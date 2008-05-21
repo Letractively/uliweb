@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys, os
 sys.path.insert(0, 'apps')
-sys.path.insert(0, 'kuaiboo')
+sys.path.insert(0, 'uliweb')
 
 from werkzeug import script
 
