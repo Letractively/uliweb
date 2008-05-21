@@ -15,6 +15,7 @@ from werkzeug import Local, LocalManager
 from werkzeug.routing import Map, Rule
 from utils.template import template_file, get_templatefile
 from utils.storage import Storage
+from utils.plugin import *
 
 APPS_DIR = 'apps'
 
@@ -64,9 +65,6 @@ def expose(rule=None, **kw):
         return f
     return decorate
 
-import __builtin__
-setattr(__builtin__, 'expose', expose)
-
 def url_for(endpoint, _external=False, **values):
     dir = os.path.basename(APPS_DIR)
     if not endpoint.startswith(dir + '.'):
@@ -89,8 +87,9 @@ class HTTPError(Exception):
 def redirect(url):
     raise RequestRedirect(url)
 
-def errorpage(message='', errorpage=None, **kwargs):
+def errorpage(request, message='', errorpage=None, **kwargs):
     kwargs.setdefault('message', message)
+    kwargs.setdefault('link', request.path_info)
     raise HTTPError(errorpage, **kwargs)
 
 def static_serve(request, filename):
@@ -108,6 +107,10 @@ class Dispatcher(object):
             self.init(apps_dir)
         
     def init(self, apps_dir):
+        import __builtin__
+        setattr(__builtin__, 'expose', expose)
+        setattr(__builtin__, 'plugin', plugin)
+        
         APPS_DIR = apps_dir
         Dispatcher.apps_dir = apps_dir
         Dispatcher.modules = self.collect_modules()
@@ -116,6 +119,9 @@ class Dispatcher(object):
         self.install_views(self.modules['views'])
         Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.env = self._prepare_env()
+        Dispatcher.template_env = Dispatcher.env.copy()
+        callplugin('prepare_default_env', Dispatcher.env)
+        callplugin('prepare_template_env', Dispatcher.template_env)
         Dispatcher.installed = True
         
     def _prepare_env(self):
@@ -135,7 +141,7 @@ class Dispatcher(object):
         
     def render(self, templatefile, vars, env=None, dirs=None):
         dirs = dirs or self.template_dirs
-        env = env or self.env
+        env = self.get_template_env(env)
         return Response(template_file(templatefile, vars, env, dirs), content_type='text/html')
     
     def not_found(self, request, e):
@@ -154,8 +160,8 @@ class Dispatcher(object):
             response = e
         return response
     
-    def get_env(self, env=None):
-        e = self.env.copy()
+    def get_template_env(self, env=None):
+        e = self.template_env
         if env:
             e.update(env)
         return e
@@ -179,7 +185,7 @@ class Dispatcher(object):
         for k, v in local_env.iteritems():
             handler.func_globals[k] = v
         
-        env = self.get_env(local_env)
+        env = self.get_template_env(local_env)
         handler.func_globals['env'] = env
         
         result = handler(**values)
