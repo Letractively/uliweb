@@ -107,15 +107,18 @@ class Dispatcher(object):
             self.init(apps_dir)
         
     def init(self, apps_dir):
+        global APPS_DIR
         import __builtin__
         setattr(__builtin__, 'expose', expose)
         setattr(__builtin__, 'plugin', plugin)
+        setattr(__builtin__, 'application', self)
         
         APPS_DIR = apps_dir
         Dispatcher.apps_dir = apps_dir
+        Dispatcher.apps = self.get_apps()
+        print 'apps', Dispatcher.apps
         Dispatcher.modules = self.collect_modules()
         self.install_settings(self.modules['settings'])
-        Dispatcher.apps = self.modules['apps']
         self.install_views(self.modules['views'])
         Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.env = self._prepare_env()
@@ -138,6 +141,20 @@ class Dispatcher(object):
         from utils import Form
         env['Form'] = Form
         return env
+    
+    def get_apps(self):
+        try:
+            import settings
+            if hasattr(settings, 'INSTALLED_APPS'):
+                return getattr(settings, 'INSTALLED_APPS')
+            else:
+                s = []
+                for p in os.listdir(self.apps_dir):
+                    if os.path.isdir(os.path.join(self.apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
+                        s.append(p)
+                return s
+        except ImportError:
+            pass
         
     def render(self, templatefile, vars, env=None, dirs=None):
         dirs = dirs or self.template_dirs
@@ -209,7 +226,6 @@ class Dispatcher(object):
         modules = {}
         views = set()
         settings = []
-        apps = []
         settings_files = ['.'.join([os.path.basename(self.apps_dir), 'settings']) for x in ['.py', '.pyc', '.pyo']
             if os.path.exists(os.path.join(self.apps_dir, 'settings%s' % x))]
         if settings_files:
@@ -229,6 +245,8 @@ class Dispatcher(object):
                         views.add('.'.join([os.path.basename(self.apps_dir), appname, fname]))
             
         for p in os.listdir(self.apps_dir):
+            if p not in self.apps:
+                continue
             path = os.path.join(self.apps_dir, p)
             if p.startswith('.') or p.startswith('_') or p.startswith('CVS'):
                 continue
@@ -240,22 +258,20 @@ class Dispatcher(object):
                 else:
                     enum_views(path, p, pattern='views*')
                 #deal with settings
-                settings_files = ['.'.join([os.path.basename(self.apps_dir), p, 'settings']) for x in ['.py', '.pyc', '.pyo']
-                    if os.path.exists(os.path.join(os.path.basename(self.apps_dir), p, 'settings%s' % x))]
-                if settings_files:
-                    settings.append(settings_files[0])
-                apps.append(p)
+                if p in self.apps:
+                    settings_files = ['.'.join([os.path.basename(self.apps_dir), p, 'settings']) for x in ['.py', '.pyc', '.pyo']
+                        if os.path.exists(os.path.join(os.path.basename(self.apps_dir), p, 'settings%s' % x))]
+                    if settings_files:
+                        settings.append(settings_files[0])
            
         modules['views'] = list(views)
         modules['settings'] = settings
-        modules['apps'] = apps
         return modules
     
     def install_views(self, views):
         for v in views:
             appname = v.rsplit('.')[-2]
-            if appname in self.apps:
-                __import__(v, {}, {}, [''])
+            __import__(v, {}, {}, [''])
             
     def install_settings(self, s):
         global config
@@ -263,13 +279,8 @@ class Dispatcher(object):
         config = Storage({})
         for v in s:
             mod = __import__(v, {}, {}, [''])
-            if not getattr(mod, 'APP_VALID', True):
-                appname = v.rsplit('.')[-2]
-                if appname in self.modules['apps']:
-                    self.modules['apps'].remove(appname)
-                continue
             for k in dir(mod):
-                if k.startswith('_') or not k.isupper() or k == 'APP_VALID':
+                if k.startswith('_') or not k.isupper():
                     pass
                 else:
                     config[k] = getattr(mod, k)
