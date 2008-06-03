@@ -116,7 +116,6 @@ class Dispatcher(object):
         APPS_DIR = apps_dir
         Dispatcher.apps_dir = apps_dir
         Dispatcher.apps = self.get_apps()
-        print 'apps', Dispatcher.apps
         Dispatcher.modules = self.collect_modules()
         self.install_settings(self.modules['settings'])
         self.install_views(self.modules['views'])
@@ -183,6 +182,41 @@ class Dispatcher(object):
             e.update(env)
         return e
     
+    def call_endpoint(self, endpoint, request, response=None, **values):
+        #get handler
+        module, func = endpoint.rsplit('.', 1)
+        mod = __import__(module, {}, {}, [''])
+        handler = getattr(mod, func)
+        
+        #if there is __begin__ then invoke it, if __begin__ return None, it'll
+        #continue running
+        if hasattr(mod, '__begin__'):
+            f = getattr(mod, '__begin__')
+            result = self.call_handler(f, request, response, **values)
+            if result:
+                return result
+        
+        result = self.call_handler(handler, request, response, **values)
+        return result
+        
+    def wrap_result(self, result, request, response, env=None):
+        env = env or self.env
+        if isinstance(result, dict):
+            result = Storage(result)
+            if hasattr(response, 'view') and response.view:
+                tmpfile = response.view
+            else:
+                tmpfile = request.function + config.TEMPLATE_SUFFIX
+            dirs = [os.path.join(self.apps_dir, request.appname, 'templates')] + self.template_dirs
+            response = self.render(tmpfile, result, env=env)
+        elif isinstance(result, (str, unicode)):
+            response = Response(result, content_type='text/html')
+        elif isinstance(result, Response):
+            response = result
+        else:
+            response = Response(str(result), content_type='text/html')
+        return response
+    
     def call_handler(self, handler, request, response=None, **values):
         response = response or Response(content_type='text/html')
         request.appname = handler.__module__.split('.')[1]
@@ -206,21 +240,7 @@ class Dispatcher(object):
         handler.func_globals['env'] = env
         
         result = handler(**values)
-        if isinstance(result, dict):
-            result = Storage(result)
-            if hasattr(response, 'view') and response.view:
-                tmpfile = response.view
-            else:
-                tmpfile = request.function + config.TEMPLATE_SUFFIX
-            dirs = [os.path.join(self.apps_dir, request.appname, 'templates')] + self.template_dirs
-            response = self.render(tmpfile, result, env=env)
-        elif isinstance(result, (str, unicode)):
-            response = Response(result, content_type='text/html')
-        elif isinstance(result, Response):
-            response = result
-        else:
-            response = Response(str(result), content_type='text/html')
-        return response
+        return self.wrap_result(result, request, response, env)
             
     def collect_modules(self):
         modules = {}
@@ -301,9 +321,8 @@ class Dispatcher(object):
                     break
             else:
                 raise NotFound()
-            handler = import_func(endpoint)
             #wrap the handler, add some magic object to func_globals
-            response = self.call_handler(handler, req, res, **values)
+            response = self.call_endpoint(endpoint, req, res, **values)
         except RequestRedirect, e:
             response = e
         except HTTPError, e:
