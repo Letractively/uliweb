@@ -1,3 +1,3 @@
 debug = True #no valid option
 
-INSTALLED_APPS = ['Hello']
+INSTALLED_APPS = ['Examples']
