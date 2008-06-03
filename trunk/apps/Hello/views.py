@@ -62,8 +62,15 @@ def static(filename):
 
 @expose
 def test_error():
-    error(message='This is error test!')
+    error(request, message='This is error test!')
     
 @expose
 def print_config():
     return '<br/>'.join(["%s = %r" % (k,v) for k, v in config.iteritems()])
+
+@expose('/test_cookie')
+def test_cookie():
+    c = request.cookies.get('name', 'no-cookie')
+    response.set_cookie('name', 'limodou')
+    response.write('cookie name=' + c)
+    return response
