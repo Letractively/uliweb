@@ -1,0 +1,41 @@
+{{extend "layout.html"}}
+<h1>uliweb Framework</h1>
+<p>这是 uliweb 的测试页面，你可以在其中找到许多的例子.</p>
+<h2>View函数</h2>
+{{ cycle = Cycle('odd', 'even') }}
+<table class="examplesTable">
+<tbody>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('%s.views.examples_template' % request.appname) }}">模板测试</a></td>
+    <td class="description">在缺省情况下，每一个view都会有一个缺省对应的模板，它与view函数的名字相同，后缀为.html。但是否使用模板要看view函数的返回值。</td>
+  </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('%s.views.examples_redirect' % request.appname) }}">重定向测试</a></td>
+    <td class="description">使用redirect可以重定向到你指定的URL上。</td>
+  </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('%s.views.examples_form' % request.appname) }}">Form模块测试</a></td>
+    <td class="description">使用Form模块，你可以生成一个用于数据校验的对象，它一方面可以用来校验Form提交的数据，并进行相应的转化，另一方面可以生成相应的HTML代码。</td>
+  </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('%s.views.examples_response' % request.appname) }}">View返回response对象测试</a></td>
+    <td class="description">View方法可以返回多种类型的数据，其中可以返回一个Response对象。一种是生成新的Response对象，一种是直接使用内置的response对象返回。</td>
+  </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title">静态文件测试</td>
+    <td class="description">如果你可以看到<img src="{{= url_for('%s.views.static' % request.appname, filename='test.gif') }}"/>这个图像，说明测试正确。</td>
+  </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('%s.views.examples_error' % request.appname) }}">调用出错模板</a></td>
+    <td class="description">在View中使用error可以直接调用出错模板。</td>
+  </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('%s.views.examples_print_config' % request.appname) }}">打印配置信息</a></td>
+    <td class="description">uliweb可以支持多级的settings文件配置。你可以把配置项写在apps或每个app目录下的settings.py文件中，注意配置项变量名必须是大写，这一点与Django一致。在使用时，你可以直接使用config变量，它是一个dict对象。</td>
+  </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('%s.views.examples_cookie' % request.appname) }}">Cookie测试</a></td>
+    <td class="description">第一次将显示无cookie，刷新页面，第二次将存在cookie。</td>
+  </tr>
+</tbody>
+</table>

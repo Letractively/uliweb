@@ -1,0 +1,47 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<title>{{=Get('title') or 'TEST TITLE'}}</title>
+	<!-- Source File -->
+	<link rel="stylesheet" type="text/css" href="/static/css/reset-fonts-grids.css">
+	<link rel="stylesheet" type="text/css" href="/static/css/site.css">
+	<link rel="stylesheet" type="text/css" href="/static/css/examples.css">
+	<link rel="stylesheet" type="text/css" href="/static/nifty/niftyCorners.css">
+	<link rel="stylesheet" type="text/css" href="/static/nifty/niftyPrint.css" media="print">
+	<script type="text/javascript" src="/static/nifty/nifty.js"></script>
+	<script type="text/javascript">
+	window.onload=function(){
+	if(!NiftyCheck())
+	    return;
+	Rounded("div.tabs","#FFFFFF","#0B045C");
+	}
+	</script>
+</head>
+<body>
+<div id="doc4" class="yui-t7">
+ <div class="doc-wrapper1">
+  <div class="doc-wrapper2">
+  </div>
+  <div class="doc-wrapper3">
+  </div>
+  <div class="doc-wrapper4">
+   <div id="hd">
+     <div class="head">
+	   <div class="links"></div>
+	   <em class="acct"><strong>Welcome Guest</strong> (<a href="/register" rel="nofollow">Register</a> | <a href="/login" rel="nofollow">Login</a>)</em>
+	   <div class="tabs">
+	     {{for f, c, a in Get(response.menu, []):}}
+		   {{if f:}}<a href="{{=a}}" class="current">{{=c}}</a>
+		   {{else:}}<a href="{{=a}}">{{=c}}</a>
+		   {{pass}}
+		 {{pass}}
+	   </div>
+	 </div>
+   </div>
+   <div id="bd">{{include}}</div>
+   <div id="ft"></div>
+  </div>
+ </div>
+</div>
+</body>
+</html>

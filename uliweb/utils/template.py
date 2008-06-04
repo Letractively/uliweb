@@ -76,6 +76,8 @@ def get_templatefile(filename, dirs, default_template=None):
 
 def template_file(filename, vars=None, env=None, dirs=None, default_template=None):
     fname = get_templatefile(filename, dirs, default_template)
+    if not fname:
+        raise Exception, "Can't find the template %s" % filename
     return template(file(fname).read(), vars, env, dirs)
 
 def template(text, vars=None, env=None, dirs=None, default_template=None):
@@ -168,8 +170,38 @@ class Out(object):
     def getvalue(self):
         return self.buf.getvalue()
 
+def cycle(*elements):
+    while 1:
+        for j in elements:
+            yield j
+            
 def _run(code, locals={}, env={}):
     locals['out'] = out = Out()
+    locals['Xml'] = out.noescape
+    
+    def Get(name, default='', vars=locals):
+        """
+        name should be a variable name or function call, for example:
+            
+            {{=GET('title')}}
+            {{=GET('get_title()')}}
+            
+        and name can also be a real variable object, for example:
+            
+            {{=GET(title)}}
+        """
+        if isinstance(name, (str, unicode)):
+            try:
+                return eval(name, env, vars)
+            except NameError:
+                return default
+            return default
+        if name:
+            return name
+        else:
+            return default
+    locals['Get'] = Get
+    locals['Cycle'] = cycle
     
     if isinstance(code, (str, unicode)):
         code = compile(code, 'file', 'exec')
