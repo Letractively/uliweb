@@ -1,4 +1,4 @@
-uliweb ÊÇÓÉlimodou·¢Æğ£¬¶àÈË²Î¼ÓµÄ¿ªÔ´web¿ò¼Ü¡£
+uliweb æ˜¯ç”±limodouå‘èµ·ï¼Œå¤šäººå‚åŠ çš„å¼€æºwebæ¡†æ¶ã€‚
 
-* **ÏîÄ¿Ö÷Ò³** http://code.google.com/p/uliweb
-* **ÓÊ¼şÁĞ±í** http://groups.google.com/group/uliweb
+* **é¡¹ç›®ä¸»é¡µ** http://code.google.com/p/uliweb
+* **é‚®ä»¶åˆ—è¡¨** http://groups.google.com/group/uliweb
