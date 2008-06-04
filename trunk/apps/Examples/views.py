@@ -1,39 +1,32 @@
 from frameworks.SimpleFrame import expose
 
-@expose('/')
-def index():
+def __begin__():
+    response.menu=[
+      [False, 'Home', '/'],
+      [True, 'Examples', '/examples'],
+      [False, 'About', '/about'],
+    ]
+
+@expose('/examples')
+def examples_index():
     return {}
 
-@expose('/template')
-def template():
+@expose
+def examples_template():
     title="This is a template test"
     return locals()
 
-@expose('/redirect')
-def test_redirect():
+@expose
+def examples_redirect():
     redirect(url_for('%s.views.index' % request.appname))
 
 @expose
-def simple_expose():
-    return '''@expose
-def simple_expose(req):
-    return 
-'''
-
-@expose
-def simple_expose_para(name):
-    return '''@expose
-def simple_expose_para(req, name):
-    return
-'''
-
-@expose
-def test_response():
+def examples_response():
     response.write("<p>This test is directly use response object in view function</p>")
     return response
 
-@expose('/form')
-def form():
+@expose
+def examples_form():
     class F(Form.Form):
         title = Form.TextField(label='Title:', required=True, help_string='Title help string')
         content = Form.TextAreaField(label='Content:')
@@ -61,15 +54,15 @@ def static(filename):
     return static_serve(request, filename)
 
 @expose
-def test_error():
+def examples_error():
     error(request, message='This is error test!')
     
 @expose
-def print_config():
+def examples_print_config():
     return '<br/>'.join(["%s = %r" % (k,v) for k, v in config.iteritems()])
 
-@expose('/test_cookie')
-def test_cookie():
+@expose
+def examples_cookie():
     c = request.cookies.get('name', 'no-cookie')
     response.set_cookie('name', 'limodou')
     response.write('cookie name=' + c)

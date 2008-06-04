@@ -120,6 +120,7 @@ class Dispatcher(object):
         self.install_settings(self.modules['settings'])
         self.install_views(self.modules['views'])
         Dispatcher.template_dirs = self.get_template_dirs()
+        Dispatcher.file_dirs = self.get_file_dirs()
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_env = Dispatcher.env.copy()
         callplugin('prepare_default_env', Dispatcher.env)
@@ -139,6 +140,7 @@ class Dispatcher(object):
         env['xhtml'] = xhtml
         from utils import Form
         env['Form'] = Form
+        env['get_file'] = self.get_file
         return env
     
     def get_apps(self):
@@ -155,9 +157,26 @@ class Dispatcher(object):
         except ImportError:
             pass
         
-    def render(self, templatefile, vars, env=None, dirs=None):
+    def get_file(self, filename, request=None):
+        """
+        get_file will search from apps directory
+        """
+        if os.path.exists(filename):
+            return filename
+        dirs = self.file_dirs
+        if request:
+            dirs = [os.path.join(self.apps_dir, request.appname, 'files')] + dirs
+        for d in dirs:
+            path = os.path.join(d, filename)
+            if os.path.exists(path):
+                return path
+        raise Exception, "Can't find the file %s" % filename
+    
+    def render(self, templatefile, vars, env=None, dirs=None, request=None):
         dirs = dirs or self.template_dirs
         env = self.get_template_env(env)
+        if request:
+            dirs = [os.path.join(self.apps_dir, request.appname, 'templates')] + dirs
         return Response(template_file(templatefile, vars, env, dirs), content_type='text/html')
     
     def not_found(self, request, e):
@@ -192,9 +211,9 @@ class Dispatcher(object):
         #continue running
         if hasattr(mod, '__begin__'):
             f = getattr(mod, '__begin__')
-            result = self.call_handler(f, request, response, **values)
+            result, env = self._call_function(f, request, response)
             if result:
-                return result
+                return self.wrap_result(result, request, response, env)
         
         result = self.call_handler(handler, request, response, **values)
         return result
@@ -207,8 +226,7 @@ class Dispatcher(object):
                 tmpfile = response.view
             else:
                 tmpfile = request.function + config.TEMPLATE_SUFFIX
-            dirs = [os.path.join(self.apps_dir, request.appname, 'templates')] + self.template_dirs
-            response = self.render(tmpfile, result, env=env)
+            response = self.render(tmpfile, result, env=env, request=request)
         elif isinstance(result, (str, unicode)):
             response = Response(result, content_type='text/html')
         elif isinstance(result, Response):
@@ -217,7 +235,7 @@ class Dispatcher(object):
             response = Response(str(result), content_type='text/html')
         return response
     
-    def call_handler(self, handler, request, response=None, **values):
+    def _call_function(self, handler, request, response=None, **values):
         response = response or Response(content_type='text/html')
         request.appname = handler.__module__.split('.')[1]
         request.function = handler.__name__
@@ -240,6 +258,10 @@ class Dispatcher(object):
         handler.func_globals['env'] = env
         
         result = handler(**values)
+        return result, env
+    
+    def call_handler(self, handler, request, response=None, **values):
+        result, env = self._call_function(handler, request, response, **values)
         return self.wrap_result(result, request, response, env)
             
     def collect_modules(self):
@@ -308,6 +330,10 @@ class Dispatcher(object):
     def get_template_dirs(self):
         template_dirs = [os.path.join(self.apps_dir, p, 'templates') for p in self.apps]
         return template_dirs
+    
+    def get_file_dirs(self):
+        dirs = [os.path.join(self.apps_dir, p, 'files') for p in self.apps]
+        return dirs
     
     def __call__(self, environ, start_response):
         local.application = self
