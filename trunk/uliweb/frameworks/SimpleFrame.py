@@ -122,13 +122,13 @@ class Dispatcher(object):
         Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.file_dirs = self.get_file_dirs()
         Dispatcher.env = self._prepare_env()
-        Dispatcher.template_env = Dispatcher.env.copy()
+        Dispatcher.template_env = Storage(Dispatcher.env.copy())
         callplugin('prepare_default_env', Dispatcher.env)
         callplugin('prepare_template_env', Dispatcher.template_env)
         Dispatcher.installed = True
         
     def _prepare_env(self):
-        env = {}
+        env = Storage({})
         env['url_for'] = url_for
         env['redirect'] = redirect
         env['error'] = errorpage
@@ -170,7 +170,7 @@ class Dispatcher(object):
             path = os.path.join(d, filename)
             if os.path.exists(path):
                 return path
-        raise Exception, "Can't find the file %s" % filename
+        errorpage(request, "Can't find the file %s" % filename)
     
     def render(self, templatefile, vars, env=None, dirs=None, request=None):
         dirs = dirs or self.template_dirs

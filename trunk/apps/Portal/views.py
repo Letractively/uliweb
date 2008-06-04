@@ -1,11 +1,9 @@
 from frameworks.SimpleFrame import expose
+from modules.menu import menu
 
 def __begin__():
-    response.menu=[
-      [True, 'Home', '/'],
-      [False, 'Examples', '/examples'],
-      [False, 'About', '/about'],
-    ]
+    response.menu=menu(request, 'Portal')
+    env['title'] = 'uliweb Project Site'
     
 @expose('/')
 def index():

@@ -1,11 +1,8 @@
 from frameworks.SimpleFrame import expose
+from modules.menu import menu
 
 def __begin__():
-    response.menu=[
-      [False, 'Home', '/'],
-      [True, 'Examples', '/examples'],
-      [False, 'About', '/about'],
-    ]
+    response.menu=menu(request, 'Examples')
 
 @expose('/examples')
 def examples_index():
