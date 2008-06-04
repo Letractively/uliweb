@@ -1,19 +1,19 @@
-uliweb �ĵ�
+uliweb 文档
 =============
 
-�̳�
+教程
 ------
 
 * `uliweb Step by Step </documents/uliweb_step_by_step>`_
 
-�����ĵ�
+开发文档
 ----------
 
-�����ĵ�������uliweb�ļ���ϸ�ڣ������ͨ�����˽�uliweb�ķ������档
+开发文档描述了uliweb的技术细节，你可以通过它了解uliweb的方方面面。
 
-* `uliweb �ܹ� </documents/architecture>`_
-* `View ��ʹ�� </documents/view>`_
-* `Settings ��ʹ�� </documents/settings>`_
-* `ģ���ʹ�� </documents/template>`_
-* `���ϵͳ��ʹ�� </documents/plugin>`_
+* `uliweb 架构 </documents/architecture>`_
+* `View 的使用 </documents/view>`_
+* `Settings 的使用 </documents/settings>`_
+* `模板的使用 </documents/template>`_
+* `插件系统的使用 </documents/plugin>`_
 
