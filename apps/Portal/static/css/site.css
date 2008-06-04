@@ -61,7 +61,7 @@ body{font-family:arial;color:#4e4e4e;background:#e7e7e7;}
 #hd .head div.links{float:left;text-align:left;width:300px;}
 #hd .head div.links a{margin-right:10px;}
 
-#hd .tabs{float:right;width:60%;margin-top:10px;padding:0;height:24px;overflow:hidden;background:#0B045C;}
+#hd .tabs{margin-top:10px;padding:0;height:24px;overflow:hidden;background:#0B045C;}
 #hd .tabs a{margin-right:25px;color:#fff;font:bold 100% arial;}
 #hd .tabs .current{color:#ffae00;}
 
