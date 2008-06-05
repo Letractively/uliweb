@@ -24,7 +24,7 @@ re_strings=re.compile(PY_STRING_LITERAL_RE,re.DOTALL)
 
 re_include_nameless=re.compile('\{\{\s*include\s*\}\}')
 re_include=re.compile('\{\{\s*include\s+[\'"](?P<name>.*?)[\'"]\s*\}\}')
-re_extend=re.compile('^\s*\{\{\s*extend\s+[\'"](?P<name>[^\']+)[\'"]\s*\}\}')
+re_extend=re.compile('^\s*\{\{\s*extend\s+[\'"](?P<name>[^\']+?)[\'"]\s*\}\}', re.M)
 
 def reindent(text):
     lines=text.split('\n')
@@ -102,7 +102,7 @@ def template(text, vars=None, env=None, dirs=None, default_template=None):
             parent = open(t, 'rb').read()
         except IOError: 
             raise Exception, 'Processing View %s error!' % filename
-        text = re_include_nameless.sub(re_extend.sub('', text, 1), parent)
+        text = text[0:match.start()] + re_include_nameless.sub(text[match.end():], parent)
     
     ##
     # check whether it includes subtemplates
@@ -183,12 +183,12 @@ def _run(code, locals={}, env={}):
         """
         name should be a variable name or function call, for example:
             
-            {{=GET('title')}}
-            {{=GET('get_title()')}}
+            {{=Get('title')}}
+            {{=Get('get_title()')}}
             
         and name can also be a real variable object, for example:
             
-            {{=GET(title)}}
+            {{=Get(title)}}
         """
         if isinstance(name, (str, unicode)):
             try:
@@ -234,5 +234,7 @@ def editfile(path,file):
 def htmleditfile(path,file):
     return A('htmledit')
 }}
+{{title='bbbbb'}}
+{{=Get('title', 'aaaaa')}}
     """
     print template(a)

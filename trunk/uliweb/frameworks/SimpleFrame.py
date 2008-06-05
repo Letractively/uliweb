@@ -171,7 +171,6 @@ class Dispatcher(object):
             path = os.path.join(d, filename)
             if os.path.exists(path):
                 return path
-        print 'aaaaaaaaaaaaaaaa', filename
         errorpage("Can't find the file %s" % filename)
     
     def render(self, templatefile, vars, env=None, dirs=None, request=None):
