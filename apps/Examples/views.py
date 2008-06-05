@@ -52,7 +52,7 @@ def static(filename):
 
 @expose
 def examples_error():
-    error(request, message='This is error test!')
+    error(message='This is error test!')
     
 @expose
 def examples_print_config():
