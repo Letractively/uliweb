@@ -87,9 +87,10 @@ class HTTPError(Exception):
 def redirect(url):
     raise RequestRedirect(url)
 
-def errorpage(request, message='', errorpage=None, **kwargs):
+def errorpage(message='', errorpage=None, request=None, **kwargs):
     kwargs.setdefault('message', message)
-    kwargs.setdefault('link', request.path_info)
+    if request:
+        kwargs.setdefault('link', request.path_info)
     raise HTTPError(errorpage, **kwargs)
 
 def static_serve(request, filename):
@@ -170,7 +171,8 @@ class Dispatcher(object):
             path = os.path.join(d, filename)
             if os.path.exists(path):
                 return path
-        errorpage(request, "Can't find the file %s" % filename)
+        print 'aaaaaaaaaaaaaaaa', filename
+        errorpage("Can't find the file %s" % filename)
     
     def render(self, templatefile, vars, env=None, dirs=None, request=None):
         dirs = dirs or self.template_dirs
