@@ -44,7 +44,7 @@ code.content = 1
 code.arguments = (0, 1, 1)
 directives.register_directive('code', code)
 
-def to_html(text, level=2):
+def to_html(text, level=2, part='html_body'):
     global g_data
     g_data.g_style = {}
     source = text
@@ -53,7 +53,7 @@ def to_html(text, level=2):
         style = '<style>' + '\n'.join(g_data.g_style.values()) + '</style>'
     else:
         style = ''
-    return  style + '\n' + parts['body']
+    return  style + '\n' + parts[part]
 
 def parts(file):
     fo = open(file, 'r')

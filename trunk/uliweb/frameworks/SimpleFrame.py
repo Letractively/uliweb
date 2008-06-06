@@ -121,7 +121,6 @@ class Dispatcher(object):
         self.install_settings(self.modules['settings'])
         self.install_views(self.modules['views'])
         Dispatcher.template_dirs = self.get_template_dirs()
-        Dispatcher.file_dirs = self.get_file_dirs()
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_env = Storage(Dispatcher.env.copy())
         callplugin('prepare_default_env', Dispatcher.env)
@@ -158,15 +157,16 @@ class Dispatcher(object):
         except ImportError:
             pass
         
-    def get_file(self, filename, request=None):
+    def get_file(self, filename, request=None, dirname='files'):
         """
         get_file will search from apps directory
         """
         if os.path.exists(filename):
             return filename
-        dirs = self.file_dirs
         if request:
-            dirs = [os.path.join(self.apps_dir, request.appname, 'files')] + dirs
+            dirs = [os.path.join(self.apps_dir, x, dirname) for x in [request.appname] + self.apps]
+        else:
+            dirs = [os.path.join(self.apps_dir, x, dirname) for x in self.apps]
         for d in dirs:
             path = os.path.join(d, filename)
             if os.path.exists(path):
@@ -332,14 +332,9 @@ class Dispatcher(object):
         template_dirs = [os.path.join(self.apps_dir, p, 'templates') for p in self.apps]
         return template_dirs
     
-    def get_file_dirs(self):
-        dirs = [os.path.join(self.apps_dir, p, 'files') for p in self.apps]
-        return dirs
-    
     def __call__(self, environ, start_response):
         local.application = self
         req = Request(environ)
-        res = Response(content_type='text/html')
         local.url_adapter = adapter = url_map.bind_to_environ(environ)
         try:
             endpoint, values = adapter.match()
@@ -348,8 +343,28 @@ class Dispatcher(object):
                     break
             else:
                 raise NotFound()
-            #wrap the handler, add some magic object to func_globals
-            response = self.call_endpoint(endpoint, req, res, **values)
+            
+            #middleware process
+            middlewares = config.get('MIDDLEWARE_CLASSES', [])
+            response = None
+            for middleware in middlewares:
+                mod = import_func(middleware)
+                if hasattr(mod, 'process_request'):
+                    response = middleware.process_request(req)
+                    if response is not None:
+                        break
+            
+            res = Response(content_type='text/html')
+            if response is None:
+                response = self.call_endpoint(endpoint, req, res, **values)
+            else:
+                response = res
+                
+            for middleware in reversed(middlewares):
+                mod = import_func(middleware)
+                if hasattr(mod, 'process_response'):
+                    response = middleware.process_response(req, response)
+            
         except RequestRedirect, e:
             response = e
         except HTTPError, e:
