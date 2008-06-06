@@ -3,7 +3,6 @@ from modules.menu import menu
 
 def __begin__():
     response.menu=menu(request, 'Portal')
-    env['title'] = 'uliweb Project Site'
     
 @expose('/')
 def index():
