@@ -1,24 +1,27 @@
 基本信息(Basic Info)
 ---------------------
-
-* `Uliweb简介(Introduction) <{{= url_for('%s.views.show_document' % request.appname, filename='introduction') }}>`_
-* 许可协议(License)
+{{ 
+def index(filename):
+    return url_for('%s.views.show_document' % request.appname, filename=filename)
+pass
+}}
+* `Uliweb简介(Introduction) <{{= index('introduction') }}>`_
+* `许可协议(License) <{{= index('license') }}>`_
 * 更新说明(Change Log)
-* 鸣谢(Credits)
+* `鸣谢(Credits) <{{= index('credits') }}>`_
 
 安装Uliweb(Installation)
 -------------------------
 
-* 系统需求(Requirements)
-* 安装Uliweb(Install Uliweb)
+* `系统需求(Requirements) <{{= index('requirements') }}>`_
+* `安装Uliweb(Install Uliweb) <{{= index('installation') }}>`_
 * 从之前版本升级(Updating from a Previous Version)
 * 修改配置文件(Configure Uliweb)
 
 Uliweb快速入门(Quick Tutorial)
 -------------------------------
 
-* 选择一个编辑器(Choose a Editor for Uliweb)
-* 第一个页面(Your First webpage on Uliweb)
+* `Hello, Uliweb(Your First web app with Uliweb) <{{= index('hello_uliweb') }}>`_
 * 模板和视图(Views and Templates)
 * 快速构建博客(Build a weblog in minutes)
 * 用CSS美化你的博客(CSS Artwork for your weblog)
