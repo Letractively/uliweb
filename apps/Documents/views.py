@@ -19,8 +19,14 @@ def _show(filename, env, render=True):
         content = to_html(content)
     return locals()
     
-@expose('/documents/<regex(".*$"):filename>')
-def show_document(filename):
+@expose('/documents/<regex(".*$"):filename>', defaults={'lang':''})
+#@expose('/documents/<regex(".*$"):filename>')
+#def show_document(filename, lang=''):
+#this is also available
+@expose('/documents/<lang>/<regex(".*$"):filename>')
+def show_document(filename, lang):
     if not filename.endswith('.rst'):
         filename += '.rst'
+    if lang:
+        filename = os.path.join(lang, filename)
     return _show(filename, env, False)

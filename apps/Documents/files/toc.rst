@@ -1,14 +1,15 @@
 基本信息(Basic Info)
 ---------------------
 {{ 
-def index(filename):
-    return url_for('%s.views.show_document' % request.appname, filename=filename)
+def index(filename, lang=''):
+    return url_for('%s.views.show_document' % request.appname, filename=filename, lang=lang)
 pass
 }}
 * `Uliweb简介(Introduction) <{{= index('introduction') }}>`_
 * `许可协议(License) <{{= index('license') }}>`_
 * 更新说明(Change Log)
 * `鸣谢(Credits) <{{= index('credits') }}>`_
+* `使用Uliweb的网站(Web Sites which use Uliweb) <{{= index('sites') }}>`_
 
 安装Uliweb(Installation)
 -------------------------
@@ -21,7 +22,7 @@ pass
 Uliweb快速入门(Quick Tutorial)
 -------------------------------
 
-* `Hello, Uliweb(Your First web app with Uliweb) <{{= index('hello_uliweb') }}>`_
+* `Hello, Uliweb(Your First web app with Uliweb) <{{= index('hello_uliweb') }}>`_ `English <{{= index('hello_uliweb', 'en') }}>`_
 * 模板和视图(Views and Templates)
 * 快速构建博客(Build a weblog in minutes)
 * 用CSS美化你的博客(CSS Artwork for your weblog)

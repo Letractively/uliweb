@@ -1,6 +1,8 @@
 Hello, Uliweb
 ================
 
+:Author: Limodou <limodou@gmail.com>
+
 .. contents:: 
 
 本教程将带你领略 Uliweb 的风采，这是一个非常简单的例子，你可以按照我的步骤来操作。我们
