@@ -67,5 +67,9 @@ body{font-family:arial;color:#4e4e4e;background:#e7e7e7;}
 
 #bd {clear:both; margin-top:50px;}
 
-div .left {float:left; margin-right:30px;}
-div .clear {clear:both;}
+div.left {float:left; margin-right:30px;}
+div.clear {clear:both;}
+
+div.contents.topic {float:right; border:1px solid #dedede;padding:5px; margin:5px; background-color:#FFF8AF;}
+div.document pre {border:1px solid #dedede; padding:5px; margin:5px; background-color:#FFF8AF;}
+div.document div.note {border:1px solid #ff0000; padding:5px; margin:5px; background-color:#FF9F9F;}

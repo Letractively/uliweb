@@ -1,1 +1,1 @@
-#INSTALLED_APPS = ['Examples']
+#INSTALLED_APPS = ['Hello']
