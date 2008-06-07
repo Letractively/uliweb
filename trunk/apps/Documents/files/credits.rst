@@ -6,12 +6,18 @@
 开发贡献者
 -----------
 
-limodou
+::
+
+    limodou <limodou@gmail.com>
 
 文档贡献者
 -----------
 
-limodou icebird
+::
+
+    limodou <limodou@gmail.com> 
+    icebird <icebird@gmail.com> 
+    E.T <iwinux@gmail.com>
 
 设计贡献者
 -----------
