@@ -14,6 +14,6 @@ http://uliwebproject.appspot.com 站点的主要代码，运行它还需要其�
 网站代码
 ----------
 
-* Python 2.4+
-* Docutils 4.0
-* pygments
+* `Python 2.4+ <http://python.org>`_
+* `Docutils 0.4 <http://docutils.sourceforge.net/>`_
+* `pygments <http://pygments.org/>`_
