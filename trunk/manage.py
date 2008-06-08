@@ -27,6 +27,48 @@ def make_app(appname=''):
                 print >>fp, "#coding=utf-8"
                 print >>fp, "from frameworks.SimpleFrame import expose"
             fp.close()
+            
+def export(outputdir=''):
+    """
+    Export Uliweb to a directory.
+    """
+    import shutil
+    
+    if not outputdir:
+        sys.stderr.write("Error: outputdir should be a directory and can't be empty")
+        sys.exit(0)
+        
+    if not os.path.exists(outputdir):
+        os.makedirs(outputdir)
+        
+    #copy files
+    for f in ['app.yaml', 'gae_handler.py', 'manage.py']:
+        path = os.path.join(outputdir, f)
+        if f == 'app.yaml':
+            if not os.path.exists(path):
+                shutil.copy2(f, path)
+        else:
+            shutil.copy2(f, path)
+        
+    #copy dirs
+    def copy_dir(d, dst):
+        for f in d:
+            dd = os.path.join(dst, f)
+            if not os.path.exists(dd):
+                os.makedirs(dd)
+            for r in os.listdir(f):
+                if r in ['.svn']:
+                    continue
+                fpath = os.path.join(f, r)
+                if os.path.isdir(fpath):
+                    copy_dir([fpath], dst)
+                else:
+                    ext = os.path.splitext(fpath)[1]
+                    if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
+                        continue
+                    shutil.copy2(fpath, dd)
+    
+    copy_dir(['uliweb'], outputdir)
         
 #def make_shell():
 #    from shorty import models, utils
@@ -37,6 +79,7 @@ if __name__ == '__main__':
     action_runserver = script.make_runserver(make_application, use_reloader=True, 
         port=8000, use_debugger=True)
     action_makeapp = make_app
+    action_export = export
     #action_shell = script.make_shell(make_shell)
     #action_initdb = lambda: make_app().init_database()
 
