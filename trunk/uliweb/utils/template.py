@@ -11,7 +11,6 @@ import os
 __all__=['template']
 
 re_write=re.compile('\{\{=(?P<value>.*?)\}\}',re.DOTALL)
-re_write_noescape=re.compile('\{\{!(?P<value>.*?)\}\}',re.DOTALL)
 re_html=re.compile('\}\}.*?\{\{',re.DOTALL)
 #re_strings=re.compile('((?:""").*?(?:"""))|'+"((?:''').*?(?:'''))"+'((?:""").*?(?:"""))|'+"((?:''').*?(?:'''))"
 
@@ -23,8 +22,8 @@ PY_STRING_LITERAL_RE= r'(?P<name>'+ \
 re_strings=re.compile(PY_STRING_LITERAL_RE,re.DOTALL)
 
 re_include_nameless=re.compile('\{\{\s*include\s*\}\}')
-re_include=re.compile('\{\{\s*include\s+[\'"](?P<name>.*?)[\'"]\s*\}\}')
-re_extend=re.compile('^\s*\{\{\s*extend\s+[\'"](?P<name>[^\']+?)[\'"]\s*\}\}', re.M)
+re_include=re.compile('\{\{\s*include\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
+re_extend=re.compile('\s*\{\{\s*extend\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
 
 def reindent(text):
     lines=text.split('\n')
@@ -93,10 +92,10 @@ def template(text, vars=None, env=None, dirs=None, default_template=None):
     while 1:
         match = re_extend.search(text)
         if not match: break
-        filename = match.group('name')
+        filename = eval(match.group('name'), env, vars)
         t = get_templatefile(filename, dirs, default_template)
         if not t:
-            raise Exception, "Cann't find the template file %s" % filename
+            raise Exception, "Can't find the template file %s" % filename
             
         try: 
             parent = open(t, 'rb').read()
@@ -110,10 +109,10 @@ def template(text, vars=None, env=None, dirs=None, default_template=None):
     while 1:
         match = re_include.search(text)
         if not match: break
-        filename = match.group('name')
+        filename = eval(match.group('name'), env, vars)
         t = get_templatefile(filename, dirs, default_template)
         if not t:
-            raise Exception, "Cann't find the template file %s" % filename
+            raise Exception, "Can't find the template file %s" % filename
             
         try: 
             child = open(t,'rb').read()
@@ -121,8 +120,7 @@ def template(text, vars=None, env=None, dirs=None, default_template=None):
             raise Exception, 'Processing View %s error!' % filename
         text = re_include.sub(child, text, 1)
     
-    text = re_write.sub('{{out.write(\g<value>)}}', text)
-    text = '}}%s{{' % re_write_noescape.sub('{{out.write(\g<value>,escape=False)}}', text)
+    text = '}}%s{{' % re_write.sub('{{out.write(\g<value>)}}', text)
     text = replace(re_html, text, lambda x: '\nout.write(%s,escape=False)\n' % repr(x[2:-2]))
     text = replace(re_strings, text, lambda x: x.replace('\n','\\n'))
     code = reindent(text)
@@ -203,6 +201,7 @@ def _run(code, locals={}, env={}):
     locals['Get'] = Get
     locals['Cycle'] = cycle
     
+    print code
     if isinstance(code, (str, unicode)):
         code = compile(code, 'file', 'exec')
     exec code in env, locals
