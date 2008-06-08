@@ -201,7 +201,6 @@ def _run(code, locals={}, env={}):
     locals['Get'] = Get
     locals['Cycle'] = cycle
     
-    print code
     if isinstance(code, (str, unicode)):
         code = compile(code, 'file', 'exec')
     exec code in env, locals
