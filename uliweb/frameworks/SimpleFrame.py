@@ -106,6 +106,8 @@ class Dispatcher(object):
     def __init__(self, apps_dir=APPS_DIR):
         if not Dispatcher.installed:
             self.init(apps_dir)
+            callplugin('startup_installed', self, config, url_map)
+        callplugin('startup', self, config, url_map)
         
     def init(self, apps_dir):
         global APPS_DIR

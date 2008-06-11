@@ -6,3 +6,4 @@ def prepare_template_env(env):
     def rst2html(filename):
         return to_html(file(env.get_file(filename)).read())
     env['rst2html'] = rst2html
+    
