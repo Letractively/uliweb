@@ -5,8 +5,7 @@ from frameworks.SimpleFrame import expose
 def guestbook():
     from models import Note
     
-    notes = Note.select_all()
-    print notes
+    notes = Note.filter(order=lambda z: [reversed(z.datetime)])
     return locals()
       
 @expose('/guestbook/new_comment')
@@ -22,7 +21,8 @@ def new_comment():
         flag, data = form.validate(request.params)
         if flag:
             data['datetime'] = datetime.datetime.now()
-            Note.insert(**data)
+            n = Note(**data)
+            n.put()
             redirect(url_for('%s.views.guestbook' % request.appname))
         else:
             message = "There is something wrong! Please fix them."

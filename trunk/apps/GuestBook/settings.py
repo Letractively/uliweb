@@ -1,6 +1,7 @@
 from utils.plugin import plugin
 
 connection = {'connection':'sqlite://database.db'}
+ORM_DEBUG = True
 
 @plugin('prepare_template_env')
 def prepare_template_env(env):
@@ -13,3 +14,4 @@ def startup(application, config, *args):
     orm.get_connection(**connection)
     orm.set_auto_bind(True)
     orm.set_auto_migirate(True)
+    orm.set_debug(ORM_DEBUG)
