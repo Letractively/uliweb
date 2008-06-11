@@ -7,11 +7,13 @@ import sys
 sys.path.insert(0, '..')
 
 __all__ = ['Field', 'get_connection', 'Model', 'migirate_table',
-    'set_auto_bind', 'set_auto_migirate', 'Reference']
+    'set_auto_bind', 'set_auto_migirate', 'Reference',
+    'ReversedKeyException']
 
 __default_connection__ = None  #global connection instance
 __auto_bind__ = False
 __auto_migirate__ = False
+__DEBUG__ = False
 
 import re
 import geniusql
@@ -21,6 +23,8 @@ import threading
 
 r_spec = re.compile('(?P<spec>.*?)://(?:(?P<user>.*?):(?P<passwd>.*?)@)?(?:(?P<url>.*?)(?:\?(?P<arguments>.*))?)?$')
 
+class ReversedKeyException(Exception):pass
+
 def set_auto_bind(flag):
     global __auto_bind__
     __auto_bind__ = flag
@@ -28,6 +32,10 @@ def set_auto_bind(flag):
 def set_auto_migirate(flag):
     global __auto_migirate__
     __auto_migirate__ = flag
+    
+def set_debug(flag):
+    global __DEBUG__
+    __DEBUG__ = flag
 
 def get_connection(connection='', default=True, **args):
     if default:
@@ -100,6 +108,18 @@ def DB(connection='', **args):
         db.create()
     db._schema = db.schema()
     db._schema.create()
+    
+#    def log(message, self=db):
+#        import logging
+#        handler = logging.StreamHandler()
+#        _logger = logging.getLogger('werkzeug')
+#        _logger.addHandler(handler)
+#        if __DEBUG__:
+#            _logger.setLevel(logging.DEBUG)
+#            _logger.debug(message)
+#    
+#    setattr(db, 'log', log)
+#    
     return db
 
 class Field(object):
@@ -141,14 +161,30 @@ class Reference(Field):
 
     def __repr__(self):
         return '<Reference %s %r>' % (self.tablename, self.ref_field)
+  
+def is_reversed(f):
+    if f in ['add_index', 'add_reference', 'bind', 'create', 'created', 
+        'db', 'delete', 'delete_all', 'drop', 'drop_primary', 'fields', 
+        'fields_list', 'id_clause', 'insert', 'is_existed', 'keys', 
+        'rename', 'save', 'save_all', 'schema', 'select', 'select_all', 
+        'set_primary', 'set_tablename', 'table', 'tablename', 'put',
+        'dict', 'get', 'remove', 'filter']:
+        return True
+    else:
+        return False
     
 class ModelMetaclass(type):
     def __new__(cls, name, bases, attrs):
         fields = {}
-        for field_name, obj in attrs.items():
+        d = attrs.copy()
+        for field_name, obj in d.items():
             if isinstance(obj, Field):
+                if is_reversed(field_name):
+                    raise ReversedKeyException("This word [%s] is a reversed key, "
+                        "please try another name" % field_name)
                 obj.name = field_name
                 fields[field_name] = obj
+                del attrs[field_name]
 
         f = {}
         for base in bases[::-1]:
@@ -162,8 +198,8 @@ class ModelMetaclass(type):
         attrs['fields'] = f
         
         for method in ['insert', 'drop', 'rename', 'add_index', 'set_primary',
-            'drop_primary', 'id_clause', 'save', 'save_all', 'delete', 'delete_all',
-            'select', 'select_all', 'keys']:
+            'drop_primary', 'id_clause', 'save', 'save_all', 'delete_all',
+            'keys', 'select', 'select_all', 'delete']:
             def _f(cls, method=method, *args, **kwargs):
                 if not hasattr(cls, 'table'):
                     cls.bind(auto_create=__auto_migirate__)
@@ -211,6 +247,49 @@ class Model(object):
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
+    
+    def __init__(self, **kwargs):
+        self.id = None
+        self._old_values = {}
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+        
+    def _set_saved(self):
+        self._old_values = self.dict()
+        
+    def dict(self):
+        d = {}
+        for k, v in self.fields.items():
+            t = getattr(self, k, None)
+            if t:
+                d[k] = t
+        return d
+            
+    def _get_data(self):
+        if not bool(self.id):
+            return self.dict()
+        else:
+            d = {}
+            d['id'] = self.id
+            for k, v in self.fields.items():
+                t = self.old_values.get(k, None)
+                if repr(v) != repr(t):
+                    d[k] = v
+        return d
+            
+    def put(self):
+        d = self._get_data()
+        if d:
+            if not bool(self.id):
+                obj = self.table.insert(**d)
+                self.id = obj['id']
+            else:
+                self.table.save(**d)
+            self._set_saved()
+        
+    @classmethod
+    def remove(cls, obj):
+        cls.table.delete(** obj.dict())
     
     @classmethod
     def set_tablename(cls):
@@ -265,6 +344,26 @@ class Model(object):
     def add_reference(cls, fieldname, tablename, ref_field):
         cls.table.references[tablename] = (fieldname, tablename, ref_field)
         cls.table.add_index(fieldname)
+        
+    @classmethod
+    def get(cls, restriction=None, **kwargs):
+        obj = cls.table.select(restriction, **kwargs)
+        o = cls(**obj)
+        o._set_saved()
+        return o
+    
+    @classmethod
+    def filter(cls, restriction=None, order=None, limit=None, **kwargs):
+        for obj in cls.table._select_lazy(restriction, order, limit, **kwargs):
+            o = cls(**obj)
+            o._set_saved()
+            yield o
+            
+    def __repr__(self):
+        s = []
+        for k, v in self.fields_list:
+            s.append('%r:%r' % (k, getattr(self, k, None)))
+        return ('<%s {' % self.__class__.__name__) + ','.join(s) + '}>'
             
 def migirate_table(table, schema):
     def compare_column(a, b):
@@ -286,17 +385,28 @@ def migirate_table(table, schema):
 if __name__ == '__main__':
     db = get_connection('sqlite')
     db.create()
+    set_auto_bind(True)
+    set_auto_migirate(True)
+    set_debug(True)
     
     class Test(Model):
         username = Field(str)
         year = Field(int)
     
     Test.insert(username='limodou')
-    print Test.select_all()
+    Test.insert(username='xxxxxxx')
+    print list(Test.filter())
+    t = Test(username='zoom', year=30)
+    t.put()
+    print list(Test.filter())
+    Test.remove(t)
+    print list(Test.filter())
+    t = Test.get(username='limodou')
+    print t
     
-    class Test(Model):
-        username = Field(str)
-        year = Field(int)
-        age = Field(int)
-        
-    print Test.select_all()
+#    class Test(Model):
+#        username = Field(str)
+#        year = Field(int)
+#        age = Field(int)
+#        
+#    print list(Test.select_all())

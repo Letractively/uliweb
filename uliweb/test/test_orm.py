@@ -162,6 +162,23 @@ def test7():
     print list(db.select((A & B, [A.keys(), B.keys()])))
     print list(db.select((A << B, [A.keys(), B.keys()])))
 
+def test8():
+#    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
+    set_auto_bind(True)
+    set_auto_migirate(True)
+    db = get_connection('sqlite')
+    db.create()
+
+    class A(Model):
+        username = Field(str, max_length=20)
+        year = Field(int)
+
+    a = A.insert(username='limodou', year='35')
+    a = A.insert(username='zoom', year='30')
+    a = A.insert(username='limodou', year='25')
+    
+    print A.select_all(order=lambda x: [x.username, x.year])
+
 def clear_other():
     import decimal
     db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
@@ -172,4 +189,4 @@ def clear_other():
     Other.delete_all()
     
 if __name__ == '__main__':
-    test7()
+    test8()
