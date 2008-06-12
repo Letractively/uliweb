@@ -273,9 +273,10 @@ class Model(object):
             d = {}
             d['id'] = self.id
             for k, v in self.fields.items():
-                t = self.old_values.get(k, None)
-                if repr(v) != repr(t):
-                    d[k] = v
+                t = self._old_values.get(k, None)
+                x = getattr(self, k, None)
+                if (x is not None and t is not None) and repr(t) != repr(x):
+                    d[k] = x
         return d
             
     def put(self):
