@@ -190,7 +190,6 @@ def test9():
     class A(Model):
         username = Field(str, max_length=20)
         year = Field(int)
-        file = Field(file)
 
     class B(Model):
         a = Reference(A)
@@ -200,11 +199,16 @@ def test9():
     a = A(username='zoom', year='30')
     a.put()
     b = B.insert(a=a.id, name='lost')
+    b = B.insert(a=a.id, name='tttt')
     b = B(a=a.id, name='world')
     b.put()
+#    b = B(a=a, name='ttttt')
+#    b.put()
 
+#    print A.select_all()
+#    print B.select_all()
+#    print '-----------------'
     print list(a.reference(B))
-    print list(a.reference_a(B))
     print list(a.reference_a(B))
     print list(b.reference(A))
     c = b.foreign(A)
