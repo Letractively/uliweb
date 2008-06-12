@@ -179,6 +179,37 @@ def test8():
     
     print A.select_all(order=lambda x: [x.username, x.year])
 
+def test9():
+#    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
+    set_auto_bind(True)
+    set_auto_migirate(True)
+    set_debug(True)
+    db = get_connection('sqlite')
+    db.create()
+
+    class A(Model):
+        username = Field(str, max_length=20)
+        year = Field(int)
+
+    class B(Model):
+        a = Reference(A)
+        name = Field(str)
+        
+    a = A.insert(username='limodou', year='35')
+    a = A(username='zoom', year='30')
+    a.put()
+    b = B.insert(a=a.id, name='lost')
+    b = B(a=a.id, name='world')
+    b.put()
+
+    print list(a.reference(B))
+    print list(a.reference_a(B))
+    print list(a.reference_a(B))
+    print list(b.reference(A))
+    print b.foreign(A)
+#    print list(db.select((B & A, [B.keys(), A.keys()])))
+#    print list(db.select((A << B, [A.keys(), B.keys()])))
+
 def clear_other():
     import decimal
     db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
@@ -189,4 +220,4 @@ def clear_other():
     Other.delete_all()
     
 if __name__ == '__main__':
-    test8()
+    test9()

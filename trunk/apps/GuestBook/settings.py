@@ -1,7 +1,9 @@
 from utils.plugin import plugin
 
-connection = {'connection':'sqlite://database.db'}
-ORM_DEBUG = True
+#connection = {'connection':'sqlite://database.db'}
+connection = {'connection':'mysql://root:limodou@localhost/test'}
+
+DEBUG_LOG = True
 
 @plugin('prepare_template_env')
 def prepare_template_env(env):
@@ -11,7 +13,7 @@ def prepare_template_env(env):
 @plugin('startup')
 def startup(application, config, *args):
     from utils import orm
-    orm.get_connection(**connection)
+    orm.set_debug_log(DEBUG_LOG)
     orm.set_auto_bind(True)
     orm.set_auto_migirate(True)
-    orm.set_debug(ORM_DEBUG)
+    orm.get_connection(**connection)
