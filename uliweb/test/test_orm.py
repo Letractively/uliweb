@@ -181,15 +181,16 @@ def test8():
 
 def test9():
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
+    set_debug_log(False)
     set_auto_bind(True)
     set_auto_migirate(True)
-    set_debug(True)
     db = get_connection('sqlite')
     db.create()
 
     class A(Model):
         username = Field(str, max_length=20)
         year = Field(int)
+        file = Field(file)
 
     class B(Model):
         a = Reference(A)
@@ -206,7 +207,11 @@ def test9():
     print list(a.reference_a(B))
     print list(a.reference_a(B))
     print list(b.reference(A))
-    print b.foreign(A)
+    c = b.foreign(A)
+    print c
+    c.username += '_fix'
+    c.put()
+    print c
 #    print list(db.select((B & A, [B.keys(), A.keys()])))
 #    print list(db.select((A << B, [A.keys(), B.keys()])))
 
