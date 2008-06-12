@@ -1,7 +1,7 @@
 from utils.plugin import plugin
 
-#connection = {'connection':'sqlite://database.db'}
-connection = {'connection':'mysql://root:limodou@localhost/test'}
+connection = {'connection':'sqlite://database.db'}
+#connection = {'connection':'mysql://root:limodou@localhost/test'}
 
 DEBUG_LOG = True
 
