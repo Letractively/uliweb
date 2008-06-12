@@ -7,13 +7,13 @@ import sys
 sys.path.insert(0, '..')
 
 __all__ = ['Field', 'get_connection', 'Model', 'migirate_table',
-    'set_auto_bind', 'set_auto_migirate', 'Reference',
+    'set_auto_bind', 'set_auto_migirate', 'set_debug_log', 'Reference',
     'ReversedKeyException']
 
 __default_connection__ = None  #global connection instance
 __auto_bind__ = False
 __auto_migirate__ = False
-__DEBUG__ = False
+__debug_log__ = None
 
 import re
 import geniusql
@@ -24,6 +24,7 @@ import threading
 r_spec = re.compile('(?P<spec>.*?)://(?:(?P<user>.*?):(?P<passwd>.*?)@)?(?:(?P<url>.*?)(?:\?(?P<arguments>.*))?)?$')
 
 class ReversedKeyException(Exception):pass
+class ModelInstanceException(Exception):pass
 
 def set_auto_bind(flag):
     global __auto_bind__
@@ -33,9 +34,9 @@ def set_auto_migirate(flag):
     global __auto_migirate__
     __auto_migirate__ = flag
     
-def set_debug(flag):
-    global __DEBUG__
-    __DEBUG__ = flag
+def set_debug_log(log):
+    global __debug_log__
+    __debug_log__ = log
 
 def get_connection(connection='', default=True, **args):
     if default:
@@ -46,6 +47,9 @@ def get_connection(connection='', default=True, **args):
     else:
         db = DB(connection, **args)
         return db
+
+def _default_sql_log(message):
+    sys.stdout.write("[Debug] SQL -- %s\n" % message)
 
 def DB(connection='', **args):
     """
@@ -109,17 +113,13 @@ def DB(connection='', **args):
     db._schema = db.schema()
     db._schema.create()
     
-#    def log(message, self=db):
-#        import logging
-#        handler = logging.StreamHandler()
-#        _logger = logging.getLogger('werkzeug')
-#        _logger.addHandler(handler)
-#        if __DEBUG__:
-#            _logger.setLevel(logging.DEBUG)
-#            _logger.debug(message)
-#    
-#    setattr(db, 'log', log)
-#    
+    if __debug_log__:
+        if __debug_log__ is True:
+            log = _default_sql_log
+        else:
+            log = __debug_log__
+        setattr(db, 'log', log)
+        
     return db
 
 class Field(object):
@@ -163,12 +163,13 @@ class Reference(Field):
         return '<Reference %s %r>' % (self.tablename, self.ref_field)
   
 def is_reversed(f):
-    if f in ['add_index', 'add_reference', 'bind', 'create', 'created', 
-        'db', 'delete', 'delete_all', 'drop', 'drop_primary', 'fields', 
-        'fields_list', 'id_clause', 'insert', 'is_existed', 'keys', 
-        'rename', 'save', 'save_all', 'schema', 'select', 'select_all', 
-        'set_primary', 'set_tablename', 'table', 'tablename', 'put',
-        'dict', 'get', 'remove', 'filter']:
+#    if f in ['add_index', 'add_reference', 'bind', 'create', 'created', 
+#        'db', 'delete', 'delete_all', 'drop', 'drop_primary', 'fields', 
+#        'fields_list', 'id_clause', 'insert', 'is_existed', 'keys', 
+#        'rename', 'save', 'save_all', 'schema', 'select', 'select_all', 
+#        'set_primary', 'set_tablename', 'table', 'tablename', 'put',
+#        'dict', 'get', 'remove', 'filter']:
+    if f in ['put', 'dict', 'reference', 'foreign'] or f.startswith('reference_'):
         return True
     else:
         return False
@@ -286,7 +287,74 @@ class Model(object):
             else:
                 self.table.save(**d)
             self._set_saved()
+            
+    def __getattr__(self, name):
+        if name.startswith('reference_'):
+            b_id = name[10:]
+            def _f(b, restriction=None, order=None, limit=None, self=self, b_id=b_id, **kwargs):
+                return self._reference(b, b_id=b_id, restriction=restriction, 
+                    order=order, limit=limit, **kwargs)
+            setattr(self, name, _f)
+            return _f
+        else:
+            raise AttributeError, 'Name %s does not exist' % name
         
+    def foreign(self, b):
+        r = self._reference(b, None)
+        if r:
+            return r.next()
+    
+    def reference(self, b, restriction=None, order=None, limit=None, **kwargs):
+        return self._reference(b, None, restriction, order, limit, **kwargs)
+    
+    def _reference(self, b, b_id=None, restriction=None, order=None, limit=None, **kwargs):
+        from geniusql import logic
+        condition = None
+        if restriction:
+            condition = logic.Expression(restriction)
+        if not issubclass(b, Model):
+            raise ModelInstanceException("First argument must be Model class")
+        #find reference between a and b
+        b_id = b_id
+        if not b_id:
+            c = None
+            ref_flag = None
+            #B -> A (B has a reference to A)
+            for k, v in b.table.references.items():
+                if v[1] == self.tablename:
+                    b_id = v[0]
+                    ref_flag = 'B->A'
+                    break
+            #A -> B (A has a reference to B)
+            if not ref_flag:
+                for k, v in self.table.references.items():
+                    if v[1] == b.tablename:
+                        b_id = v[2]
+                        ref_flag = 'A->B'
+                        break
+            
+        if b_id:
+            d = {b_id:self.id}
+            c = logic.filter(**d)
+            if condition:
+                condition = condition + c
+            else:
+                condition = c
+            cls = b
+            for obj in cls.table._select_lazy(condition, order, limit, **kwargs):
+                o = cls(**obj)
+                o._set_saved()
+                yield o
+        else:
+            yield []
+
+    def __repr__(self):
+        s = []
+        for k, v in self.fields_list:
+            s.append('%r:%r' % (k, getattr(self, k, None)))
+        return ('<%s {' % self.__class__.__name__) + ','.join(s) + '}>'
+           
+    #classmethod========================================================
     @classmethod
     def remove(cls, obj):
         cls.table.delete(** obj.dict())
@@ -327,7 +395,7 @@ class Model(object):
             return True
         except geniusql.errors.MappingError:
             return False
-
+    
     @classmethod
     def create(cls, force=False, migirate=False):
         cls._c_lock.acquire()
@@ -359,12 +427,6 @@ class Model(object):
             o._set_saved()
             yield o
             
-    def __repr__(self):
-        s = []
-        for k, v in self.fields_list:
-            s.append('%r:%r' % (k, getattr(self, k, None)))
-        return ('<%s {' % self.__class__.__name__) + ','.join(s) + '}>'
-            
 def migirate_table(table, schema):
     def compare_column(a, b):
         return ((a.pytype is b.pytype) and (a.dbtype.__class__.__name__ == b.dbtype.__class__.__name__)
@@ -383,25 +445,26 @@ def migirate_table(table, schema):
         del t[k]
     
 if __name__ == '__main__':
+    set_debug_log(True)
+    set_auto_bind(True)         #auto bind table to db and schema
+    set_auto_migirate(True)     #if you changed model, then automatically change the table
+
     db = get_connection('sqlite')
     db.create()
-    set_auto_bind(True)
-    set_auto_migirate(True)
-    set_debug(True)
     
     class Test(Model):
         username = Field(str)
         year = Field(int)
     
-    Test.insert(username='limodou')
+    Test.insert(username='limodou') #use nomally insert
     Test.insert(username='xxxxxxx')
+    print list(Test.filter())       #filter will return a generator of Test instance
+    t = Test(username='zoom', year=30)  #or create an table instance
+    t.put()         #save it
     print list(Test.filter())
-    t = Test(username='zoom', year=30)
-    t.put()
+    Test.remove(t)  #remove an object from table
     print list(Test.filter())
-    Test.remove(t)
-    print list(Test.filter())
-    t = Test.get(username='limodou')
+    t = Test.get(username='limodou')    #get a single object
     print t
     
 #    class Test(Model):
