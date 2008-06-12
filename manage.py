@@ -29,7 +29,7 @@ def make_app(appname=''):
                 print >>fp, "from frameworks.SimpleFrame import expose"
             fp.close()
             
-def export(outputdir=''):
+def export(outputdir='', withsql=('n', True)):
     """
     Export Uliweb to a directory.
     """
@@ -69,7 +69,10 @@ def export(outputdir=''):
                         continue
                     shutil.copy2(fpath, dd)
     
-    copy_dir(['uliweb'], outputdir)
+    dirs = ['uliweb']
+    if withsql:
+        dirs.append('geniusql')
+    copy_dir(dirs, outputdir)
         
 #def make_shell():
 #    from shorty import models, utils
