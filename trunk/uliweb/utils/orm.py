@@ -253,6 +253,8 @@ class Model(object):
         self.id = None
         self._old_values = {}
         for k, v in kwargs.items():
+            if isinstance(v, Model):
+                v = v.id
             setattr(self, k, v)
         
     def _set_saved(self):
@@ -303,7 +305,10 @@ class Model(object):
     def foreign(self, b):
         r = self._reference(b, None)
         if r:
-            return r.next()
+            try:
+                return r.next()
+            except StopIteration:
+                return None
     
     def reference(self, b, restriction=None, order=None, limit=None, **kwargs):
         return self._reference(b, None, restriction, order, limit, **kwargs)
@@ -317,13 +322,15 @@ class Model(object):
             raise ModelInstanceException("First argument must be Model class")
         #find reference between a and b
         b_id = b_id
+        ref_flag = None
         if not b_id:
             c = None
-            ref_flag = None
+            d = {}
             #B -> A (B has a reference to A)
             for k, v in b.table.references.items():
                 if v[1] == self.tablename:
                     b_id = v[0]
+                    d = {b_id:self.id}
                     ref_flag = 'B->A'
                     break
             #A -> B (A has a reference to B)
@@ -331,11 +338,13 @@ class Model(object):
                 for k, v in self.table.references.items():
                     if v[1] == b.tablename:
                         b_id = v[2]
+                        d = {b_id:getattr(self, v[0], None)}
                         ref_flag = 'A->B'
                         break
+        else:
+            d = {b_id:self.id}
             
         if b_id:
-            d = {b_id:self.id}
             c = logic.filter(**d)
             if condition:
                 condition = condition + c
@@ -347,7 +356,7 @@ class Model(object):
                 o._set_saved()
                 yield o
         else:
-            yield []
+            raise StopIteration
 
     def __repr__(self):
         s = []
