@@ -167,30 +167,8 @@ class SQLStorage(dict):
         self[key] = value
     def __repr__(self): return '<SQLStorage ' + dict.__repr__(self) + '>'
 
-#class Reference(Field):
-#    def __init__(self, tablename, ref_field='id'):
-#        if issubclass(tablename, Model):
-#            tablename = tablename.tablename
-#        elif isinstance(tablename, geniusql.Table):
-#            tablename = tablename.name
-#        self.tablename = tablename
-#        self.ref_field = ref_field
-#
-#    def create(self, schema):
-#        self.column = schema.column(int)
-#        return self.column
-#
-#    def __repr__(self):
-#        return '<Reference %s %r>' % (self.tablename, self.ref_field)
-  
 def check_reserved_word(f):
-#    if f in ['add_index', 'add_reference', 'bind', 'create', 'created', 
-#        'db', 'delete', 'delete_all', 'drop', 'drop_primary', 'fields', 
-#        'fields_list', 'id_clause', 'insert', 'is_existed', 'keys', 
-#        'rename', 'save', 'save_all', 'schema', 'select', 'select_all', 
-#        'set_primary', 'set_tablename', 'table', 'tablename', 'put',
-#        'dict', 'get', 'remove', 'filter']:
-    if f in ['put', 'dict', 'reference', 'foreign'] or f.startswith('reference_') or f in dir(Model):
+    if f in ['put', 'save'] or f in dir(Model):
         raise ReservedWordError(
             "Cannot define property using reserved word '%s'. " % f
             )

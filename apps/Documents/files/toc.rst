@@ -23,6 +23,7 @@ Uliweb快速入门(Quick Tutorial)
 -------------------------------
 
 * `Hello, Uliweb(Your First web app with Uliweb) <{{= index('hello_uliweb') }}>`_ `English <{{= index('hello_uliweb', 'en') }}>`_
+* `迷你留言薄(Mini GuestBook) <{{= index('guestbook') }}>`_
 * 模板和视图(Views and Templates)
 * 快速构建博客(Build a weblog in minutes)
 * 用CSS美化你的博客(CSS Artwork for your weblog)
