@@ -28,3 +28,13 @@ def new_comment():
             message = "There is something wrong! Please fix them."
             return {'form':form.html(request.params, data, py=False), 'message':message}
     
+@expose('/guestbook/delete/<id>')
+def del_comment(id):
+    from models import Note
+
+    n = Note.get(int(id))
+    if n:
+        n.delete()
+        redirect(url_for('%s.views.guestbook' % request.appname))
+    else:
+        error("No such record [%s] existed" % id)
