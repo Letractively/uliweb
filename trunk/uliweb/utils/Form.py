@@ -9,6 +9,22 @@ def capitalize(s):
     t = s.split('_')
     return ' '.join([x.capitalize() for x in t])
 
+class D(dict):
+    def __getattr__(self, key): 
+        try: 
+            return self[key]
+        except KeyError, k: 
+            return None
+        
+    def __setattr__(self, key, value): 
+        self[key] = value
+        
+    def __delattr__(self, key):
+        try: 
+            del self[key]
+        except KeyError, k: 
+            raise AttributeError, k
+
 ###############################################################
 # Validator
 ###############################################################
@@ -486,7 +502,7 @@ class Form(object):
             new_data[field_name] = field.get_data(all_data)
 
         #validate and gather the result
-        result = {}
+        result = D({})
         for field_name, field in self.fields.items():
             flag, value = field.validate(new_data[field_name], new_data)
             if not flag:
