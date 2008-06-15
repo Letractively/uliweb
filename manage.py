@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import sys, os
 
-sys.path.insert(0, '.')
-sys.path.insert(0, 'apps')
-sys.path.insert(0, 'uliweb')
+path = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(path, 'apps'))
+sys.path.insert(0, os.path.join(path, 'uliweb'))
 
 from werkzeug import script
 
-apps_dir = os.path.join(os.path.dirname(__file__), 'apps')
+apps_dir = os.path.join(path, 'apps')
 
 def make_application():
     from frameworks import SimpleFrame
