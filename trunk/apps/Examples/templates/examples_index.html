@@ -37,5 +37,9 @@
     <td class="title"><a href="{{= url_for('%s.views.examples_cookie' % request.appname) }}">Cookie测试</a></td>
     <td class="description">第一次将显示无cookie，刷新页面，第二次将存在cookie。</td>
   </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('Post.views.post') }}">简单的表单测试</a></td>
+    <td class="description">可以用来渲染reStructuredText文本并显示。</td>
+  </tr>
 </tbody>
 </table>
