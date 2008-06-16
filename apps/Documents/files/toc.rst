@@ -16,7 +16,7 @@ pass
 
 * `系统需求(Requirements) <{{= index('requirements') }}>`_
 * `安装Uliweb(Install Uliweb) <{{= index('installation') }}>`_
-* 从之前版本升级(Updating from a Previous Version)
+* `版本升级(Update) <{{= index('update') }}>`_
 * 修改配置文件(Configure Uliweb)
 
 Uliweb快速入门(Quick Tutorial)
@@ -40,6 +40,7 @@ Uliweb快速入门(Quick Tutorial)
 * 使用数据库(Using Database in Uliweb)
 * 开发工具(Tools)
 * `部署指南(Deployment Guide) <{{= index('deployment') }}>`_
+* `manage.py使用指南(manage.py User Guide) <{{= index('manage_guide') }}>`_
 
 高级应用(Advanced Topics)
 -----------------------------
