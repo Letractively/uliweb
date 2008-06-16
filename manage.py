@@ -31,8 +31,35 @@ def make_app(appname=''):
                 print >>fp, """def index():
     return '<h1>Hello, Uliweb</h1>'"""
             fp.close()
+
+#copy dirs
+def _copy_dir(d, dst, verbose):
+    import shutil
+
+    for f in d:
+        if not os.path.exists(f):
+            if verbose:
+                sys.stderr.write("Warn: %s does not exist, SKIP\n" % f)
+            continue
+        if verbose:
+            sys.stdout.write("Info: Processing %s...\n" % f)
+        dd = os.path.join(dst, f)
+        if not os.path.exists(dd):
+            os.makedirs(dd)
+        for r in os.listdir(f):
+            if r in ['.svn']:
+                continue
+            fpath = os.path.join(f, r)
+            if os.path.isdir(fpath):
+                _copy_dir([fpath], dst, verbose)
+            else:
+                ext = os.path.splitext(fpath)[1]
+                if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
+                    continue
+                shutil.copy2(fpath, dd)
             
-def export(outputdir='', withsql=('n', True)):
+            
+def export(outputdir=('o', ''), withsql=('n', True), verbose=('v', False)):
     """
     Export Uliweb to a directory.
     """
@@ -46,7 +73,7 @@ def export(outputdir='', withsql=('n', True)):
         os.makedirs(outputdir)
         
     #copy files
-    for f in ['app.yaml', 'gae_handler.py', 'manage.py', 'wsgi_handler.py']:
+    for f in ['app.yaml', 'gae_handler.py', 'manage.py', 'wsgi_handler.wsgi']:
         path = os.path.join(outputdir, f)
         if f == 'app.yaml':
             if not os.path.exists(path):
@@ -54,29 +81,73 @@ def export(outputdir='', withsql=('n', True)):
         else:
             shutil.copy2(f, path)
         
-    #copy dirs
-    def copy_dir(d, dst):
-        for f in d:
-            dd = os.path.join(dst, f)
-            if not os.path.exists(dd):
-                os.makedirs(dd)
-            for r in os.listdir(f):
-                if r in ['.svn']:
-                    continue
-                fpath = os.path.join(f, r)
-                if os.path.isdir(fpath):
-                    copy_dir([fpath], dst)
-                else:
-                    ext = os.path.splitext(fpath)[1]
-                    if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
-                        continue
-                    shutil.copy2(fpath, dd)
-    
     dirs = ['uliweb']
     if withsql:
         dirs.append('geniusql')
-    copy_dir(dirs, outputdir)
+    _copy_dir(dirs, outputdir, verbose)
         
+def exportapp(outputdir=('o', ''), appname=('a', ''), verbose=('v', False)):
+    """
+    Export a app to a outpudir's apps directory.
+    """
+    if not outputdir:
+        sys.stderr.write("Error: outputdir should be a directory and can't be empty")
+        sys.exit(0)
+        
+    if not appname:
+        sys.stderr.write("Error: appname should not be empty")
+        sys.exit(0)
+        
+    outdir = os.path.join(outputdir, 'apps')
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+        
+    for f in (os.path.join(outdir, x) for x in ['settings.py', '__init__.py']):
+        if not os.path.exists(f):
+            fp = file(f, 'wb')
+            fp.close()
+    
+    dirs = [os.path.join('apps', appname)]
+    _copy_dir(dirs, outputdir, verbose)
+   
+def _copy_dir2(d, dst, verbose=False):
+    import shutil
+
+    for f in d:
+        if not os.path.exists(f):
+            if verbose:
+                sys.stderr.write("Warn: %s does not exist, SKIP\n" % f)
+            continue
+        if verbose:
+            sys.stdout.write("Info: Processing %s...\n" % f)
+        for r in os.listdir(f):
+            if r in ['.svn']:
+                continue
+            fpath = os.path.join(f, r)
+            if os.path.isdir(fpath):
+                dd = os.path.join(dst, r)
+                if not os.path.exists(dd):
+                    os.makedirs(dd)
+                _copy_dir([fpath], dd, verbose)
+            else:
+                ext = os.path.splitext(fpath)[1]
+                if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
+                    continue
+                shutil.copy2(fpath, dst)
+
+def exportstatic(outputdir=('o', ''), verbose=('v', False)):
+    """
+    Export all installed apps' static directory to outputdir directory.
+    """
+    if not outputdir:
+        sys.stderr.write("Error: outputdir should be a directory and can't be empty")
+        sys.exit(0)
+
+    application = make_application()
+    apps = application.apps
+    dirs = [os.path.join('apps', appname, 'static') for appname in apps]
+    _copy_dir2(dirs, outputdir, verbose)
+
 #def make_shell():
 #    from shorty import models, utils
 #    application = make_app()
@@ -87,6 +158,8 @@ if __name__ == '__main__':
         port=8000, use_debugger=True)
     action_makeapp = make_app
     action_export = export
+    action_exportapp = exportapp
+    action_exportstatic = exportstatic
     #action_shell = script.make_shell(make_shell)
     #action_initdb = lambda: make_app().init_database()
 
