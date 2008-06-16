@@ -1,4 +1,4 @@
-from frameworks.SimpleFrame import expose
+from uliweb.core.SimpleFrame import expose
 from modules.menu import menu
 
 def __begin__():

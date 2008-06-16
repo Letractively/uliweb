@@ -11,7 +11,7 @@ from werkzeug import script
 apps_dir = os.path.join(path, 'apps')
 
 def make_application():
-    from frameworks import SimpleFrame
+    from uliweb.core import SimpleFrame
     return SimpleFrame.Dispatcher(apps_dir=apps_dir)
 
 def make_app(appname=''):
@@ -27,7 +27,7 @@ def make_app(appname=''):
             fp = file(f, 'wb')
             if f.endswith('views.py'):
                 print >>fp, "#coding=utf-8"
-                print >>fp, "from frameworks.SimpleFrame import expose\n"
+                print >>fp, "from uliweb.core.SimpleFrame import expose\n"
                 print >>fp, "@expose('/')"
                 print >>fp, """def index():
     return '<h1>Hello, Uliweb</h1>'"""

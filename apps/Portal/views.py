@@ -1,4 +1,4 @@
-from frameworks.SimpleFrame import expose
+from uliweb.core.SimpleFrame import expose
 from modules.menu import menu
 
 def __begin__():
@@ -8,7 +8,7 @@ def __begin__():
 def index():
     return {}
 
-from frameworks.SimpleFrame import static_serve
+from uliweb.core.SimpleFrame import static_serve
 @expose('/static/<regex(".*$"):filename>')
 def static(filename):
     return static_serve(request, filename)

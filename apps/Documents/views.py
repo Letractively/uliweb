@@ -1,4 +1,4 @@
-from frameworks.SimpleFrame import expose
+from uliweb.core.SimpleFrame import expose
 from modules.menu import menu
 import os
 
@@ -10,8 +10,8 @@ def documents():
     return _show('toc.rst', env)
 
 def _show(filename, env, render=True):
-    from utils.template import template
-    from utils.rst import to_html
+    from uliweb.core.template import template
+    from uliweb.utils.rst import to_html
     content = file(env.get_file(filename)).read()
     if render:
         content = to_html(template(content, env=env))

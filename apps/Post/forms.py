@@ -1,4 +1,4 @@
-from utils import Form
+from uliweb.core import Form
 
 Form.Form.layout_class = Form.CSSLayout
 

@@ -1,5 +1,5 @@
 #coding=utf-8
-from frameworks.SimpleFrame import expose
+from uliweb.core.SimpleFrame import expose
 
 @expose('/post')
 def post():
