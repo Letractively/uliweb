@@ -30,18 +30,15 @@ def _make_text_block(name, content, content_type=None):
 
 def format_iso8601(obj):
     """Format a datetime object for iso8601"""
-    return obj.strftime('%Y-%d-%mT%H:%M:%SZ')
+    return obj.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
 class AtomFeed(object):
-    """
-    A helper class that creates ATOM feeds.
-    """
+    """A helper class that creates Atom feeds."""
     default_generator = ('Werkzeug', None, None)
 
     def __init__(self, title=None, entries=None, **kwargs):
-        """
-        Create an atom feed.
+        """Create an Atom feed.
 
         :Parameters:
           title
@@ -96,7 +93,7 @@ class AtomFeed(object):
         Everywhere where a list is demanded, any iterable can be used.
         """
         self.title = title
-        self.title_type = kwargs.get('title_type')
+        self.title_type = kwargs.get('title_type', 'text')
         self.url = kwargs.get('url')
         self.feed_url = kwargs.get('feed_url', self.url)
         self.id = kwargs.get('id', self.feed_url)
@@ -107,7 +104,7 @@ class AtomFeed(object):
         self.rights = kwargs.get('rights')
         self.rights_type = kwargs.get('rights_type')
         self.subtitle = kwargs.get('subtitle')
-        self.subtitle_type = kwargs.get('subtitle_type')
+        self.subtitle_type = kwargs.get('subtitle_type', 'text')
         self.generator = kwargs.get('generator')
         if self.generator is None:
             self.generator = self.default_generator
@@ -134,6 +131,7 @@ class AtomFeed(object):
         if len(args) == 1 and not kwargs and isinstance(args[0], FeedEntry):
             self.entries.append(args[0])
         else:
+            kwargs['feed_url'] = self.feed_url
             self.entries.append(FeedEntry(*args, **kwargs))
 
     def __repr__(self):
@@ -151,7 +149,7 @@ class AtomFeed(object):
                 self.author = ({'name': u'unbekannter Autor'},)
 
         if not self.updated:
-            dates = sorted(entry.updated for entry in self.entries)
+            dates = sorted([entry.updated for entry in self.entries])
             self.updated = dates and dates[-1] or datetime.utcnow()
 
         yield u'<?xml version="1.0" encoding="utf-8"?>\n'
@@ -166,7 +164,7 @@ class AtomFeed(object):
                 escape(self.feed_url, True)
         for link in self.links:
             yield u'  <link %s/>\n' % ''.join('%s="%s" ' % \
-                (k, escape(link[k], True)) for k in link)
+                [(k, escape(link[k], True)) for k in link])
         for author in self.author:
             yield u'  <author>\n'
             yield u'    <name>%s</name>\n' % escape(author['name'])
@@ -219,13 +217,10 @@ class AtomFeed(object):
 
 
 class FeedEntry(object):
-    """
-    Represents a single entry in a feed.
-    """
+    """Represents a single entry in a feed."""
 
-    def __init__(self, title=None, content=None, **kwargs):
-        """
-        Holds an atom feed entry.
+    def __init__(self, title=None, content=None, feed_url=None, **kwargs):
+        """Holds an Atom feed entry.
 
         :Parameters:
           title
@@ -278,7 +273,7 @@ class FeedEntry(object):
         Everywhere where a list is demanded, any iterable can be used.
         """
         self.title = title
-        self.title_type = kwargs.get('title_type', 'html')
+        self.title_type = kwargs.get('title_type', 'text')
         self.content = content
         self.content_type = kwargs.get('content_type', 'html')
         self.url = kwargs.get('url')
@@ -290,7 +285,7 @@ class FeedEntry(object):
         self.published = kwargs.get('published')
         self.rights = kwargs.get('rights')
         self.links = kwargs.get('links', [])
-        self.xml_base = kwargs.get('xml_base', self.url)
+        self.xml_base = kwargs.get('xml_base', feed_url)
 
         if not hasattr(self.author, '__iter__') \
            or isinstance(self.author, (basestring, dict)):
@@ -336,7 +331,7 @@ class FeedEntry(object):
             yield u'  </author>\n'
         for link in self.links:
             yield u'  <link %s/>\n' % ''.join('%s="%s" ' % \
-                (k, escape(link[k], True)) for k in link)
+                [(k, escape(link[k], True)) for k in link])
         if self.summary:
             yield u'  ' + _make_text_block('summary', self.summary,
                                            self.summary_type)

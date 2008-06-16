@@ -6,7 +6,7 @@ r"""
     This template engine recognizes ASP/PHP like blocks and executes the code
     in them::
 
-        t = Template('<% for u in users %>${u['username']}\n<% endfor %>')
+        t = Template('<% for u in users %>${u["username"]}\n<% endfor %>')
         t.render(users=[{'username': 'John'},
                         {'username': 'Jane'}])
 
@@ -115,6 +115,14 @@ r"""
         <% endif %>
 
 
+    Python 2.3 Compatibility
+    ------------------------
+
+    Because of limitations in Python 2.3 it's impossible to achieve the
+    semi-silent variable lookup fallback.  If a template relies on undefined
+    variables it won't execute under Python 2.3.
+
+
     :copyright: 2006-2008 by Armin Ronacher, Ka-Ping Yee.
     :license: BSD License.
 """
@@ -126,6 +134,23 @@ from compiler.consts import SC_LOCAL, SC_GLOBAL, SC_FREE, SC_CELL
 from compiler.pycodegen import ModuleCodeGenerator
 from tokenize import PseudoToken
 from werkzeug import utils
+from werkzeug._internal import _decode_unicode
+
+# Anything older than Python 2.4 
+if sys.version_info < (2, 4):
+    class AstMangler(object):
+
+        def __getattr__(self, key):
+            class_ = getattr(_ast, key)
+            def wrapper(*args, **kw):
+                lineno = kw.pop('lineno', None)
+                obj = class_(*args, **kw)
+                obj.lineno = lineno
+                return obj
+            return wrapper
+
+    _ast = ast
+    ast = AstMangler()
 
 
 # Copyright notice: The `parse_data` method uses the string interpolation
@@ -134,9 +159,8 @@ from werkzeug import utils
 # .. _ltipl20.py: http://lfw.org/python/Itpl20.py
 
 
-token_re = re.compile('%s|%s|%s(?i)' % (
-    r'[uU]?[rR]?"""([^"\\]*(?:\\.[^"\\]*)*)"""',
-    r"[uU]?[rR]?'''([^'\\]*(?:\\.[^'\\]*)*)'''",
+token_re = re.compile('%s|%s(?s)' % (
+    r'[uU]?[rR]?("""|\'\'\')((?<!\\)\\\1|.)*?\1',
     PseudoToken
 ))
 directive_re = re.compile(r'(?<!\\)<%(?:(#)|(py(?:thon)?\b)|'
@@ -322,7 +346,7 @@ class Parser(object):
 
         def write_data(value):
             if value:
-                nodes.append(ast.Const(value, lineno))
+                nodes.append(ast.Const(value, lineno=lineno))
                 return value.count('\n')
             return 0
 
@@ -390,7 +414,7 @@ class Context(object):
 
     def to_unicode(self, value):
         if isinstance(value, str):
-            return value.decode(self.encoding, self.errors)
+            return _decode_unicode(value, self.encoding, self.errors)
         return unicode(value)
 
     def get_value(self, as_unicode=True):
@@ -427,8 +451,7 @@ class TemplateCodeGenerator(ModuleCodeGenerator):
 
 
 class Template(object):
-    """
-    Represents a simple text based template.  It's a good idea to load such
+    """Represents a simple text based template.  It's a good idea to load such
     templates from files on the file system to get better debug output.
     """
     default_context = {
@@ -441,7 +464,9 @@ class Template(object):
     def __init__(self, source, filename='<template>', encoding='utf-8',
                  errors='strict', unicode_mode=True):
         if isinstance(source, str):
-            source = source.decode(encoding, errors)
+            source = _decode_unicode(source, encoding, errors)
+        if isinstance(filename, unicode):
+            filename = filename.encode('utf-8')
         node = Parser(tokenize(u'\n'.join(source.splitlines()),
                                filename), filename).parse()
         self.code = TemplateCodeGenerator(node, filename).getCode()
@@ -458,7 +483,7 @@ class Template(object):
             f = open(file, 'r')
             close = True
         try:
-            data = f.read().decode(encoding, errors)
+            data = _decode_unicode(f.read(), encoding, errors)
         finally:
             if close:
                 f.close()
@@ -467,16 +492,19 @@ class Template(object):
     from_file = classmethod(from_file)
 
     def render(self, *args, **kwargs):
-        """
-        This function accepts either a dict or some keyword arguments which
+        """This function accepts either a dict or some keyword arguments which
         will then be the context the template is evaluated in.  The return
         value will be the rendered template.
         """
         ns = self.default_context.copy()
-        ns.update(*args, **kwargs)
+        ns.update(dict(*args, **kwargs))
         context = Context(ns, self.encoding, self.errors)
-        exec self.code in context.runtime, context
+        if sys.version_info < (2, 4):
+            exec self.code in context.runtime, ns
+        else:
+            exec self.code in context.runtime, context
         return context.get_value(self.unicode_mode)
 
     def substitute(self, *args, **kwargs):
+        """For API compatibility with `string.Template`."""
         return self.render(*args, **kwargs)

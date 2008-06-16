@@ -1,139 +1,186 @@
-HISTORY = {};
-HISTORY_POSITIONS = {};
+$(function() {
+  var sourceView = null;
 
-function changeTB() {
-  $('#interactive').slideToggle('fast');
-  $('#plain').slideToggle('fast');
-}
-
-function toggleFrameVars(num) {
-  $('#frame-' + num + ' .vars').slideToggle('fast');
-}
-
-function toggleInterpreter(num) {
-  $('#frame-' + num + ' .exec_code').slideToggle('fast', function() {
-    if ($(this).css('display') == 'block')
-      $('input.input', this).focus();
-  });
-}
-
-function toggleTableVars(num) {
-  $('#tvar-' + num + ' .vars').slideToggle('fast');
-}
-
-function getHistory(tb, frame) {
-  var key = tb + '||' + frame;
-  if (key in HISTORY)
-    var h = HISTORY[key];
-  else {
-    var h = HISTORY[key] = [''];
-    HISTORY_POSITIONS[key] = 0;
+  /**
+   * if we are in console mode, show the console.
+   */
+  if (CONSOLE_MODE && EVALEX) {
+    openShell(null, $('div.console div.inner').empty(), 0);
   }
-  return {
-    history:  h,
-    setPos: function(val) {
-      HISTORY_POSITIONS[key] = val;
-    },
-    getPos: function() {
-      return HISTORY_POSITIONS[key];
-    },
-    getCurrent: function() {
-      return h[HISTORY_POSITIONS[key]];
-    }
-  };
-}
 
-function addToHistory(tb, frame, value) {
-  var h = getHistory(tb, frame);
-  var tmp = h.history.pop();
-  h.history.push(value);
-  if (tmp != undefined)
-    h.history.push(tmp);
-  h.setPos(h.history.length - 1);
-}
+  $('div.traceback div.frame').each(function() {
+    var
+      target = $('pre', this)
+        .click(function() {
+          sourceButton.click();
+        }),
+      consoleNode = null, source = null,
+      frameID = this.id.substring(6);
 
-function backInHistory(tb, frame, input) {
-  var pos, h = getHistory(tb, frame);
-  if ((pos = h.getPos()) > 0)
-    h.setPos(pos - 1);
-  input.value = h.getCurrent();
-}
+    /**
+     * Add an interactive console to the frames
+     */
+    if (EVALEX)
+      $('<img src="./__debugger__?cmd=resource&f=console.png">')
+        .attr('title', 'Open an interactive python shell in this frame')
+        .click(function() {
+          consoleNode = openShell(consoleNode, target, frameID);
+          return false;
+        })
+        .prependTo(target);
 
-function forwardInHistory(tb, frame, input) {
-  var pos, h = getHistory(tb, frame);
-  if ((pos = h.getPos()) < h.history.length - 1)
-    h.setPos(pos + 1);
-  input.value = h.getCurrent();
-}
-
-function sendCommand(tb, frame, cmd, output) {
-  addToHistory(tb, frame, cmd);
-  $.get('__traceback__', {
-    tb:     tb,
-    frame:  frame,
-    code:   cmd + '\n'
-  }, function(data) {
-    var x = output.append($('<div>').text(data))[0];
-    x.scrollTop = x.scrollHeight;
-  });
-}
-
-function pasteIt() {
-  var info = $('#plain p.pastebininfo');
-  var orig = info.html();
-  info.html('<em>submitting traceback...</em>');
-
-  $.ajax({
-    type:     'POST',
-    url:      '__traceback__?pastetb=yes',
-    data:     $('#plain pre.plain').text(),
-    dataType: 'json',
-    error: function() {
-      alert('Submitting paste failed. Make sure you have a\n' +
-            'working internet connection.');
-      info.html(orig);
-    },
-    success: function(result) {
-      info.text('Submitted paste: ').append(
-        $('<a>').attr('href', result.url).text('#' + result.paste_id)
-      );
-    }
-  });
-}
-
-$(document).ready(function() {
-  $('.exec_code').hide();
-  $('.vars').hide();
-  $('.code .pre').hide();
-  $('.code .post').hide();
-
-  $('.exec_code').submit(function() {
-    sendCommand(this.tb.value, this.frame.value, this.cmd.value,
-                $('.output', this));
-    this.cmd.value = '';
-    return false;
+    /**
+     * Show sourcecode
+     */
+    var sourceButton = $('<img src="./__debugger__?cmd=resource&f=source.png">')
+      .attr('title', 'Display the sourcecode for this frame')
+      .click(function() {
+        if (!sourceView)
+          $('h2', sourceView =
+            $('<div class="box"><h2>View Source</h2><div class="sourceview">' +
+              '<table></table></div>')
+              .insertBefore('div.explanation'))
+            .css('cursor', 'pointer')
+            .click(function() {
+              sourceView.slideUp('fast');
+            });
+        $.get('./__debugger__', {cmd: 'source', frm: frameID}, function(data) {
+          $('table', sourceView)
+            .replaceWith(data);
+          if (!sourceView.is(':visible'))
+            sourceView.slideDown('fast', function() {
+              focusSourceBlock();
+            });
+          else
+            focusSourceBlock();
+        });
+        return false;
+      })
+      .prependTo(target);
   });
 
-  $('.code').click(function() {
-    $('.pre', $(this)).toggle();
-    $('.post', $(this)).toggle();
-  });
+  /**
+   * toggle traceback types on click.
+   */
+  $('h2.traceback').click(function() {
+    $(this).next().slideToggle('fast');
+    $('div.plain').slideToggle('fast');
+  }).css('cursor', 'pointer');
+  $('div.plain').hide();
 
-  $('.exec_code input.input').keypress(function(e) {
-    if (e.charCode == 100 && e.ctrlKey) {
-      $('.output', $(this).parent()).text('--- screen cleared ---');
+  /**
+   * Add extra info (this is here so that only users with JavaScript
+   * enabled see it.)
+   */
+  $('span.nojavascript')
+    .removeClass('nojavascript')
+    .text('To switch between the interactive traceback and the plaintext ' +
+          'one, you can click on the "Traceback" headline.  From the text ' +
+          'traceback you can also create a paste of it.  For code execution ' +
+          'mouse-over the frame you want to debug and click on the console ' +
+          'icon on the right side.');
+
+  /**
+   * Add the pastebin feature
+   */
+  $('div.plain form')
+    .submit(function() {
+      $('input[@type="submit"]', this).val('submitting...');
+      $.ajax({
+        dataType:     'json',
+        url:          './__debugger__',
+        data:         {tb: TRACEBACK, cmd: 'paste'},
+        success:      function(data) {
+          console.log(data);
+          $('div.plain span.pastemessage')
+            .removeClass('pastemessage')
+            .text('Paste created: ')
+            .append($('<a>#' + data.id + '</a>').attr('href', data.url));
+      }});
       return false;
-    }
-    else if (e.charCode == 0 && (e.keyCode == 38 || e.keyCode == 40)) {
-      var parent = $(this).parent();
-      var tb = $('input[@name="tb"]', parent).attr('value');
-      var frame = $('input[@name="frame"]', parent).attr('value');
-      if (e.keyCode == 38)
-        backInHistory(tb, frame, this);
-      else
-        forwardInHistory(tb, frame, this);
-      return false;
-    }
-    return true;
-  });
+    });
+
+  // if we have javascript we submit by ajax anyways, so no need for the
+  // not scaling textarea.
+  var plainTraceback = $('div.plain textarea');
+  plainTraceback.replaceWith($('<pre>').text(plainTraceback.text()));
 });
+
+
+/**
+ * Helper function for shell initialization
+ */
+function openShell(consoleNode, target, frameID) {
+  if (consoleNode)
+    return consoleNode.slideToggle('fast');
+  consoleNode = $('<pre class="console">')
+    .appendTo(target.parent())
+    .hide()
+  var historyPos = 0, history = [''];
+  var output = $('<div class="output">[console ready]</div>')
+    .appendTo(consoleNode);
+  var form = $('<form>&gt;&gt;&gt; </form>')
+    .submit(function() {
+      var cmd = command.val();
+      $.get('./__debugger__', {cmd: cmd, frm: frameID}, function(data) {
+        var tmp = $('<div>').html(data);
+        $('span.extended', tmp).each(function() {
+          var hidden = $(this).wrap('<span>').hide();
+          hidden
+            .parent()
+            .append($('<a href="#" class="toggle">&nbsp;&nbsp;</a>')
+              .click(function() {
+                hidden.toggle();
+                $(this).toggleClass('open')
+                return false;
+              }));
+        });
+        output.append(tmp);
+        command.focus();
+        var old = history.pop();
+        history.push(cmd);
+        if (typeof old != 'undefined')
+          history.push(old);
+        historyPos = history.length - 1;
+      });
+      command.val('');
+      return false;
+    }).
+    appendTo(consoleNode);
+
+  var command = $('<input type="text">')
+    .appendTo(form)
+    .keypress(function(e) {
+      if (e.charCode == 100 && e.ctrlKey) {
+        output.text('--- screen cleared ---');
+        return false;
+      }
+      else if (e.charCode == 0 && (e.keyCode == 38 || e.keyCode == 40)) {
+        if (e.keyCode == 38 && historyPos > 0)
+          historyPos--;
+        else if (e.keyCode == 40 && historyPos < history.length)
+          historyPos++;
+        command.val(history[historyPos]);
+        return false;
+      }
+    });
+    
+  return consoleNode.slideDown('fast', function() {
+    command.focus();
+  });
+}
+
+/**
+ * Focus the current block in the source view.
+ */
+function focusSourceBlock() {
+  var tmp, line = $('table.source tr.current');
+  for (var i = 0; i < 7; i++) {
+    tmp = line.prev();
+    if (!(tmp && tmp.is('.in-frame')))
+      break
+    line = tmp;
+  }
+  var container = $('div.sourceview')[0];
+  container.scrollTop = line.offset().top - container.offsetTop;
+}
