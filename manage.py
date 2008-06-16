@@ -14,6 +14,12 @@ def make_application():
     from uliweb.core import SimpleFrame
     return SimpleFrame.Dispatcher(apps_dir=apps_dir)
 
+def make_debug_application(debug=False):
+    def action(debug=debug):
+        from uliweb.core import SimpleFrame
+        return SimpleFrame.Dispatcher(apps_dir=apps_dir, debug=debug)
+    return action
+
 def make_app(appname=''):
     """create a new app according the appname parameter"""
     path = os.path.join(apps_dir, appname)
@@ -174,7 +180,7 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
 #    return locals()
 
 if __name__ == '__main__':
-    action_runserver = script.make_runserver(make_application, use_reloader=True, 
+    action_runserver = script.make_runserver(make_debug_application(True), use_reloader=True, 
         port=8000, use_debugger=True)
     action_makeapp = make_app
     action_export = export

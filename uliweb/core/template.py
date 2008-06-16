@@ -73,21 +73,12 @@ def get_templatefile(filename, dirs, default_template=None):
         if default_template:
             return default_template
 
-def template_file(filename, vars=None, env=None, dirs=None, default_template=None):
-    fname = get_templatefile(filename, dirs, default_template)
-    if not fname:
-        raise Exception, "Can't find the template %s" % filename
-    return template(file(fname).read(), vars, env, dirs)
-
-def template(text, vars=None, env=None, dirs=None, default_template=None):
-    vars = vars or {}
-    env = env or {}
+def render_text(text, vars=None, env=None, dirs=None, default_template=None):
     dirs = dirs or []
+
     if not isinstance(text, (str, unicode)):
         text = text.read()
-        
-    dirs = dirs or []
-
+    
     # check whether it extends a layout
     while 1:
         match = re_extend.search(text)
@@ -124,6 +115,25 @@ def template(text, vars=None, env=None, dirs=None, default_template=None):
     text = replace(re_html, text, lambda x: '\nout.write(%s,escape=False)\n' % repr(x[2:-2]))
     text = replace(re_strings, text, lambda x: x.replace('\n','\\n'))
     code = reindent(text)
+
+    return code
+
+def render_file(filename, vars=None, env=None, dirs=None, default_template=None):
+    fname = get_templatefile(filename, dirs, default_template)
+    if not fname:
+        raise Exception, "Can't find the template %s" % filename
+    return fname, render_text(file(fname).read(), vars, env, dirs, default_template)
+    
+def template_file(filename, vars=None, env=None, dirs=None, default_template=None):
+    vars = vars or {}
+    env = env or {}
+    fname, code = render_file(filename, vars, env, dirs, default_template)
+    return _run(code, vars, env, fname)
+
+def template(text, vars=None, env=None, dirs=None, default_template=None):
+    vars = vars or {}
+    env = env or {}
+    code = render_text(text, vars, env, dirs, default_template)
     return _run(code, vars, env)
 
 import StringIO
@@ -173,7 +183,7 @@ def cycle(*elements):
         for j in elements:
             yield j
             
-def _run(code, locals={}, env={}):
+def _run(code, locals={}, env={}, filename='template'):
     locals['out'] = out = Out()
     locals['Xml'] = out.noescape
     
@@ -202,7 +212,7 @@ def _run(code, locals={}, env={}):
     locals['Cycle'] = cycle
     
     if isinstance(code, (str, unicode)):
-        code = compile(code, 'file', 'exec')
+        code = compile(code, filename, 'exec')
     exec code in env, locals
     return out.getvalue()
 

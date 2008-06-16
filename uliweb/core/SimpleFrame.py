@@ -13,7 +13,7 @@ from werkzeug.routing import RequestRedirect
 
 from werkzeug import Local, LocalManager
 from werkzeug.routing import Map, Rule
-from uliweb.core.template import template_file, get_templatefile
+from uliweb.core import template
 from uliweb.core.storage import Storage
 from uliweb.core.plugin import *
 
@@ -101,9 +101,21 @@ def static_serve(request, filename):
             return return_file(f)
     raise NotFound()
 
+class Loader(object):
+    def __init__(self, tmpfilename, vars, env, dirs):
+        self.tmpfilename = tmpfilename
+        self.dirs = dirs
+        self.vars = vars
+        self.env = env
+        
+    def get_source(self, modname=''):
+        f, t = template.render_file(self.tmpfilename, self.vars, self.env, self.dirs)
+        return t
+        
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir=APPS_DIR):
+    def __init__(self, apps_dir=APPS_DIR, debug=False):
+        self.debug = debug
         if not Dispatcher.installed:
             self.init(apps_dir)
             callplugin('startup_installed', self, config, url_map)
@@ -180,10 +192,13 @@ class Dispatcher(object):
         env = self.get_template_env(env)
         if request:
             dirs = [os.path.join(self.apps_dir, request.appname, 'templates')] + dirs
-        return Response(template_file(templatefile, vars, env, dirs), content_type='text/html')
+        if self.debug:
+            env = env.copy()
+            env['__loader__'] = Loader(templatefile, vars, env, dirs)
+        return Response(template.template_file(templatefile, vars, env, dirs), content_type='text/html')
     
     def not_found(self, request, e):
-        tmp_file = get_templatefile('404'+config.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('404'+config.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
         else:
@@ -191,7 +206,7 @@ class Dispatcher(object):
         return response
     
     def internal_error(self, request, e):
-        tmp_file = get_templatefile('500'+config.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('500'+config.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
         else:
