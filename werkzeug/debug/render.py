@@ -17,7 +17,7 @@ from werkzeug.debug.util import Namespace
 
 def get_template(name):
     return Template.from_file(join(dirname(__file__), 'shared', name),
-                              unicode_mode=False, errors='ignore')
+                              unicode_mode=False)
 
 
 def load_resource(res):
