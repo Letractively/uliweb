@@ -33,17 +33,19 @@ def make_app(appname=''):
             fp.close()
 
 #copy dirs
-def _copy_dir(d, dst, verbose):
+def _copy_dir(d, dst, verbose, exact=False):
     import shutil
 
     for f in d:
         if not os.path.exists(f):
             if verbose:
-                sys.stderr.write("Warn: %s does not exist, SKIP\n" % f)
+                sys.stderr.write("Warn : %s does not exist, SKIP\n" % f)
             continue
         if verbose:
-            sys.stdout.write("Info: Processing %s...\n" % f)
+            sys.stdout.write("Info : Processing %s...\n" % f)
         dd = os.path.join(dst, f)
+        if exact:
+            shutil.rmtree(dd, True)
         if not os.path.exists(dd):
             os.makedirs(dd)
         for r in os.listdir(f):
@@ -59,7 +61,7 @@ def _copy_dir(d, dst, verbose):
                 shutil.copy2(fpath, dd)
             
             
-def export(outputdir=('o', ''), withsql=('n', True), verbose=('v', False)):
+def export(outputdir=('o', ''), withsql=('n', True), verbose=('v', False), exact=('e', False)):
     """
     Export Uliweb to a directory.
     """
@@ -84,7 +86,7 @@ def export(outputdir=('o', ''), withsql=('n', True), verbose=('v', False)):
     dirs = ['uliweb']
     if withsql:
         dirs.append('geniusql')
-    _copy_dir(dirs, outputdir, verbose)
+    _copy_dir(dirs, outputdir, verbose, exact)
         
 def exportapp(outputdir=('o', ''), appname=('a', ''), verbose=('v', False)):
     """
@@ -110,16 +112,22 @@ def exportapp(outputdir=('o', ''), appname=('a', ''), verbose=('v', False)):
     dirs = [os.path.join('apps', appname)]
     _copy_dir(dirs, outputdir, verbose)
    
-def _copy_dir2(d, dst, verbose=False):
+def _copy_dir2(d, dst, verbose=False, check=True):
     import shutil
+    
+    def _md5(filename):
+        import md5
+        a = md5.new()
+        a.update(file(filename, 'rb').read())
+        return a.digest()
 
     for f in d:
         if not os.path.exists(f):
             if verbose:
-                sys.stderr.write("Warn: %s does not exist, SKIP\n" % f)
+                sys.stderr.write("Warn : %s does not exist, SKIP\n" % f)
             continue
         if verbose:
-            sys.stdout.write("Info: Processing %s...\n" % f)
+            sys.stdout.write("Info : Processing %s...\n" % f)
         for r in os.listdir(f):
             if r in ['.svn']:
                 continue
@@ -128,14 +136,25 @@ def _copy_dir2(d, dst, verbose=False):
                 dd = os.path.join(dst, r)
                 if not os.path.exists(dd):
                     os.makedirs(dd)
-                _copy_dir([fpath], dd, verbose)
+                _copy_dir([fpath], dd, verbose, check)
             else:
                 ext = os.path.splitext(fpath)[1]
                 if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
                     continue
-                shutil.copy2(fpath, dst)
+                if check:
+                    df = os.path.join(dst, r)
+                    if os.path.exists(df):
+                        a = _md5(fpath)
+                        b = _md5(df)
+                        if a != b:
+                            sys.stderr.write("Error: Target file [%s] is already existed, and "
+                                "it not same as source one [%s], so copy failed" % (fpath, dst))
+                    else:
+                        shutil.copy2(fpath, dst)
+                else:
+                    shutil.copy2(fpath, dst)
 
-def exportstatic(outputdir=('o', ''), verbose=('v', False)):
+def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     """
     Export all installed apps' static directory to outputdir directory.
     """
@@ -146,7 +165,7 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False)):
     application = make_application()
     apps = application.apps
     dirs = [os.path.join('apps', appname, 'static') for appname in apps]
-    _copy_dir2(dirs, outputdir, verbose)
+    _copy_dir2(dirs, outputdir, verbose, check)
 
 #def make_shell():
 #    from shorty import models, utils
