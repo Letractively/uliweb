@@ -2,8 +2,9 @@
 import sys, os
 
 path = os.path.dirname(__file__)
+sys.path.insert(0, path)
 sys.path.insert(0, os.path.join(path, 'apps'))
-sys.path.insert(0, os.path.join(path, 'uliweb'))
+#sys.path.insert(0, os.path.join(path, 'uliweb'))
 
 from werkzeug import script
 
