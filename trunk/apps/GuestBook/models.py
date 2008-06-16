@@ -1,4 +1,4 @@
-from utils.orm import *
+from uliweb.orm import *
 import datetime
 
 class Note(Model):

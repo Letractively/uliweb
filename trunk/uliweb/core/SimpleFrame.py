@@ -13,9 +13,9 @@ from werkzeug.routing import RequestRedirect
 
 from werkzeug import Local, LocalManager
 from werkzeug.routing import Map, Rule
-from utils.template import template_file, get_templatefile
-from utils.storage import Storage
-from utils.plugin import *
+from uliweb.core.template import template_file, get_templatefile
+from uliweb.core.storage import Storage
+from uliweb.core.plugin import *
 
 APPS_DIR = 'apps'
 
@@ -97,7 +97,7 @@ def static_serve(request, filename):
     for p in request.application.apps:
         f = os.path.join(APPS_DIR, p, 'static', filename)
         if os.path.exists(f):
-            from utils.FileApp import return_file
+            from uliweb.core.FileApp import return_file
             return return_file(f)
     raise NotFound()
 
@@ -140,7 +140,7 @@ class Dispatcher(object):
         from werkzeug import html, xhtml
         env['html'] = html
         env['xhtml'] = xhtml
-        from utils import Form
+        from uliweb.core import Form
         env['Form'] = Form
         env['get_file'] = self.get_file
         return env
@@ -320,7 +320,7 @@ class Dispatcher(object):
             
     def install_settings(self, s):
         global config
-        s.insert(0, 'frameworks.default_config')
+        s.insert(0, 'uliweb.core.default_config')
         config = Storage({})
         for v in s:
             mod = __import__(v, {}, {}, [''])

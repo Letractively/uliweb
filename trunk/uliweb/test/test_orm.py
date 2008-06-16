@@ -4,7 +4,7 @@ sys.path.insert(0, '../..')
 sys.path.insert(0, '..')
 
 print 'import...', time.time()
-from utils.orm import *
+from uliweb.orm import *
 import geniusql
 print 'end import...', time.time()
 
