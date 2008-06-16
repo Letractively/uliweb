@@ -1,6 +1,11 @@
 #coding=utf-8
 from frameworks.SimpleFrame import expose
 
+from frameworks.SimpleFrame import static_serve
+@expose('/static/<regex(".*$"):filename>')
+def static(filename):
+    return static_serve(request, filename)
+
 @expose('/guestbook')
 def guestbook():
     from models import Note
