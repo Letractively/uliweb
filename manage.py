@@ -84,12 +84,12 @@ def export(outputdir=('o', ''), withsql=('n', True), verbose=('v', False), exact
         else:
             shutil.copy2(f, path)
         
-    dirs = ['uliweb']
+    dirs = ['uliweb', 'webob', 'werkzeug']
     if withsql:
         dirs.append('geniusql')
     _copy_dir(dirs, outputdir, verbose, exact)
         
-def exportapp(outputdir=('o', ''), appname=('a', ''), verbose=('v', False)):
+def exportapp(outputdir=('o', ''), appname=('a', ''), verbose=('v', False), exact=('e', False)):
     """
     Export a app to a outpudir's apps directory.
     """
@@ -111,7 +111,7 @@ def exportapp(outputdir=('o', ''), appname=('a', ''), verbose=('v', False)):
             fp.close()
     
     dirs = [os.path.join('apps', appname)]
-    _copy_dir(dirs, outputdir, verbose)
+    _copy_dir(dirs, outputdir, verbose, exact)
    
 def _copy_dir2(d, dst, verbose=False, check=True):
     import shutil
