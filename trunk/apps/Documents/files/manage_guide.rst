@@ -9,25 +9,6 @@ manage.py 使用指南
 
 manage.py是Uliweb提供的命令行工具，你可以用它做许多的事情。
 
-export
---------
-
-这个命令，可以将Uliweb的核心代码导出到你指定的outputdir目录下去。可以用于初始项目的创建。
-
-::
-
-    Usage: python manage.py [options] outputdir
-    
-    options:
-    
-    -e
-        完全同步操作。使用它将删除目标目录下原有的版本，然后再进行拷贝。
-    
-    -n
-        忽略数据库组件。Uliweb自带geniusql模块，如果你不使用它，可以加这个
-        选项不进行拷贝处理。
-
-
 runserver
 -------------
 
@@ -64,6 +45,28 @@ makeapp
 
     Usage: python manage.py makeapp appname
     
+export
+--------
+
+这个命令，可以将Uliweb的核心代码导出到你指定的outputdir目录下去。可以用于初始项目的创建。
+
+::
+
+    Usage: python manage.py [options] outputdir
+    
+    options:
+    
+    -e
+        完全同步操作。使用它将删除目标目录下原有的版本，然后再进行拷贝。
+    
+    -n
+        忽略数据库组件。Uliweb自带geniusql模块，如果你不使用它，可以加这个
+        选项不进行拷贝处理。
+        
+    -v 
+
+        是否输出冗余信息。缺省为不输出。一旦设定将在执行时显示一些处理情况。
+        
 exportapp
 -------------
 
@@ -71,7 +74,20 @@ exportapp
 
 ::
 
-    Usage: python manage.py exportapp outputdir
+    Usage: python manage.py exportapp [options] outputdir
+    
+    options:
+
+    -e
+        完全同步操作。使用它将删除目标目录下原有的版本，然后再进行拷贝。
+    
+    -n
+        忽略数据库组件。Uliweb自带geniusql模块，如果你不使用它，可以加这个
+        选项不进行拷贝处理。
+        
+    -v 
+    
+        是否输出冗余信息。缺省为不输出。一旦设定将在执行时显示一些处理情况。
     
 exportstatic
 ---------------
