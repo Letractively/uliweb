@@ -39,6 +39,7 @@ Uliweb快速入门(Quick Tutorial)
 * 模板(Templates)
 * 使用数据库(Using Database in Uliweb)
 * 开发工具(Tools)
+* `部署指南(Deployment Guide) <{{= index('deployment') }}>`_
 
 高级应用(Advanced Topics)
 -----------------------------
