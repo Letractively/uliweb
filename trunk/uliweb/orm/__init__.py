@@ -4,7 +4,7 @@
 
 import sys
 
-sys.path.insert(0, '../../..')
+sys.path.insert(0, '../..')
 
 __all__ = ['Field', 'get_connection', 'Model', 'migirate_table',
     'set_auto_bind', 'set_auto_migirate', 'set_debug_log', 
