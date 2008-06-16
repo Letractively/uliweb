@@ -243,11 +243,8 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 
     在定义Model时，Uliorm会自动为你添加id字段的定义，它将是一个主键，这一点与Django一样。
     
-显示留言
------------------------
-
-增加guestbook()的View方法
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+静态文件处理
+--------------
 
 打开GuestBook下的views.py文件，已经有内容了：
 
@@ -256,7 +253,35 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
     #coding=utf-8
     from frameworks.SimpleFrame import expose
 
-加入显示留言的处理：
+然后加入静态文件支持的代码：
+
+.. code:: python
+
+    from frameworks.SimpleFrame import static_serve
+    @expose('/static/<regex(".*$"):filename>')
+    def static(filename):
+        return static_serve(request, filename)
+
+Uliweb已经提供了静态文件的支持，因此一种方式你直接使用Uliweb来进行静态文件的服务，另
+一种就是让Web server来做这事。Uliweb中的每个APP都有自已的static目录，这样的目的主要
+是为了可以让每个APP尽可能独立。使用Uliweb在处理静态文件时，当访问一个静态文件时，它会
+先到当前APP的目录下查找文件，如果没有找到会到其它可用的APP下查询文件，因此APP间的static
+目录是共享的。并且Uliweb的静态文件支持可以对于已经下载到本地的文件返回304从而避免再次
+下载，这一点在开发服务器可以看到。另外支持trunk的分块方式文件下传。
+
+如果你决定使用web server来处理静态文件，那么上面的代码就不需要了，同时要将所有static下
+的文件进行汇总到同一个目录下，然后在web server的配置中增加对静态URL的映射。这块因为教
+程中没有用到，就不多说了。
+
+上面的expose中使用到了正则匹配，一时不太明白没有关系，照猫画虎就成了。
+
+显示留言
+-----------------------
+
+增加guestbook()的View方法
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+打开GuestBook下的views.py文件，加入显示留言的处理代码：
 
 .. code:: python
 
@@ -563,7 +588,7 @@ regex等类型。如果只是 ``<name>`` 则表示匹配 //　间的内容。一
 #. Form使用，包括：Form的定义，Form的布局，HTML代码生成，数据校验，出错处理
 #. 模板的使用，包括： {{extend}} 的使用，在模板环境中增加自定义函数，子模板变量定义的
    技巧，错误模板的使用，Python代码的嵌入
-#. View的使用，包括：redirect, error的使用
+#. View的使用，包括：redirect, error的使用, 静态文件处理
 #. URL映射的使用，包括：expose的使用，参数定义，与View函数的对应
 #. manage.py的使用，包括：export, makeapp的使用
 #. 结构的了解，包括：Uliweb的app组织，settings.py文件的处理机制，view函数与模板文件
