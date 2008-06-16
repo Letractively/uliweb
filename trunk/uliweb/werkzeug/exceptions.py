@@ -57,9 +57,8 @@
     :copyright: 2007-2008 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
-from werkzeug.utils import escape
-from werkzeug.wrappers import BaseResponse
-from werkzeug.http import HTTP_STATUS_CODES
+import sys
+from werkzeug._internal import HTTP_STATUS_CODES
 
 
 class HTTPException(Exception):
@@ -76,6 +75,20 @@ class HTTPException(Exception):
         Exception.__init__(self, '%d %s' % (self.code, self.name))
         if description is not None:
             self.description = description
+
+    def wrap(cls, exception, name=None):
+        """
+        This method returns a new subclass of the exception provided that
+        also is a subclass of `BadRequest`.
+        """
+        class newcls(cls, exception):
+            def __init__(self, arg=None, description=None):
+                cls.__init__(self, description)
+                exception.__init__(self, arg)
+        newcls.__module__ = sys._getframe(1).f_globals.get('__name__')
+        newcls.__name__ = name or cls.__name__ + exception.__name__
+        return newcls
+    wrap = classmethod(wrap)
 
     def name(self):
         """The status name."""
@@ -105,6 +118,11 @@ class HTTPException(Exception):
 
     def get_response(self, environ):
         """Get a response object."""
+        # lazyly imported for various reasons.  For one can use the exceptions
+        # with custom responses (testing exception instances against types) and
+        # so we don't ever have to import the wrappers, but also because there
+        # are ciruclar dependencies when bootstrapping the module.
+        from werkzeug.wrappers import BaseResponse
         headers = self.get_headers(environ)
         return BaseResponse(self.get_body(environ), self.code, headers)
 
@@ -116,7 +134,7 @@ class HTTPException(Exception):
 
 class _ProxyException(HTTPException):
     """
-    An http exception that expands renders a WSGI application on error.
+    An HTTP exception that expands renders a WSGI application on error.
     """
 
     def __init__(self, response):
@@ -201,10 +219,8 @@ class MethodNotAllowed(HTTPException):
     code = 405
 
     def __init__(self, valid_methods=None, description=None):
-        """
-        takes an optional list of valid http methods
-        starting with werkzeug 0.3 the list will be mandatory
-        """
+        """Takes an optional list of valid http methods
+        starting with werkzeug 0.3 the list will be mandatory."""
         HTTPException.__init__(self, description)
         self.valid_methods = valid_methods
 
@@ -389,17 +405,24 @@ class ServiceUnavailable(HTTPException):
     )
 
 
+default_exceptions = {}
+__all__ = ['HTTPException']
+
 def _find_exceptions():
-    rv = {}
     for name, obj in globals().iteritems():
         try:
             if getattr(obj, 'code', None) is not None:
-                rv[obj.code] = obj
+                default_exceptions[obj.code] = obj
+                __all__.append(obj.__name__)
         except TypeError:
             continue
-    return rv
-default_exceptions = _find_exceptions()
+_find_exceptions()
 del _find_exceptions
+
+
+#: raised by the request functions if they were unable to decode the
+#: incomding data properly.
+HTTPUnicodeError = BadRequest.wrap(UnicodeError, 'HTTPUnicodeError')
 
 
 class Aborter(object):
@@ -427,3 +450,7 @@ class Aborter(object):
         raise self.mapping[code](*args, **kwargs)
 
 abort = Aborter()
+
+
+# imported here because of circular dependencies of werkzeug.utils
+from werkzeug.utils import escape

@@ -47,7 +47,6 @@ import sys
 import time
 import thread
 from itertools import chain
-from werkzeug.utils import _log
 try:
     from wsgiref.simple_server import ServerHandler, WSGIRequestHandler, \
          WSGIServer
@@ -55,6 +54,7 @@ try:
 except ImportError:
     have_wsgiref = False
 from SocketServer import ThreadingMixIn, ForkingMixIn
+from werkzeug._internal import _log
 
 
 if have_wsgiref:
@@ -103,8 +103,7 @@ if have_wsgiref:
 
 def make_server(host, port, app=None, threaded=False, processes=1,
                 request_handler=None):
-    """
-    Create a new wsgiref server that is either threaded, or forks
+    """Create a new wsgiref server that is either threaded, or forks
     or just processes one request after another.
     """
     if not have_wsgiref:
@@ -122,9 +121,8 @@ def make_server(host, port, app=None, threaded=False, processes=1,
     elif processes > 1:
         class request_handler(request_handler):
             multiprocess = True
-            max_children = processes - 1
         class server(ForkingMixIn, WSGIServer):
-            pass
+            max_children = processes - 1
     else:
         server = WSGIServer
     srv = server((host, port), request_handler)
@@ -173,8 +171,7 @@ def reloader_loop(extra_files=None, interval=1):
 
 
 def restart_with_reloader():
-    """
-    Spawn a new Python interpreter with the same arguments as this one,
+    """Spawn a new Python interpreter with the same arguments as this one,
     but running the reloader thread.
     """
     while 1:
@@ -190,9 +187,7 @@ def restart_with_reloader():
 
 
 def run_with_reloader(main_func, extra_files=None, interval=1):
-    """
-    Run the given function in an independent python interpreter.
-    """
+    """Run the given function in an independent python interpreter."""
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         thread.start_new_thread(main_func, ())
         try:
@@ -206,10 +201,10 @@ def run_with_reloader(main_func, extra_files=None, interval=1):
 
 
 def run_simple(hostname, port, application, use_reloader=False,
+               use_debugger=False, use_evalex=True,
                extra_files=None, reloader_interval=1, threaded=False,
                processes=1, request_handler=None):
-    """
-    Start an application using wsgiref and with an optional reloader.  This
+    """Start an application using wsgiref and with an optional reloader.  This
     wraps `wsgiref` to fix the wrong default reporting of the multithreaded
     WSGI variable and adds optional multithreading and fork support.
 
@@ -218,6 +213,8 @@ def run_simple(hostname, port, application, use_reloader=False,
     :param application: the WSGI application to execute
     :param use_reloader: should the server automatically restart the python
                          process if modules were changed?
+    :param use_debugger: should the werkzeug debugging system be used?
+    :param use_evalex: should the exception evaluation feature be enabled?
     :param extra_files: a list of files the reloader should listen for
                         additionally to the modules.  For example configuration
                         files.
@@ -230,6 +227,10 @@ def run_simple(hostname, port, application, use_reloader=False,
                             at the `werkzeug.serving` sourcecode for more
                             details.
     """
+    if use_debugger:
+        from werkzeug.debug import DebuggedApplication
+        application = DebuggedApplication(application, use_evalex)
+
     def inner():
         srv = make_server(hostname, port, application, threaded,
                           processes, request_handler)

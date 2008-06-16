@@ -26,7 +26,10 @@ def make_app(appname=''):
             fp = file(f, 'wb')
             if f.endswith('views.py'):
                 print >>fp, "#coding=utf-8"
-                print >>fp, "from frameworks.SimpleFrame import expose"
+                print >>fp, "from frameworks.SimpleFrame import expose\n"
+                print >>fp, "@expose('/')"
+                print >>fp, """def index():
+    return '<h1>Hello, Uliweb</h1>'"""
             fp.close()
             
 def export(outputdir='', withsql=('n', True)):
@@ -43,7 +46,7 @@ def export(outputdir='', withsql=('n', True)):
         os.makedirs(outputdir)
         
     #copy files
-    for f in ['app.yaml', 'gae_handler.py', 'manage.py']:
+    for f in ['app.yaml', 'gae_handler.py', 'manage.py', 'wsgi_handler.py']:
         path = os.path.join(outputdir, f)
         if f == 'app.yaml':
             if not os.path.exists(path):

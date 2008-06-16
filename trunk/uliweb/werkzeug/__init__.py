@@ -34,26 +34,36 @@ all_by_module = {
                              'SharedDataMiddleware', 'ClosingIterator',
                              'FileStorage', 'url_unquote_plus', 'url_decode',
                              'url_unquote', 'get_current_url', 'redirect',
-                             'append_slash_redirect', 'lazy_property',
+                             'append_slash_redirect',
                              'cached_property', 'MultiDict', 'import_string',
                              'dump_cookie', 'parse_cookie', 'unescape',
                              'format_string', 'Href', 'DispatcherMiddleware',
                              'find_modules', 'header_property', 'html',
-                             'xhtml'],
+                             'xhtml', 'HTMLBuilder', 'parse_form_data',
+                             'validate_arguments', 'ArgumentValidationError',
+                             'bind_arguments'],
     'werkzeug.useragents':  ['UserAgent'],
     'werkzeug.http':        ['Accept', 'CacheControl', 'ETags', 'parse_etags',
                              'parse_date', 'parse_cache_control_header',
                              'is_resource_modified', 'parse_accept_header',
                              'parse_set_header', 'quote_etag', 'unquote_etag',
-                             'HeaderSet', 'HTTP_STATUS_CODES'],
+                             'generate_etag', 'dump_header',
+                             'parse_list_header', 'parse_dict_header',
+                             'HeaderSet', 'parse_authorization_header',
+                             'parse_www_authenticate_header',
+                             'WWWAuthenticate', 'Authorization',
+                             'HTTP_STATUS_CODES'],
     'werkzeug.wrappers':    ['BaseResponse', 'BaseRequest', 'Request',
                              'Response', 'AcceptMixin', 'ETagRequestMixin',
                              'ETagResponseMixin', 'ResponseStreamMixin',
                              'CommonResponseDescriptorsMixin',
-                             'UserAgentMixin', 'BaseReporterStream']
+                             'UserAgentMixin', 'AuthorizationMixin',
+                             'WWWAuthenticateMixin'],
+    # the undocumented easteregg ;-)
+    'werkzeug._internal':   ['_easteregg']
 }
 
-attribute_modules = ['exceptions', 'routing', 'script']
+attribute_modules = dict.fromkeys(['exceptions', 'routing', 'script'])
 
 
 object_origins = {}
@@ -75,6 +85,7 @@ class module(ModuleType):
             __import__('werkzeug.' + name)
         return ModuleType.__getattribute__(self, name)
 
+
 # keep a reference to this module so that it's not garbage collected
 old_module = sys.modules['werkzeug']
 
@@ -84,5 +95,5 @@ new_module.__dict__.update({
     '__file__': __file__,
     '__path__': __path__,
     '__doc__':  __doc__,
-    '__all__':  tuple(object_origins)
+    '__all__':  tuple(object_origins) + tuple(attribute_modules)
 })

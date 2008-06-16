@@ -5,30 +5,30 @@
 
     WSGI application traceback debugger.
 
-    :copyright: 2007 by Georg Brandl, Armin Ronacher.
+    :copyright: 2008 by Georg Brandl, Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
-import sys
-import inspect
-import traceback
-import code
-
-from werkzeug.debug.render import debug_page, load_resource
-from werkzeug.debug.util import ThreadedStream, Namespace, get_uid, \
-     get_frame_info, ExceptionRepr
-from werkzeug.utils import url_decode
+from os.path import join, dirname, basename, isfile
+from mimetypes import guess_type
+from werkzeug.wrappers import BaseRequest as Request, BaseResponse as Response
+from werkzeug.debug.repr import debug_repr
+from werkzeug.debug.tbtools import get_current_traceback
+from werkzeug.debug.console import Console
+from werkzeug.debug.utils import render_template
 
 
-try:
-    system_exceptions = (GeneratorExit,)
-except NameError:
-    system_exceptions = ()
-system_exceptions += (SystemExit, KeyboardInterrupt)
+class _ConsoleFrame(object):
+    """Helper class so that we can reuse the frame console code for the
+    standalone console.
+    """
+
+    def __init__(self, namespace):
+        self.console = Console(namespace)
+        self.id = 0
 
 
 class DebuggedApplication(object):
-    """
-    Enables debugging support for a given application::
+    """Enables debugging support for a given application::
 
         from werkzeug.debug import DebuggedApplication
         from myapp import app
@@ -40,225 +40,109 @@ class DebuggedApplication(object):
     THIS IS A GAPING SECURITY HOLE IF PUBLICLY ACCESSIBLE!
     """
 
-    def __init__(self, application, evalex=False,
-                 request_key='werkzeug.request'):
-        self.evalex = bool(evalex)
-        self.application = application
-        self.request_key = request_key
+    def __init__(self, app, evalex=False, request_key='werkzeug.request',
+                 console_path='/console', console_init_func=dict,
+                 show_hidden_frames=False):
+        self.app = app
+        self.evalex = evalex
+        self.frames = {}
         self.tracebacks = {}
+        self.request_key = request_key
+        self.console_path = console_path
+        self.console_init_func = console_init_func
+        self.show_hidden_frames = show_hidden_frames
+
+    def debug_application(self, environ, start_response):
+        """Run the application and conserve the traceback frames."""
+        app_iter = None
+        try:
+            app_iter = self.app(environ, start_response)
+            for item in app_iter:
+                yield item
+            if hasattr(app_iter, 'close'):
+                app_iter.close()
+        except:
+            if hasattr(app_iter, 'close'):
+                app_iter.close()
+            traceback = get_current_traceback(skip=1, show_hidden_frames=
+                                              self.show_hidden_frames)
+            for frame in traceback.frames:
+                self.frames[frame.id] = frame
+            self.tracebacks[traceback.id] = traceback
+
+            try:
+                start_response('500 INTERNAL SERVER ERROR', [
+                    ('Content-Type', 'text/html; charset=utf-8')
+                ])
+            except:
+                # if we end up here there has been output but an error
+                # occurred.  in that situation we can do nothing fancy any
+                # more, better log something into the error log and fall
+                # back gracefully.
+                environ['wsgi.errors'].write(
+                    '\nDebugging middlware catched exception in streamed '
+                    'reponse a point where response headers were already '
+                    'sent.\n')
+                traceback.log(environ['wsgi.errors'])
+                return
+
+            yield traceback.render_full(evalex=self.evalex) \
+                           .encode('utf-8', 'replace')
+            traceback.log(environ['wsgi.errors'])
+
+    def execute_command(self, request, command, frame):
+        """Execute a command in a console."""
+        return Response(frame.console.eval(command), mimetype='text/html')
+
+    def display_console(self, request):
+        """Display a standalone shell."""
+        if 0 not in self.frames:
+            self.frames[0] = _ConsoleFrame(self.console_init_func())
+        return Response(render_template('console.html'), mimetype='text/html')
+
+    def paste_traceback(self, request, traceback):
+        """Paste the traceback and return a JSON response."""
+        paste_id = traceback.paste()
+        return Response('{"url": "http://paste.pocoo.org/show/%d/", "id": %d}'
+                        % (paste_id, paste_id), mimetype='application/json')
+
+    def get_source(self, request, frame):
+        """Render the source viewer."""
+        return Response(frame.render_source(), mimetype='text/html')
+
+    def get_resource(self, request, filename):
+        """Return a static resource from the shared folder."""
+        filename = join(dirname(__file__), 'shared', basename(filename))
+        if isfile(filename):
+            mimetype = guess_type(filename)[0] or 'application/octet-stream'
+            f = file(filename, 'rb')
+            try:
+                return Response(f.read(), mimetype=mimetype)
+            finally:
+                f.close()
+        return Response('Not Found', status=404)
 
     def __call__(self, environ, start_response):
-        # exec code in open tracebacks or provide shared data
-        if environ.get('PATH_INFO', '').strip('/').endswith('__traceback__'):
-            parameters = url_decode(environ.get('QUERY_STRING', ''))
-            # shared data
-            if 'resource' in parameters and 'mimetype' in parameters:
-                data = load_resource(parameters['resource'])
-                start_response('200 OK', [
-                    ('Content-Type', str(parameters['mimetype'])),
-                    ('Content-Length', str(len(data)))
-                ])
-                yield data
-                return
-            # pastebin
-            elif parameters.get('pastetb'):
-                from xmlrpclib import ServerProxy
-                try:
-                    length = int(environ['CONTENT_LENGTH'])
-                except (KeyError, ValueError):
-                    length = 0
-                data = environ['wsgi.input'].read(length)
-                s = ServerProxy('http://paste.pocoo.org/xmlrpc/')
-                paste_id = s.pastes.newPaste('pytb', data)
-                start_response('200 OK', [('Content-Type', 'text/plain')])
-                yield '{"paste_id": %d, "url": "%s"}' % (
-                    paste_id,
-                    'http://paste.pocoo.org/show/%d' % paste_id
-                )
-                return
-            # execute commands in an existing debug context
-            elif self.evalex:
-                try:
-                    tb = self.tracebacks[parameters['tb']]
-                    frame = parameters['frame']
-                    context = tb[frame]
-                    code = parameters['code']
-                except (IndexError, KeyError):
-                    pass
-                else:
-                    result = context.exec_expr(code)
-                    start_response('200 OK', [('Content-Type', 'text/plain')])
-                    yield result
-                    return
-
-        # wrap the application and catch errors.
-        appiter = None
-        try:
-            appiter = self.application(environ, start_response)
-            for line in appiter:
-                yield line
-        except system_exceptions, e:
-            raise e
-        except:
-            ThreadedStream.install()
-            exc_info = sys.exc_info()
-            try:
-                headers = [('Content-Type', 'text/html; charset=utf-8')]
-                start_response('500 INTERNAL SERVER ERROR', headers)
-            except:
-                pass
-            debug_context = self.create_debug_context(environ, exc_info)
-            yield debug_page(debug_context)
-
-        if hasattr(appiter, 'close'):
-            appiter.close()
-
-    def format_exception(self, exc_info):
-        """Format a text/plain traceback."""
-        return self.create_debug_context({
-            'wsgi.run_once':    True
-        }, exc_info, True).plaintb + '\n'
-
-    def create_debug_context(self, environ, exc_info, simple=False):
-        exception_type, exception_value, tb = exc_info
-        # skip first internal frame
-        if not tb.tb_next is None:
-            tb = tb.tb_next
-
-        # load frames
-        frames = []
-        frame_map = {}
-        tb_uid = None
-        if not environ['wsgi.run_once'] and not environ['wsgi.multiprocess']:
-            tb_uid = get_uid()
-            frame_map = self.tracebacks[tb_uid] = {}
-
-        plaintb_buffer = ['Traceback (most recent call last):']
-        write = plaintb_buffer.append
-
-        # walk through frames and collect information
-        while tb is not None:
-            if not tb.tb_frame.f_locals.get('__traceback_hide__', False):
-                if tb_uid and not simple:
-                    frame_uid = get_uid()
-                    frame_map[frame_uid] = InteractiveDebugger(self,
-                                                               tb.tb_frame)
-                else:
-                    frame_uid = None
-                frame = get_frame_info(tb, simple=simple)
-                frame['frame_uid'] = frame_uid
-                frames.append(frame)
-                write('  File "%s", line %s, in %s' % (
-                    frame['filename'],
-                    frame['lineno'],
-                    frame['function']
-                ))
-                if frame['raw_context_line'] is None:
-                    write('    <no sourcecode available>')
-                else:
-                    write('    ' + frame['raw_context_line'])
-            tb = tb.tb_next
-
-        # guard for string exceptions
-        if isinstance(exception_type, str):
-            extypestr = 'string exception'
-            exception_value = exception_type
-        elif exception_type.__module__ == 'exceptions':
-            extypestr = exception_type.__name__
-        else:
-            extypestr = '%s.%s' % (
-                exception_type.__module__,
-                exception_type.__name__
-            )
-
-        # finialize plain traceback and write it to stderr
-        try:
-            if isinstance(exception_value, unicode):
-                exception_value = exception_value.encode('utf-8')
-            else:
-                exception_value = str(exception_value)
-            exvalstr = ': ' + exception_value
-        except:
-            exvalstr = ''
-        write(extypestr + exvalstr)
-        plaintb = '\n'.join(plaintb_buffer)
-
-        if not simple:
-            environ['wsgi.errors'].write(plaintb)
-
-        # support for the werkzeug request object or fall back to
-        # WSGI environment
-        req_vars = []
-        if not simple:
-            request = environ.get(self.request_key)
-            if request is not None:
-                for varname in dir(request):
-                    if varname.startswith('_'):
-                        continue
-                    try:
-                        value = getattr(request, varname)
-                    except Exception, err:
-                        value = ExceptionRepr(err)
-                    if not hasattr(value, 'im_func'):
-                        req_vars.append((varname, value))
-            else:
-                req_vars.append(('WSGI Environ', environ))
-
-        return Namespace(
-            evalex =          self.evalex,
-            exception_type =  extypestr,
-            exception_value = exception_value,
-            frames =          frames,
-            last_frame =      frames[-1],
-            plaintb =         plaintb,
-            tb_uid =          tb_uid,
-            frame_map =       frame_map,
-            req_vars =        req_vars,
-        )
-
-
-class InteractiveDebugger(code.InteractiveInterpreter):
-    """
-    Subclass of the python interactive interpreter that
-    automatically captures stdout and buffers older input.
-    """
-
-    def __init__(self, middleware, frame):
-        self.middleware = middleware
-        self.globals = frame.f_globals
-        code.InteractiveInterpreter.__init__(self, frame.f_locals)
-        self.more = False
-        self.buffer = []
-
-    def runsource(self, source):
-        if isinstance(source, unicode):
-            source = source.encode('utf-8')
-        source = source.rstrip() + '\n'
-        ThreadedStream.push()
-        prompt = self.more and '... ' or '>>> '
-        try:
-            source_to_eval = ''.join(self.buffer + [source])
-            if code.InteractiveInterpreter.runsource(self,
-               source_to_eval, '<debugger>', 'single'):
-                self.more = True
-                self.buffer.append(source)
-            else:
-                self.more = False
-                del self.buffer[:]
-        finally:
-            return prompt + source + ThreadedStream.fetch()
-
-    def runcode(self, code):
-        try:
-            exec code in self.globals, self.locals
-        except:
-            self.write(self.middleware.format_exception(sys.exc_info()))
-
-    def write(self, data):
-        sys.stdout.write(data)
-
-    def exec_expr(self, code):
-        rv = self.runsource(code)
-        if isinstance(rv, unicode):
-            return rv.encode('utf-8')
-        return rv
+        """Dispatch the requests."""
+        # important: don't ever access a function here that reads the incoming
+        # form data!  Otherwise the application won't have access to that data
+        # any more!
+        request = Request(environ)
+        response = self.debug_application
+        if self.evalex and self.console_path is not None and \
+           request.path == self.console_path:
+            response = self.display_console(request)
+        elif request.path.rstrip('/').endswith('/__debugger__'):
+            cmd = request.args.get('cmd')
+            arg = request.args.get('f')
+            traceback = self.tracebacks.get(request.args.get('tb', type=int))
+            frame = self.frames.get(request.args.get('frm', type=int))
+            if cmd == 'resource' and arg:
+                response = self.get_resource(request, arg)
+            elif cmd == 'paste' and traceback is not None:
+                response = self.paste_traceback(request, traceback)
+            elif cmd == 'source' and frame:
+                response = self.get_source(request, frame)
+            elif self.evalex and cmd is not None and frame is not None:
+                response = self.execute_command(request, cmd, frame)
+        return response(environ, start_response)

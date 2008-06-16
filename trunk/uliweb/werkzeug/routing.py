@@ -33,7 +33,7 @@
     If the application doesn't use subdomains it's perfectly fine to not set
     the default subdomain and use the `Subdomain` rule factory.  The endpoint
     in the rules can be anything, for example import paths or unique
-    identitifers.  The WSGI application can use those endpoints to get the
+    identifiers.  The WSGI application can use those endpoints to get the
     handler for that URL.  It doesn't have to be a string at all but it's
     recommended.
 
@@ -119,13 +119,13 @@ _rule_re = re.compile(r'''
     (?P<variable>[a-zA-Z][a-zA-Z0-9_]*)         # variable name
     >
 ''', re.VERBOSE)
+_simple_rule_re = re.compile(r'<([^>]+)>')
 
 
 def parse_rule(rule):
-    """
-    Parse a rule and return it as generator. Each iteration yields tuples in the
-    form ``(converter, arguments, variable)``. If the converter is `None` it's a
-    static url part, otherwise it's a dynamic one.
+    """Parse a rule and return it as generator. Each iteration yields tuples
+    in the form ``(converter, arguments, variable)``. If the converter is
+    `None` it's a static url part, otherwise it's a dynamic one.
 
     :internal:
     """
@@ -155,8 +155,7 @@ def parse_rule(rule):
 
 
 def get_converter(map, name, args):
-    """
-    Create a new converter for the given arguments or raise
+    """Create a new converter for the given arguments or raise
     exception if the converter does not exist.
 
     :internal:
@@ -173,17 +172,15 @@ def get_converter(map, name, args):
 
 
 class RoutingException(Exception):
-    """
-    Special exceptions that require the application to redirect, notifies him
-    about missing urls etc.
+    """Special exceptions that require the application to redirect, notifies
+    him about missing urls etc.
 
     :internal:
     """
 
 
 class RequestRedirect(HTTPException, RoutingException):
-    """
-    Raise if the map requests a redirect. This is for example the case if
+    """Raise if the map requests a redirect. This is for example the case if
     `strict_slashes` are activated and an url that requires a leading slash.
 
     The attribute `new_url` contains the absolute desitination url.
@@ -199,14 +196,11 @@ class RequestRedirect(HTTPException, RoutingException):
 
 
 class RequestSlash(RoutingException):
-    """
-    Internal exception.
-    """
+    """Internal exception."""
 
 
 class BuildError(RoutingException, LookupError):
-    """
-    Raised if the build system cannot find a URL for an endpoint with the
+    """Raised if the build system cannot find a URL for an endpoint with the
     values provided.
     """
 
@@ -218,30 +212,25 @@ class BuildError(RoutingException, LookupError):
 
 
 class ValidationError(ValueError):
-    """
-    Validation error.  If a rule converter raises this exception the rule
+    """Validation error.  If a rule converter raises this exception the rule
     does not match the current URL and the next URL is tried.
     """
 
 
 class RuleFactory(object):
-    """
-    As soon as you have more complex URL setups it's a good idea to use rule
+    """As soon as you have more complex URL setups it's a good idea to use rule
     factories to avoid repetitive tasks.  Some of them are builtin, others can
     be added by subclassing `RuleFactory` and overriding `get_rules`.
     """
 
     def get_rules(self, map):
-        """
-        Subclasses of `RuleFactory` have to override this method and return
-        an iterable of rules.
-        """
+        """Subclasses of `RuleFactory` have to override this method and return
+        an iterable of rules."""
         raise NotImplementedError()
 
 
 class Subdomain(RuleFactory):
-    """
-    All URLs provided by this factory have the subdomain set to a
+    """All URLs provided by this factory have the subdomain set to a
     specific domain. For example if you want to use the subdomain for
     the current language this can be a good setup::
 
@@ -271,8 +260,7 @@ class Subdomain(RuleFactory):
 
 
 class Submount(RuleFactory):
-    """
-    Like `Subdomain` but prefixes the URL rule with a given string::
+    """Like `Subdomain` but prefixes the URL rule with a given string::
 
         url_map = Map([
             Rule('/', endpoint='index'),
@@ -297,8 +285,7 @@ class Submount(RuleFactory):
 
 
 class EndpointPrefix(RuleFactory):
-    """
-    Prefixes all endpoints (which must be strings for this factory) with
+    """Prefixes all endpoints (which must be strings for this factory) with
     another string. This can be useful for sub applications::
 
         url_map = Map([
@@ -322,8 +309,7 @@ class EndpointPrefix(RuleFactory):
 
 
 class RuleTemplate(object):
-    """
-    Returns copies of the rules wrapped and expands string templates in
+    """Returns copies of the rules wrapped and expands string templates in
     the endpoint, rule, defaults or subdomain sections.
 
     Here a small example for such a rule template::
@@ -349,8 +335,7 @@ class RuleTemplate(object):
 
 
 class RuleTemplateFactory(RuleFactory):
-    """
-    A factory that fills in template variables into rules.  Used by
+    """A factory that fills in template variables into rules.  Used by
     `RuleTemplate` internally.
 
     :internal:
@@ -387,11 +372,10 @@ class RuleTemplateFactory(RuleFactory):
 
 
 class Rule(RuleFactory):
-    """
-    A Rule represents one URL pattern.  There are some options for `Rule` that
-    change the way it behaves and are passed to the `Rule` constructor.  Note
-    that beside the rule-string all arguments *must* be keyword arguments in
-    order to not break the application on Werkzeug upgrades.
+    """A Rule represents one URL pattern.  There are some options for `Rule`
+    that change the way it behaves and are passed to the `Rule` constructor.
+    Note that beside the rule-string all arguments *must* be keyword arguments
+    in order to not break the application on Werkzeug upgrades.
 
     `string`
         Rule strings basically are just normal URL paths with placeholders in
@@ -454,10 +438,36 @@ class Rule(RuleFactory):
         Set this to true and the rule will never match but will create a URL
         that can be build. This is useful if you have resources on a subdomain
         or folder that are not handled by the WSGI application (like static data)
+
+    `redirect_to`
+        If given this must be either a string or callable.  In case of a
+        callable it's called with the url adapter that triggered the match and
+        the values of the URL as keyword arguments and has to return the target
+        for the redirect, otherwise it has to be a string with placeholders in
+        rule syntax::
+
+            def foo_with_slug(adapter, id):
+                # ask the database for the slug for the old id.  this of
+                # course has nothing to do with werkzeug.
+                return 'foo/' + Foo.get_slug_for_id(id)
+
+            url_map = Map([
+                Rule('/foo/<slug>', endpoint='foo'),
+                Rule('/some/old/url/<slug>', redirect_to='foo/<slug>'),
+                Rule('/other/old/url/<int:id>', redirect_to=foo_with_slug)
+            ])
+
+        When the rule is matched the routing system will raise a
+        `RequestRedirect` exception with the target for the redirect.
+
+        Keep in mind that the URL will be joined against the URL root of the
+        script so don't use a leading slash on the target URL unless you
+        really mean root of that domain.
     """
 
     def __init__(self, string, defaults=None, subdomain=None, methods=None,
-                 build_only=False, endpoint=None, strict_slashes=None):
+                 build_only=False, endpoint=None, strict_slashes=None,
+                 redirect_to=None):
         if not string.startswith('/'):
             raise ValueError('urls must start with a leading slash')
         self.rule = string
@@ -474,6 +484,7 @@ class Rule(RuleFactory):
             self.methods = set([x.upper() for x in methods])
         self.endpoint = endpoint
         self.greediness = 0
+        self.redirect_to = redirect_to
 
         self._trace = []
         if defaults is not None:
@@ -485,19 +496,17 @@ class Rule(RuleFactory):
         self._weights = []
 
     def empty(self):
-        """
-        Return an unbound copy of this rule.  This can be useful if you want
-        to reuse an already bound URL for another map.
-        """
+        """Return an unbound copy of this rule.  This can be useful if you
+        want to reuse an already bound URL for another map."""
         return Rule(self.rule, self.defaults, self.subdomain, self.methods,
-                    self.build_only, self.endpoint, self.strict_slashes)
+                    self.build_only, self.endpoint, self.strict_slashes,
+                    self.redirect_to)
 
     def get_rules(self, map):
         yield self
 
     def bind(self, map):
-        """
-        Bind the url to a map and create a regular expression based on
+        """Bind the url to a map and create a regular expression based on
         the information from the rule itself and the defaults from the map.
 
         :internal:
@@ -541,8 +550,7 @@ class Rule(RuleFactory):
             self._regex = re.compile(regex, re.UNICODE)
 
     def match(self, path):
-        """
-        Check if the rule matches a given path. Path is a string in the
+        """Check if the rule matches a given path. Path is a string in the
         form ``"subdomain|/path(method)"`` and is assembled by the map.
 
         If the rule matches a dict with the converted values is returned,
@@ -578,23 +586,23 @@ class Rule(RuleFactory):
                 return result
 
     def build(self, values):
-        """
-        Assembles the relative url for that rule and the subdomain.
+        """Assembles the relative url for that rule and the subdomain.
         If building doesn't work for some reasons `None` is returned.
 
         :internal:
         """
         tmp = []
+        add = tmp.append
         processed = set(self.arguments)
         for is_dynamic, data in self._trace:
             if is_dynamic:
                 try:
-                    tmp.append(self._converters[data].to_url(values[data]))
+                    add(self._converters[data].to_url(values[data]))
                 except ValidationError:
                     return
                 processed.add(data)
             else:
-                tmp.append(data)
+                add(data)
         subdomain, url = (u''.join(tmp)).split('|', 1)
 
         query_vars = {}
@@ -606,8 +614,7 @@ class Rule(RuleFactory):
         return subdomain, url
 
     def provides_defaults_for(self, rule):
-        """
-        Check if this rule has defaults for a given rule.
+        """Check if this rule has defaults for a given rule.
 
         :internal:
         """
@@ -616,8 +623,7 @@ class Rule(RuleFactory):
                self.arguments == rule.arguments
 
     def suitable_for(self, values, method):
-        """
-        Check if the dict of values has enough data for url generation.
+        """Check if the dict of values has enough data for url generation.
 
         :internal:
         """
@@ -640,8 +646,7 @@ class Rule(RuleFactory):
         return True
 
     def match_compare(self, other):
-        """
-        Compare this object with another one for matching.
+        """Compare this object with another one for matching.
 
         :internal:
         """
@@ -673,8 +678,7 @@ class Rule(RuleFactory):
         return 1
 
     def build_compare(self, other):
-        """
-        Compare this object with another one for building.
+        """Compare this object with another one for building.
 
         :internal:
         """
@@ -734,9 +738,7 @@ class Rule(RuleFactory):
 
 
 class BaseConverter(object):
-    """
-    Base class for all converters.
-    """
+    """Base class for all converters."""
     regex = '[^/]+'
     is_greedy = False
     weight = 100
@@ -752,8 +754,7 @@ class BaseConverter(object):
 
 
 class UnicodeConverter(BaseConverter):
-    """
-    This converter is the default converter and accepts any string but
+    """This converter is the default converter and accepts any string but
     only one one path segment.  Thus the string can not include a slash.
 
     Supported arguments:
@@ -781,8 +782,7 @@ class UnicodeConverter(BaseConverter):
 
 
 class AnyConverter(BaseConverter):
-    """
-    Matches one of the items provided.  Items can either be Python
+    """Matches one of the items provided.  Items can either be Python
     identifiers or unicode strings::
 
         Rule('/<any(about, help, imprint, u"class"):page_name>')
@@ -794,20 +794,14 @@ class AnyConverter(BaseConverter):
 
 
 class PathConverter(BaseConverter):
-    """
-    Matches one of the items provided.  Items can either be python
-    identifiers or unicode strings::
-
-        Rule('/<any(about, help, imprint, u"class"):page_name>')
-    """
+    """Like the default string converter, but it also matches slashes."""
     regex = '[^/].*?'
     is_greedy = True
     weight = 50
 
 
 class NumberConverter(BaseConverter):
-    """
-    Baseclass for `IntegerConverter` and `FloatConverter`.
+    """Baseclass for `IntegerConverter` and `FloatConverter`.
 
     :internal:
     """
@@ -835,8 +829,7 @@ class NumberConverter(BaseConverter):
 
 
 class IntegerConverter(NumberConverter):
-    """
-    This converter only accepts integer values::
+    """This converter only accepts integer values::
 
         Rule('/page/<int:page>')
 
@@ -854,8 +847,7 @@ class IntegerConverter(NumberConverter):
 
 
 class FloatConverter(NumberConverter):
-    """
-    This converter only accepts floating point values::
+    """This converter only accepts floating point values::
 
         Rule('/probability/<float:probability>')
 
@@ -872,8 +864,7 @@ class FloatConverter(NumberConverter):
 
 
 class Map(object):
-    """
-    The map class stores all the URL rules and some configuration
+    """The map class stores all the URL rules and some configuration
     parameters.  Some of the configuration values are only stored on the
     `Map` instance since those affect all rules, others are just defaults
     and can be overridden for each rule.  Note that you have to specify all
@@ -883,8 +874,7 @@ class Map(object):
     def __init__(self, rules=None, default_subdomain='', charset='utf-8',
                  strict_slashes=True, redirect_defaults=True,
                  converters=None):
-        """
-        Initializes the new URL map.
+        """Initializes the new URL map.
 
         :param rules: sequence of url rules for this map.
         :param default_subdomain: The default subdomain for rules without a
@@ -915,8 +905,7 @@ class Map(object):
             self.add(rulefactory)
 
     def is_endpoint_expecting(self, endpoint, *arguments):
-        """
-        Iterate over all rules and check if the endpoint expects
+        """Iterate over all rules and check if the endpoint expects
         the arguments provided.  This is for example useful if you have
         some URLs that expect a language code and others that do not and
         you want to wrap the builder a bit so that the current language
@@ -937,8 +926,7 @@ class Map(object):
         return iter(self._rules)
 
     def add(self, rulefactory):
-        """
-        Add a new rule or factory to the map and bind it.  Requires that the
+        """Add a new rule or factory to the map and bind it.  Requires that the
         rule is not bound to another map.
         """
         for rule in rulefactory.get_rules(self):
@@ -954,8 +942,7 @@ class Map(object):
 
     def bind(self, server_name, script_name=None, subdomain=None,
              url_scheme='http', default_method='GET', path_info=None):
-        """
-        Return a new `MapAdapter` with the details specified to the call.
+        """Return a new `MapAdapter` with the details specified to the call.
         Note that `script_name` will default to ``'/'`` if not further
         specified or `None`.  The `server_name` at least is a requirement
         because the HTTP RFC requires absolute URLs for redirects and so all
@@ -980,13 +967,13 @@ class Map(object):
 
     def bind_to_environ(self, environ, server_name=None, subdomain=None,
                         calculate_subdomain=False):
-        """
-        Like `bind` but you can pass it an WSGI environment and it will fetch
-        the information from that directory.  Note that because of limitations
-        in the protocol there is no way to get the current subdomain and real
-        `server_name` from the environment.  If you don't provide it, Werkzeug
-        will use `SERVER_NAME` and `SERVER_PORT` (or `HTTP_HOST` if provided)
-        as used `server_name` with disabled subdomain feature.
+        """Like `bind` but you can pass it an WSGI environment and it will
+        fetch the information from that directory.  Note that because of
+        limitations in the protocol there is no way to get the current
+        subdomain and real `server_name` from the environment.  If you don't
+        provide it, Werkzeug will use `SERVER_NAME` and `SERVER_PORT` (or
+        `HTTP_HOST` if provided) as used `server_name` with disabled subdomain
+        feature.
 
         If `subdomain` is `None` but an environment and a server name is
         provided it will calculate the current subdomain automatically.
@@ -1025,8 +1012,7 @@ class Map(object):
                         environ['REQUEST_METHOD'], environ.get('PATH_INFO'))
 
     def update(self):
-        """
-        Called before matching and building to keep the compiled rules
+        """Called before matching and building to keep the compiled rules
         in the correct order after things changed.
         """
         if self._remap:
@@ -1037,8 +1023,7 @@ class Map(object):
 
 
 class MapAdapter(object):
-    """
-    Retured by `Map.bind` or `Map.bind_to_environ` and does the
+    """Retured by `Map.bind` or `Map.bind_to_environ` and does the
     URL matching and building based on runtime information.
     """
 
@@ -1056,8 +1041,7 @@ class MapAdapter(object):
 
     def dispatch(self, view_func, path_info=None, method=None,
                  catch_http_exceptions=False):
-        """
-        Does the complete dispatching process.  `view_func` is called with
+        """Does the complete dispatching process.  `view_func` is called with
         the endpoint and a dict with the values for the view.  It should
         look up the view function, call it, and return a response object
         or WSGI application.  http exceptions are not catched by default
@@ -1083,23 +1067,25 @@ class MapAdapter(object):
                 urls = url_map.bind_to_environ(environ)
                 return urls.dispatch(lambda e, v: views[e](request, **v),
                                      catch_http_exceptions=True)
+
+        Keep in mind that this method might return exception objects too, so
+        use `Response.force_type` to get a response object.
         """
         try:
-            endpoint, args = self.match(path_info, method)
-        except RequestRedirect, e:
-            return e.get_response()
-        try:
+            try:
+                endpoint, args = self.match(path_info, method)
+            except RequestRedirect, e:
+                return e
             return view_func(endpoint, args)
         except HTTPException, e:
             if catch_http_exceptions:
-                return e.get_response()
+                return e
             raise
 
     def match(self, path_info=None, method=None):
-        """
-        The usage is simple: you just pass the match method the current path
-        info as well as the method (which defaults to `GET`).  The following
-        things can then happen:
+        """The usage is simple: you just pass the match method the current
+        path info as well as the method (which defaults to `GET`).  The
+        following things can then happen:
 
         - you receive a `NotFound` exception that indicates that no URL is
           matching.  A `NotFound` exception is also a WSGI application you
@@ -1190,15 +1176,29 @@ class MapAdapter(object):
                             self.script_name[:-1],
                             path.lstrip('/')
                         )))
+            if rule.redirect_to is not None:
+                if isinstance(rule.redirect_to, basestring):
+                    def _handle_match(match):
+                        value = rv[match.group(1)]
+                        return rule._converters[match.group(1)].to_url(value)
+                    redirect_url = _simple_rule_re.sub(_handle_match,
+                                                       rule.redirect_to)
+                else:
+                    redirect_url = rule.redirect_to(self, **rv)
+                raise RequestRedirect(str(urljoin('%s://%s%s%s' % (
+                    self.url_scheme,
+                    self.subdomain and self.subdomain + '.' or '',
+                    self.server_name,
+                    self.script_name
+                ), redirect_url)))
             return rule.endpoint, rv
         if have_match_for:
             raise MethodNotAllowed(valid_methods=list(have_match_for))
         raise NotFound()
 
     def test(self, path_info=None, method=None):
-        """
-        Test if a rule would match.  Works like `match` but returns `True` if
-        the URL matches, or `False` if it does not exist.
+        """Test if a rule would match.  Works like `match` but returns `True`
+        if the URL matches, or `False` if it does not exist.
         """
         try:
             self.match(path_info, method)
@@ -1209,8 +1209,7 @@ class MapAdapter(object):
         return True
 
     def build(self, endpoint, values=None, method=None, force_external=False):
-        """
-        Building URLs works pretty much the other way round.  Instead of
+        """Building URLs works pretty much the other way round.  Instead of
         `match` you call `build` and pass it the endpoint and a dict of
         arguments for the placeholders.
 
@@ -1254,7 +1253,7 @@ class MapAdapter(object):
         else:
             values = {}
 
-        for rule in self.map._rules_by_endpoint.get(endpoint) or ():
+        for rule in self.map._rules_by_endpoint.get(endpoint, ()):
             if rule.suitable_for(values, method):
                 rv = rule.build(values)
                 if rv is not None:
