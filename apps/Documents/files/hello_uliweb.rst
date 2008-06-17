@@ -14,20 +14,34 @@ Hello, Uliweb
 从 http://code.google.com/p/uliweb 下载最新版本或从svn中下载最新版本，放在一个目录下。
 因为 Uliweb 本身包含 uliwebproject 网站的代码，所以在我们这个简单的例子中其实是不需要的。
 它们都存在于apps目录下。一种方式是你将它全部删除，因为我们会创建新的app。另一种方式就是修
-改apps下的settings.py文件，只让我们新创建的app生效。这里我们将采用第二种方法。不过一会我
-们再修改它。
+改apps下的settings.py文件，只让我们新创建的app生效。再一种方法就是将代码导出到其它的工作
+目录下，这样环境比较干净，然后开始工作。这里我们将采用第三种方法。
+
+创建新的项目
+-------------
+
+Uliweb 提供一个命令行工具 manage.py, 它可以执行一些命令。在Uliweb的下载目录下，进入命
+令行，然后执行：
+
+::
+
+    python manage.py export ../uliweb_work
+    
+这里export后面是一个目录，我是将它建在与uliweb同级的uliweb_work下了，你可以换成其它的目录。
+
+在执行成功后(成功不会显示任何内容)，在命令行进入新建的目录，在这个目录下是一个完整的Uliweb
+的拷贝，但是没有任何APP存在，所以是一个干净的环境。
 
 创建Hello应用
 --------------
 
-Uliweb 提供一个命令行工具 manage.py, 它可以执行一些命令。那么首先让我们创建一个新的
-Hello app
+然后让我们创建一个Hello的应用。在uliweb_work目录的命令行下执行：
 
 .. code::
 
-    manage.py makeapp Hello
+    python manage.py makeapp Hello
     
-注意: manage.py 存在于 Uliweb 的安装目录下。在执行成功后，你会在apps下找到::
+在执行成功后，你会在apps下找到::
 
     apps/
       __init__.py
@@ -49,15 +63,14 @@ Hello app
 .. code:: python
 
     #coding=utf-8
-    from frameworks.SimpleFrame import expose
-
-以上两行代码是在执行 makeapp 之后自动创建的。然后我们编写一个view函数
-
-.. code:: python
+    from uliweb.core.SimpleFrame import expose
 
     @expose('/')
     def index():
         return '<h1>Hello, Uliweb</h1>'
+    
+以上几行代码是在执行 makeapp 之后自动创建的。甚至我们都不用写一行代码，已经有一个
+Hello, Uliweb 的View函数了。
 
 @expose('/') 是用来处理 URL Mapping的，它表示将/映射到它下面的view方法上。这样，当用户
 输入 http://localhost:8000/ 时将访问 index() 方法。如果一个函数前没有使用expose修饰，
@@ -68,18 +81,6 @@ Hello app
 
 然后我们直接返回了一行HTML代码，它将直接输出到浏览器中。
 
-修改 apps/settings.py
-----------------------
-
-在缺省情况下，Uliweb 会认为所有在apps目录下的app都是有效的。但有时你可能希望可以单独控制，
-因此你可以修改 apps/settings.py 配置文件，这里我们加入
-
-.. code:: python
-
-    INSTALLED_APPS = ['Hello']
-    
-这样，则只有 Hello 会生效。
-
 启动
 ------
 
@@ -89,7 +90,7 @@ Hello app
 
 .. code:: console
 
-    manage.py runserver
+    python manage.py runserver
     
 这样就启动了一个开发服务器。然后可以打开浏览器输入: http://localhost:8000 看到结果。
 
