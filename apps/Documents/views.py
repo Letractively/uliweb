@@ -7,7 +7,7 @@ def __begin__():
 
 @expose('/documents')
 def documents():
-    return _show('toc.rst', env)
+    return _show('content.rst', env)
 
 def _show(filename, env, render=True):
     from uliweb.core.template import template
