@@ -102,18 +102,27 @@ def static_serve(request, filename):
     raise NotFound()
 
 class Loader(object):
-    def __init__(self, tmpfilename, vars, env, dirs):
+    def __init__(self, tmpfilename, vars, env, dirs, notest=False):
         self.tmpfilename = tmpfilename
         self.dirs = dirs
         self.vars = vars
         self.env = env
+        self.notest = notest
         
-    def get_source(self, modname=''):
+    def get_source(self, exc_type, exc_value, exc_info, tb):
         f, t = template.render_file(self.tmpfilename, self.vars, self.env, self.dirs)
-        return t
+        if exc_type is SyntaxError:
+            import re
+            r = re.search(r'line (\d+)', str(exc_value))
+            lineno = int(r.group(1))
+        else:
+            lineno = tb.tb_frame.f_lineno
+        return self.tmpfilename, lineno, t 
     
     def test(self, filename):
-        return self.tmpfilename.endswith('.html')
+        if self.notest:
+            return True
+        return filename.endswith('.html')
         
 class Dispatcher(object):
     installed = False
@@ -196,11 +205,23 @@ class Dispatcher(object):
         if request:
             dirs = [os.path.join(self.apps_dir, request.appname, 'templates')] + dirs
         if self.debug:
-#            env = env.copy()
-#            env['__loader__'] = Loader(templatefile, vars, env, dirs)
-#            vars['__loader__'] = Loader(templatefile, vars, env, dirs)
-            __loader__ = Loader(templatefile, vars, env, dirs)
-            return Response(template.template_file(templatefile, vars, env, dirs), content_type='text/html')
+            def debug_template(filename, vars, env, dirs):
+                def _compile(code, filename, action):
+                    __loader__ = Loader(filename, vars, env, dirs, notest=True)
+                    return compile(code, filename, 'exec')
+                vars = vars or {}
+                env = env or {}
+                fname, code = template.render_file(filename, vars, env, dirs)
+                out = template.Out()
+                template._prepare_run(vars, env, out)
+                
+                if isinstance(code, (str, unicode)):
+                    code = _compile(code, fname, 'exec')
+                __loader__ = Loader(fname, vars, env, dirs)
+                exec code in env, vars
+                return out.getvalue()
+            
+            return Response(debug_template(templatefile, vars, env, dirs), content_type='text/html')
         else:
             return Response(template.template_file(templatefile, vars, env, dirs), content_type='text/html')
     

@@ -182,9 +182,9 @@ def cycle(*elements):
     while 1:
         for j in elements:
             yield j
-            
-def _run(code, locals={}, env={}, filename='template'):
-    locals['out'] = out = Out()
+         
+def _prepare_run(locals, env, out):
+    locals['out'] = out
     locals['Xml'] = out.noescape
     
     def Get(name, default='', vars=locals):
@@ -211,12 +211,12 @@ def _run(code, locals={}, env={}, filename='template'):
     locals['Get'] = Get
     locals['Cycle'] = cycle
     
+def _run(code, locals={}, env={}, filename='template'):
+    out = Out()
+    _prepare_run(locals, env, out)
+    
     if isinstance(code, (str, unicode)):
-        try:
-            code = compile(code, filename, 'exec')
-        except:
-            print 'xxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-            raise
+        code = compile(code, filename, 'exec')
     exec code in env, locals
     return out.getvalue()
 
