@@ -235,6 +235,8 @@ def get_frame_info(tb, context_lines=7, simple=False):
                 break
             loader = b.f_locals.get('__loader__')
 
+    exc_type, exc_value, exc_info = sys.exc_info()
+    
     # sourcecode
     source = ''
     pre_context, post_context = [], []
@@ -243,7 +245,7 @@ def get_frame_info(tb, context_lines=7, simple=False):
         if not loader is None and hasattr(loader, 'test') and loader.test(fn):
             source = ''
             if hasattr(loader, 'get_source'):
-                source = loader.get_source(modname) or ''
+                fn, lineno, source = loader.get_source(exc_type, exc_value, exc_info, tb)
         else:
             source = file(fn).read()
     except:
