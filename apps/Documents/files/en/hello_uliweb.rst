@@ -30,8 +30,27 @@ and then place it in a directory.
 Note: Uliweb contains the source code of the website (uliwebproject) 
 which is in 'apps/', however, we don't need it in this tutorial. 
 You can delete it directly or modify the file named 'settings.py' in 'apps/' 
-to make our new app the only enabled one. Here we choose the latter way, 
-but we will do that later.
+to make our new app the only enabled one. And the third way is to create
+a new working directory, so the environment is pure, and we choose the third way.
+
+Creating new project
+---------------------
+
+Uliweb has already provided a command line tool named manage.py, you can use
+it to execute some commands. Enter the installed directory of Uliweb, and swith 
+to command line, then execute:
+
+::
+
+    python manage.py export ../uliweb_work
+    
+Behind export is a directory name, I'll create a new directory named uliweb_work
+and it'll exist in the same level with uliweb, and you can of cause change it to
+any directory you want.
+
+If the command execution is successful, it'll output nothing. Then goto to the new
+build directory. This directory is a complete uliweb copy, but there is no any 
+APP, so it's a pure working environment.
 
 
 Creating 'Hello' app
@@ -42,7 +61,7 @@ to perform some operations. Now we create a brand new Hello app first.
 
 .. code::
 
-    manage.py makeapp Hello
+    python manage.py makeapp Hello
     
 Note: manage.py is in the installed directory of Uliweb.
 
@@ -70,16 +89,14 @@ Open Hello/view.py, you will see:
 .. code:: python
 
     #coding=utf-8
-    from frameworks.SimpleFrame import expose
-
-The two lines of code shown above was generated automatically when executing 'makeapp', 
-and we're going to add a view function.
-
-.. code:: python
-
+    from uliweb.core.SimpleFrame import expose
+    
     @expose('/')
     def index():
         return '<h1>Hello, Uliweb</h1>'
+
+The above lines of code shown above was generated automatically when executing 'makeapp', 
+and we even don't need write any code, there is already a Hello, Uliweb view function!
 
 @expose('/') is used for URL Mapping, which means map the url '/' to 
 the view function below. So when visiting http://localhost:8000/, function index() 
@@ -91,20 +108,6 @@ in expose either. When defining arguments, they should be the same in index() an
 
 Then the function returns a line of HTML code that will be displayed directly in browser.
 
-
-Modifying 'apps/settings.py'
-------------------------------
-
-Uliweb would regard every app in 'apps/' as enabled when using default settings, 
-however, sometimes you may want to control them separately. To manage this, 
-you can modify 'apps/settings.py'. Here we add:
-
-.. code:: python
-
-    INSTALLED_APPS = ['Hello']
-    
-By doing this, Hello is made to be the only enabled app.
-
 Launch
 --------
 
@@ -113,7 +116,7 @@ Execute the following command:
 
 .. code:: console
 
-    manage.py runserver
+    python manage.py runserver
     
 We have run the development server now, and then we can see the results 
 by typing http://localhost:8000 in the browser.

@@ -16,7 +16,7 @@
 
 ::
 
-    manage.py runserver
+    python manage.py runserver
     
 然后在浏览器输入 http://localhost:8000/guestbook 这样就可以看到了。目前缺省是使用
 sqlite3。如果你安装了python 2.5它已经是内置的。否则要安装相应的数据库和Python的绑定模
