@@ -33,7 +33,7 @@ postgresql, sqlserver, access,　firebird。不过我只试过mysql和sqlite。
 
 ::
 
-    manage.py export 目录
+    python manage.py export 目录
     
 这样，整个Uliweb的环境就完全导到一个新的环境下了。然后进入这个新的目录，开始工作吧。
 
@@ -45,7 +45,7 @@ postgresql, sqlserver, access,　firebird。不过我只试过mysql和sqlite。
 
 ::
 
-    manage.py makeapp GuestBook
+    python manage.py makeapp GuestBook
     
 这样就自动会创建apps和相关的GuestBook目录。
 
@@ -58,7 +58,7 @@ ORM，但是你可以不使用它。Uliweb提供了插件机制，可以让你�
 
 .. code:: python
 
-    from utils.plugin import plugin
+    from uliweb.core.plugin import plugin
     
 plugin是一个decorator，象expose一样，你可以用它来修饰函数，这样就可以来挂接函数到一个
 执行的入口上，并且当程序执行到这个点时，会自动执行所挂接的函数。好，加入以下内容：
@@ -72,12 +72,12 @@ plugin是一个decorator，象expose一样，你可以用它来修饰函数，�
     
     @plugin('prepare_template_env')
     def prepare_template_env(env):
-        from utils.textconvert import text2html
+        from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
         
     @plugin('startup')
     def startup(application, config, *args):
-        from utils import orm
+        from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
         orm.set_auto_migirate(True)
@@ -101,7 +101,7 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
     
 其中有些参数是可以缺省或组织作为字典项放在connection中的。比如：
 
-::
+.. code:: python
 
     connection = {'connection':'mysql://localhost/test',
         'username':'limodou',
@@ -112,7 +112,7 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
 以上三种写法效果是一样的。如果有些参数没有提供，如port参数，则将使用缺省值。对于sqlite，
 因为没有什么用户名和口令之类的，所以可以直接写为：
 
-::
+.. code:: python
     
     connection = {'connection':'sqlite'}    #内置数据库
     connection = {'connection':'sqlite://'} #内存数据库
@@ -132,7 +132,7 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
 
     @plugin('startup')
     def startup(application, config, *args):
-        from utils import orm
+        from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
         orm.set_auto_migirate(True)
@@ -180,7 +180,7 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 
     @plugin('prepare_template_env')
     def prepare_template_env(env):
-        from utils.textconvert import text2html
+        from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
 
 这也是一个插件的使用示例，它将向模板的环境中注入一个新的函数 ``text2html``, 这样你就可以
@@ -196,7 +196,7 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 
 .. code:: python
 
-    from utils.orm import *
+    from uliweb.orm import *
     import datetime
     
     class Note(Model):
@@ -208,7 +208,7 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
         
 很简单。
 
-首先要从 utils.orm 中导入全部东西，这样简单。
+首先要从 uliweb.orm 中导入全部东西，这样简单。
 
 然后是导入datetime模块。为什么会用到它，因为Uliorm在定义Model时支持两种定义方式：
 
@@ -251,13 +251,20 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 .. code:: python
 
     #coding=utf-8
-    from frameworks.SimpleFrame import expose
+    from uliweb.core.SimpleFrame import expose
+    
+    
+    @expose('/')
+    def index():
+        return '<h1>Hello, Uliweb</h1>'
+    
+将不需要的index()代码删除。只保留前两行。
 
 然后加入静态文件支持的代码：
 
 .. code:: python
 
-    from frameworks.SimpleFrame import static_serve
+    from uliweb.core.SimpleFrame import static_serve
     @expose('/static/<regex(".*$"):filename>')
     def static(filename):
         return static_serve(request, filename)
@@ -451,7 +458,7 @@ Form写在一起，因为那样代码比较多，同且如果用户输入出错�
 
 .. code:: python
 
-    from utils import Form
+    from uliweb.core import Form
     
     Form.Form.layout_class = Form.CSSLayout
     

@@ -212,7 +212,11 @@ def _run(code, locals={}, env={}, filename='template'):
     locals['Cycle'] = cycle
     
     if isinstance(code, (str, unicode)):
-        code = compile(code, filename, 'exec')
+        try:
+            code = compile(code, filename, 'exec')
+        except:
+            print 'xxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+            raise
     exec code in env, locals
     return out.getvalue()
 

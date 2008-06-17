@@ -111,6 +111,9 @@ class Loader(object):
     def get_source(self, modname=''):
         f, t = template.render_file(self.tmpfilename, self.vars, self.env, self.dirs)
         return t
+    
+    def test(self, filename):
+        return self.tmpfilename.endswith('.html')
         
 class Dispatcher(object):
     installed = False
@@ -193,9 +196,13 @@ class Dispatcher(object):
         if request:
             dirs = [os.path.join(self.apps_dir, request.appname, 'templates')] + dirs
         if self.debug:
-            env = env.copy()
-            env['__loader__'] = Loader(templatefile, vars, env, dirs)
-        return Response(template.template_file(templatefile, vars, env, dirs), content_type='text/html')
+#            env = env.copy()
+#            env['__loader__'] = Loader(templatefile, vars, env, dirs)
+#            vars['__loader__'] = Loader(templatefile, vars, env, dirs)
+            __loader__ = Loader(templatefile, vars, env, dirs)
+            return Response(template.template_file(templatefile, vars, env, dirs), content_type='text/html')
+        else:
+            return Response(template.template_file(templatefile, vars, env, dirs), content_type='text/html')
     
     def not_found(self, request, e):
         tmp_file = template.get_templatefile('404'+config.TEMPLATE_SUFFIX, self.template_dirs)
