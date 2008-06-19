@@ -149,7 +149,6 @@ def ugettext(message):
         t = translation(_domain)
     except IOError:
         return message
-    print 'message', t.ugettext(message).encode('gbk')
     return t.ugettext(message)
 
 def ungettext(msgid1, msgid2, n):
