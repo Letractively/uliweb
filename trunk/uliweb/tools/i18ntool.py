@@ -18,7 +18,7 @@ def _get_outputfile(apps_dir, appname='', locale='en'):
     if appname:
         output = os.path.join(apps_dir, appname, 'locale', locale, 'LC_MESSAGES', 'uliweb.pot')
     else:
-        output = os.path.join(apps_dir, 'locale', locale, 'LC_MESSAGES', 'uliweb.pot')
+        output = os.path.join(apps_dir, '..', 'locale', locale, 'LC_MESSAGES', 'uliweb.pot')
     return output
 
 def _get_apps(apps_dir):
@@ -53,12 +53,12 @@ def make_extract(apps_directory):
                 merge(output[:-4]+'.po', output)
             except:
                 raise
-        elif not all:
+        elif all:
             apps = _get_apps(apps_dir)
             for appname in apps:
                 path = os.path.join(apps_dir, appname)
                 files = getfiles(path)
-                output = _get_outputfile(apps_dir, locale=locale)
+                output = _get_outputfile(apps_dir, appname, locale=locale)
                 try:
                     extrace_files(files, output)
                     print 'Success! output file is %s' % output
