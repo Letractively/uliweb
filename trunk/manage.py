@@ -188,5 +188,7 @@ if __name__ == '__main__':
     action_exportstatic = exportstatic
     #action_shell = script.make_shell(make_shell)
     #action_initdb = lambda: make_app().init_database()
+    from uliweb.tools.i18ntool import make_extract
+    action_i18n = make_extract('apps')
 
     script.run()

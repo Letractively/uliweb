@@ -1,9 +1,9 @@
 {{extend "base.html"}}
-<h1>Render reStructuredText</h1>
-<p>This is a very simple APP. You can use it to render any reStructuredText and see the result.</p>
+<h1>{{=_('Render reStructuredText')}}</h1>
+<p>{{=_('This is a very simple APP. You can use it to render any reStructuredText and see the result.')}}</p>
 <hr/>
-<h2>Preview</h2>
+<h2>{{=_('Preview')}}</h2>
 {{ Xml(content) }}
 <hr/>
-<h2>Input reStructuredText</h2>
+<h2>{{=_('Input reStructuredText')}}</h2>
 {{ Xml(form) }}
