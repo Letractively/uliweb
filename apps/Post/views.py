@@ -1,14 +1,10 @@
 #coding=utf-8
 from uliweb.core.SimpleFrame import expose
 
-def __begin__():
-    from uliweb.core.i18n import set_language
-    set_language('zh')
-
 @expose('/post')
 def post():
     from forms import ContentForm
-    
+    from uliweb.core.i18n import get_language
     form = ContentForm()
     content = ''
     if request.method == 'POST':
@@ -22,9 +18,3 @@ def post():
         
     return locals()
 
-@expose('/post1')
-def post1():
-    from uliweb.core.i18n import set_language
-    set_language('en')
-    response.view = 'post.html'
-    return post()

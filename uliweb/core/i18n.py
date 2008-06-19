@@ -2,14 +2,13 @@ import gettext as gettext_module
 import os.path
 import copy
 import threading
-import sys
 
-sys.path.insert(0, '../..')
 from uliweb.utils.lazystr import lazy
 
 _active_locale = threading.local()
 
 _translations = {}
+_translation_objs = {}
 _localedir = None
 _domain = 'uliweb'
 _default_lang = None
@@ -21,8 +20,6 @@ def set_default_language(lang):
     _default_lang = lang
     
 def set_language(lang):
-    if not isinstance(lang, (tuple, list)):
-        lang = [lang]
     _active_locale.locale = lang
     
 def get_language():
@@ -32,6 +29,8 @@ def find(domain, localedir, languages, all=0):
     # now normalize and expand the languages
     nelangs = []
     languages = languages or []
+    if not isinstance(languages, (tuple, list)):
+        languages = [languages]
     for lang in languages:
         for nelang in gettext_module._expand_lang(lang):
             if nelang not in nelangs:
@@ -51,21 +50,32 @@ def find(domain, localedir, languages, all=0):
                     return mofile
     return result
 
+#def check_lang(domain, localedir=None, languages=None):
+#    localedir = localedir or _localedir
+#    
+#    mofiles = find(domain, localedir, languages, all=1)
+#    return bool(mofiles)
 
 def translation(domain, localedir=None, languages=None,
                 class_=None, fallback=False, codeset=None):
+    global _translation_objs
+    
+    localedir = localedir or _localedir
+    languages = languages or getattr(_active_locale, 'locale', None) or _default_lang
+    
+    r = _translation_objs.get(languages)
+    if r:
+        return r
+    
+    mofiles = find(domain, localedir, languages, all=1)
+    if not mofiles:
+        r = gettext_module.NullTranslations()
+        _translation_objs[languages] = r
+        return r
     
     if class_ is None:
         class_ = gettext_module.GNUTranslations
         
-    localedir = localedir or _localedir
-    languages = languages or getattr(_active_locale, 'locale', None) or _default_lang
-    
-    mofiles = find(domain, localedir, languages, all=1)
-    if not mofiles:
-        if fallback:
-            return gettext_module.NullTranslations()
-        raise IOError(gettext_module.ENOENT, 'No translation file found for domain', domain)
     # TBD: do we need to worry about the file pointer getting collected?
     # Avoid opening, reading, and parsing the .mo file after it's been done
     # once.
@@ -85,6 +95,8 @@ def translation(domain, localedir=None, languages=None,
             result = t
         else:
             result.add_fallback(t)
+    _translation_objs[languages] = result
+    
     return result
 
 def install(domain, localedir=None, unicode=True, codeset='utf-8', names=None):
@@ -94,9 +106,6 @@ def install(domain, localedir=None, unicode=True, codeset='utf-8', names=None):
     
     import __builtin__
     __builtin__.__dict__['_'] = unicode and ugettext_lazy or gettext_lazy
-    
-#    t = translation(domain, localedir, fallback=True, codeset=codeset)
-#    t.install(unicode, names)
     
 def dgettext(domain, message):
     try:
@@ -166,16 +175,5 @@ gettext_lazy = lazy(gettext)
 ugettext_lazy = lazy(ugettext)
 ungettext_lazy = lazy(ungettext)
 
-if __name__ == '__main__':
-    localedir = ['d:/project/svn/uliweb/apps/Post']
-    install('uliweb', localedir)
-    print 'lang=', get_language()
-    print _('Content:') + 'aaaa'
-    set_language('zh')
-    print 'lang=', get_language()
-    print _('Content:').encode('gbk')
-    set_language('en')
-    print 'lang=', get_language()
-    print _('Content:')
     
     
