@@ -174,14 +174,14 @@ class Dispatcher(object):
             import settings
             if hasattr(settings, 'INSTALLED_APPS'):
                 return getattr(settings, 'INSTALLED_APPS')
-            else:
-                s = []
-                for p in os.listdir(self.apps_dir):
-                    if os.path.isdir(os.path.join(self.apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
-                        s.append(p)
-                return s
         except ImportError:
             pass
+        
+        s = []
+        for p in os.listdir(self.apps_dir):
+            if os.path.isdir(os.path.join(self.apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
+                s.append(p)
+        return s
         
     def get_file(self, filename, request=None, dirname='files'):
         """
