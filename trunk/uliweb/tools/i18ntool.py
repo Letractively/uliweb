@@ -1,4 +1,4 @@
-import os
+import os, sys
 
 def getfiles(path):
     files_list = []
