@@ -392,10 +392,15 @@ class Dispatcher(object):
             #middleware process
             middlewares = config.get('MIDDLEWARE_CLASSES', [])
             response = None
+            _clses = {}
+            _inss = {}
             for middleware in middlewares:
-                mod = import_func(middleware)
-                if hasattr(mod, 'process_request'):
-                    response = middleware.process_request(req)
+                cls = import_func(middleware)
+                _clses[middleware] = cls
+                if hasattr(cls, 'process_request'):
+                    ins = cls(self, config)
+                    _inss[middleware] = ins
+                    response = ins.process_request(req)
                     if response is not None:
                         break
             
@@ -406,9 +411,12 @@ class Dispatcher(object):
                 response = res
                 
             for middleware in reversed(middlewares):
-                mod = import_func(middleware)
-                if hasattr(mod, 'process_response'):
-                    response = middleware.process_response(req, response)
+                cls = _clses[middleware]
+                if hasattr(cls, 'process_response'):
+                    ins = _inss.get(middleware)
+                    if not ins:
+                        ins = cls(self, config)
+                    response = ins.process_response(req, response)
             
         except RequestRedirect, e:
             response = e

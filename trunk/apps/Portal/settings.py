@@ -1,6 +1,10 @@
 from uliweb.core.plugin import plugin
 
 LANGUAGE_CODE = 'zh'
+LANGUAGES = ['en_US', 'zh_CN']
+MIDDLEWARE_CLASSES = (
+    'uliweb.middlewares.middle_translation.TranslationMiddle',
+)
 
 @plugin('prepare_template_env')
 def prepare_template_env(env):
