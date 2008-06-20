@@ -3,7 +3,8 @@ from uliweb.core.plugin import plugin
 connection = {'connection':'sqlite://database.db'}
 #connection = {'connection':'mysql://root:limodou@localhost/test'}
 
-DEBUG_LOG = True
+DEBUG = True
+DEBUG_LOG = False
 
 @plugin('prepare_template_env')
 def prepare_template_env(env):

@@ -3,12 +3,12 @@
 <head>
 	<title>{{=Get('title') or 'Uliweb Project Site'}}</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<link rel="stylesheet" type="text/css" href="/static/css/reset-fonts-grids.css">
-	<link rel="stylesheet" type="text/css" href="/static/css/site.css">
-	<link rel="stylesheet" type="text/css" href="/static/css/examples.css">
-	<link rel="stylesheet" type="text/css" href="/static/nifty/niftyCorners.css">
-	<link rel="stylesheet" type="text/css" href="/static/nifty/niftyPrint.css" media="print">
-	<script type="text/javascript" src="/static/nifty/nifty.js"></script>
+	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/reset-fonts-grids.css') }}">
+	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/site.css') }}">
+	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/examples.css') }}">
+	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='nifty/niftyCorners.css') }}">
+	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='nifty/niftyPrint.css') }}" media="print">
+	<script type="text/javascript" src="{{= url_for('Portal.views.static', filename='nifty/nifty.js') }}"></script>
 	<script type="text/javascript">
 	window.onload=function(){
 	if(!NiftyCheck())

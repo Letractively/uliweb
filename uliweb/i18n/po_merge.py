@@ -134,10 +134,13 @@ def merge(file1, file2):
 
     f1.close()
     # We're done.  Tell the user what we did.
-    print('%d strings updated. '
-          '%d of %d strings are still untranslated (%.0f%%).' %
-          (update_count, untranslated, string_count,
-           100.0 * untranslated / string_count))
+    if string_count == 0:
+        print '0 strings updated.'
+    else:
+        print('%d strings updated. '
+            '%d of %d strings are still untranslated (%.0f%%).' %
+            (update_count, untranslated, string_count,
+            100.0 * untranslated / string_count))
     
 def main(argv):
     if len(argv) != 2:

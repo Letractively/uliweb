@@ -28,4 +28,3 @@ msgstr "这是一个非常简单的应用。你可以使用它渲染任何的reS
 
 msgid "Content:"
 msgstr "内容："
-

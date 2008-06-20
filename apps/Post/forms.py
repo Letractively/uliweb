@@ -1,5 +1,5 @@
 from uliweb.core import Form
-from uliweb.core.i18n import ugettext_lazy as _
+from uliweb.i18n import ugettext_lazy as _
 
 Form.Form.layout_class = Form.CSSLayout
 

@@ -1,9 +1,13 @@
 from uliweb.core.plugin import plugin
+from uliweb.i18n import ugettext_lazy as _
 
 LANGUAGE_CODE = 'zh'
-LANGUAGES = ['en_US', 'zh_CN']
+LANGUAGES = {
+    'en_US':_('English'), 
+    'zh_CN':_('Simplified Chinese'),
+}
 MIDDLEWARE_CLASSES = (
-    'uliweb.middlewares.middle_translation.TranslationMiddle',
+    'uliweb.i18n.middle_i18n.I18nMiddle',
 )
 
 @plugin('prepare_template_env')
@@ -16,14 +20,14 @@ def prepare_template_env(env):
 @plugin('startup_installed')
 def startup(application, config, *args):
     import os
-    from uliweb.core.i18n import install, set_default_language
+    from uliweb.i18n import install, set_default_language
     
-    localedir = (#[os.path.join(application.apps_dir, '..', 'locale')] + 
+    localedir = ([os.path.join(application.apps_dir, '..', 'locale')] + 
         [os.path.join(application.apps_dir, appname) for appname in application.apps])
     install('uliweb', localedir)
     set_default_language(config.get('LANGUAGE_CODE'))
     
 @plugin('prepare_template_env')
 def prepare_template_env(env):
-    from uliweb.core.i18n import ugettext_lazy
+    from uliweb.i18n import ugettext_lazy
     env['_'] = ugettext_lazy

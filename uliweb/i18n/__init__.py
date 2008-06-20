@@ -1,9 +1,13 @@
+__all__ = ['set_default_language', 'set_language', 'get_language', 'install',
+    'gettext_lazy', 'ngettext_lazy', 'ugettext_lazy', 'ungettext_lazy',
+    'gettext', 'ugettext', 'lgettext', 'lngettext', 'ungettext', 'ngettext']
+
 import gettext as gettext_module
 import os.path
 import copy
 import threading
 
-from uliweb.utils.lazystr import lazy
+from lazystr import lazy
 
 _active_locale = threading.local()
 
@@ -49,12 +53,6 @@ def find(domain, localedir, languages, all=0):
                 else:
                     return mofile
     return result
-
-#def check_lang(domain, localedir=None, languages=None):
-#    localedir = localedir or _localedir
-#    
-#    mofiles = find(domain, localedir, languages, all=1)
-#    return bool(mofiles)
 
 def translation(domain, localedir=None, languages=None,
                 class_=None, fallback=False, codeset=None):
@@ -174,6 +172,3 @@ ngettext_lazy = lazy(ngettext)
 gettext_lazy = lazy(gettext)
 ugettext_lazy = lazy(ugettext)
 ungettext_lazy = lazy(ungettext)
-
-    
-    

@@ -16,6 +16,15 @@ mod_wsgi
 
    * 拷贝mod_wsgi.so到apache的modules目录下
 
+   Window环境可以看：
+
+    http://code.google.com/p/modwsgi/wiki/InstallationOnWindows
+
+   Linux环境可以看：
+
+    http://code.google.com/p/modwsgi/wiki/InstallationOnLinux
+
+
 #. 配置 apache 的httpd.conf文件
 
    * 增加：
