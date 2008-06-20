@@ -20,12 +20,17 @@ def prepare_template_env(env):
 @plugin('startup_installed')
 def startup(application, config, *args):
     import os
-    from uliweb.i18n import install, set_default_language
+    from uliweb.i18n import install, set_default_language, format_locale
     
     localedir = ([os.path.join(application.apps_dir, '..', 'locale')] + 
         [os.path.join(application.apps_dir, appname) for appname in application.apps])
     install('uliweb', localedir)
     set_default_language(config.get('LANGUAGE_CODE'))
+    
+    d = {}
+    for k, v in config.get('LANGUAGES', {}).items():
+        d[format_locale(k)] = v
+    config['LANGUAGES'] = d
     
 @plugin('prepare_template_env')
 def prepare_template_env(env):
