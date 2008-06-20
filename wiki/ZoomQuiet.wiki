@@ -1,5 +1,4 @@
 #summary zip abt. ZoomQuiet
-#labels Featured
 
 = abt.吾 =
 *Zoom.Quiet === Zoomq = 仨儿*
