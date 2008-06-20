@@ -1,5 +1,4 @@
 #summary CoreTeam
-#labels Featured,Phase-Support
 
 = Intro. =
 
