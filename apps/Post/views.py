@@ -10,12 +10,11 @@ def post():
     if request.method == 'POST':
         flag, data = form.validate(request.params)
         if flag:
-            from utils.rst import to_html
+            from uliweb.utils.rst import to_html
             content = to_html(data.content)
             form = form.html(data)
         else:
             form = form.html(request.params, data, py=False)
-    
-    change_languages = make_select_languages(config.get('LANGUAGES', []), request.path_info)
+    change_languages = make_select_languages(config.get('LANGUAGES', []))
     return locals()
 
