@@ -1,5 +1,5 @@
 {{extend "layout.html"}}
-<div class="left"><img src="/static/images/logo.jpg"></div>
+<div class="left"><img src="{{= url_for('Portal.views.static', filename='images/logo.jpg') }}"></div>
 <div>
 <h1>它是什么</h1>
 <p>uliweb 是一个web框架，它结合了许多框架的特点，不能说是集众家之长，但结合的东西的确不少。

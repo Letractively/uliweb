@@ -4,7 +4,6 @@ from uliweb.core.SimpleFrame import expose
 @expose('/post')
 def post():
     from forms import ContentForm
-    from uliweb.core.i18n import get_language
     form = ContentForm()
     content = ''
     if request.method == 'POST':

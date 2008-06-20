@@ -1,7 +1,7 @@
 import re
 import locale
 
-from uliweb.core.i18n import set_language
+from uliweb.i18n import set_language
 
 accept_language_re = re.compile(r'''
         ([A-Za-z]{1,8}(?:-[A-Za-z]{1,8})*|\*)   # "en", "en-au", "x-y-z", "*"
@@ -58,7 +58,7 @@ def parse_accept_lang_header(lang_string):
     result.sort(lambda x, y: -cmp(x[1], y[1]))
     return result
 
-class TranslationMiddle(object):
+class I18nMiddle(object):
     def __init__(self, application, config):
         self.config = config
         

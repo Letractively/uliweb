@@ -148,6 +148,7 @@ class Dispatcher(object):
         self.install_views(self.modules['views'])
         Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.env = self._prepare_env()
+        Dispatcher.config = config
         Dispatcher.template_env = Storage(Dispatcher.env.copy())
         callplugin('prepare_default_env', Dispatcher.env)
         callplugin('prepare_template_env', Dispatcher.template_env)
@@ -348,7 +349,7 @@ class Dispatcher(object):
                 #deal with settings
                 if p in self.apps:
                     settings_files = ['.'.join([os.path.basename(self.apps_dir), p, 'settings']) for x in ['.py', '.pyc', '.pyo']
-                        if os.path.exists(os.path.join(os.path.basename(self.apps_dir), p, 'settings%s' % x))]
+                        if os.path.exists(os.path.join(self.apps_dir, p, 'settings%s' % x))]
                     if settings_files:
                         settings.append(settings_files[0])
            
