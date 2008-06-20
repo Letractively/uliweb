@@ -1,11 +1,13 @@
 __all__ = ['set_default_language', 'set_language', 'get_language', 'install',
     'gettext_lazy', 'ngettext_lazy', 'ugettext_lazy', 'ungettext_lazy',
-    'gettext', 'ugettext', 'lgettext', 'lngettext', 'ungettext', 'ngettext']
+    'gettext', 'ugettext', 'lgettext', 'lngettext', 'ungettext', 'ngettext',
+    'format_locale']
 
 import gettext as gettext_module
 import os.path
 import copy
 import threading
+import locale
 
 from lazystr import lazy
 
@@ -27,7 +29,17 @@ def set_language(lang):
     _active_locale.locale = lang
     
 def get_language():
-    return getattr(_active_locale, 'locale', None)
+    lang = getattr(_active_locale, 'locale', _default_lang)
+    return format_locale(lang)
+
+def format_locale(lang):
+    accept_lang = lang.lower().replace('-', '_')
+    normalized = locale.locale_alias.get(accept_lang)
+    if normalized:
+        normalized = normalized.split('.')[0]
+        return normalized
+    else:
+        return lang
 
 def find(domain, localedir, languages, all=0):
     # now normalize and expand the languages

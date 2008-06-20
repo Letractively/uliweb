@@ -1,7 +1,6 @@
 import re
-import locale
 
-from uliweb.i18n import set_language
+from uliweb.i18n import set_language, format_locale
 
 accept_language_re = re.compile(r'''
         ([A-Za-z]{1,8}(?:-[A-Za-z]{1,8})*|\*)   # "en", "en-au", "x-y-z", "*"
@@ -26,12 +25,9 @@ def get_language_from_request(request, config):
         if accept_lang == '*':
             break
 
-        accept_lang = accept_lang.replace('-', '_')
-        normalized = locale.locale_alias.get(accept_lang)
+        normalized = format_locale(accept_lang)
         if not normalized:
             continue
-        # Remove the default encoding from locale_alias.
-        normalized = normalized.split('.')[0]
         
         if normalized in languages:
             return normalized
