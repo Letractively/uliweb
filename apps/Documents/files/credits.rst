@@ -9,6 +9,7 @@
 ::
 
     limodou <limodou@gmail.com>
+    头太晕 <terrycn@gmail.com>
 
 文档贡献者
 -----------
