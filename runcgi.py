@@ -2,7 +2,7 @@
 #coding=utf-8
 
 """
-以cgi scgi fastcgi方式运行uliweb！
+Run uliweb with cgi / scgi / fastcgi!
 """
 
 import os
@@ -11,19 +11,19 @@ import manage
 
 
 HELP_TEXT = r"""
-以cgi scgi fastcgi方式运行uliweb.
-flup模块是必需的。http://trac.saddi.com/flup
+Run uliweb with cgi scgi fastcgi.
+flup need,http://trac.saddi.com/flup
 
-protocol=协议  cgi,scgi,fcgi(默认cgi)
-host=监听地址   例：127.0.0.1
-port=端口号  例：3033
-socket=文件名  UNIX Socet方式监听 例:/tmp/uliweb.sock
-method=prefork/threaded 默认为threaded
-daemonize=true/false  默认为false
-pidfile=文件名  PID文件
-outfile=文件名  stdout
-errfile=文件名  stderr
-worldir=/ 工作目录 默认
+protocol=cgi,scgi,fcgi(default:cgi)
+host=HOSTNAME example:127.0.0.1
+port=PORT example:3033
+socket=SCKET_FILE_NAME  UNIX Socet example:/tmp/uliweb.sock
+method=prefork/threaded default:threaded
+daemonize=true/false  default:false
+pidfile=FILENAME  PID file
+outfile=FILENAME  stdout
+errfile=FILENAME  stderr
+worldir=default:/
 Examples:
 
 CGI:
@@ -82,9 +82,6 @@ def run(args=[],**kwargs):
     if pidfile:
         open(pidfile,'w').write('%d\n' % os.getpid())
     application = manage.make_application()
-    if application.config.DEBUG:
-        from werkzeug.debug import DebuggedApplication
-        application = DebuggedApplication(application)
     if options['protocol'] == 'cgi':
         os.environ['SCRIPT_NAME'] = ''
         WSGIServer(application).run()
