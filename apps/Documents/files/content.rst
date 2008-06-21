@@ -34,13 +34,13 @@ Uliweb快速入门(Quick Tutorial)
 -----------------------------
 
 * `Uliweb的结构和机制(Architecture and Machenism of Uliweb) <{{= index('architecture') }}>`_
-* Uliweb的URL机制(Uliweb URLs)
+* `URL映射(URL Mapping) <{{= index('url_mapping') }}>`_
 * 视图(Views)
 * 模板(Templates)
-* 使用数据库(Using Database in Uliweb)
-* 开发工具(Tools)
+* 数据库和ORM(Using Database and ORM)
 * `部署指南(Deployment Guide) <{{= index('deployment') }}>`_
 * `manage.py使用指南(manage.py User Guide) <{{= index('manage_guide') }}>`_
+* `I18n <{{= index('i18n') }}>`_
 
 高级应用(Advanced Topics)
 -----------------------------

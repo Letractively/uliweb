@@ -8,7 +8,7 @@ LOW = 3
 
 _plugins = {}
 
-def plugin(plugin_name, kind=MIDDLE, nice=-1):
+def plugin(plugin_name, sender=None, signal=None, kind=MIDDLE, nice=-1):
     """
     This is a decorator function, so you should use it as:
         
@@ -31,7 +31,8 @@ def plugin(plugin_name, kind=MIDDLE, nice=-1):
                 n = 900
         else:
             n = nice
-        plugins.append((n, func))
+        _f = (n, {'func':func, 'signal':signal, 'sender':sender})
+        plugins.append(_f)
         return func
     return f
 
@@ -43,11 +44,19 @@ def remove_plugin(plugin_name, func):
         plugins = _plugins[plugin_name]
         for i, v in enumerate(plugins):
             nice, f = v
-            if f is func:
+            if f['func'] is func:
                 del plugins[i]
                 return
 
-def callplugin(name, *args, **kwargs):
+def _test(kwargs, plugin):
+    signal = kwargs.get('signal')
+    _signal = plugin.get('signal')
+    flag = True
+    if _signal and _signal != signal:
+        flag = False
+    return flag
+        
+def callplugin(sender, name, *args, **kwargs):
     """
     Invoke plugin according plugin-name, it'll invoke plugin function one by one,
     and it'll not return anything, so if you want to return a value, you should
@@ -59,16 +68,19 @@ def callplugin(name, *args, **kwargs):
     items.sort()
     for i in range(len(items)):
         nice, f = items[i]
-        if callable(f):
+        _f = f['func']
+        if callable(_f):
+            if _test(kwargs, f):
+                continue
             try:
-                f(*args, **kwargs)
+                _f(sender, *args, **kwargs)
             except:
                 logging.exception('Calling plugin [%s] error!' % name)
                 raise
         else:
             raise Exception, "Plugin [%s] can't been invoked" % name
         
-def execplugin(name, *args, **kwargs):
+def execplugin(sender, name, *args, **kwargs):
     """
     Invoke plugin according plugin-name, it'll invoke plugin function one by one,
     and if one plugin function return non-None value, it'll return it and break
@@ -80,9 +92,12 @@ def execplugin(name, *args, **kwargs):
     items.sort()
     for i in range(len(items)):
         nice, f = items[i]
-        if callable(f):
+        _f = f['func']
+        if callable(_f):
+            if _test(kwargs, f):
+                continue
             try:
-                v = f(*args, **kwargs)
+                v = _f(sender, *args, **kwargs)
             except:
                 logging.exception('Calling plugin [%s] error!' % name)
                 raise

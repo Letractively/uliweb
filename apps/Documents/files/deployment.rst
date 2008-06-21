@@ -74,6 +74,8 @@ mod_wsgi
         Allow from all
         </Directory>
         
+     上面是将起始的URL设为/，你可以根据需要换为其它的起始URL，如/myproj。
+    
      如果在windows下，示例为：
     
      ::
@@ -85,4 +87,5 @@ mod_wsgi
         Allow from all
         </Directory>
 
-#. 重启apache        
+#. 重启apache
+#. 测试。启动浏览器输入： http://localhost/YOURURL 来检测你的网站可否可以正常访问。 
