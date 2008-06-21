@@ -126,8 +126,8 @@ class Loader(object):
         
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir=APPS_DIR, debug=False):
-        self.debug = debug
+    def __init__(self, apps_dir=APPS_DIR):
+        self.debug = False
         if not Dispatcher.installed:
             self.init(apps_dir)
             callplugin(self, 'startup_installed', config, url_map)
@@ -149,6 +149,7 @@ class Dispatcher(object):
         Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.env = self._prepare_env()
         Dispatcher.config = config
+        self.debug = config.get('DEBUG', False)
         Dispatcher.template_env = Storage(Dispatcher.env.copy())
         callplugin(self, 'prepare_default_env', Dispatcher.env)
         callplugin(self, 'prepare_template_env', Dispatcher.template_env)
