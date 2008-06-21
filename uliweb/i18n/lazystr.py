@@ -25,12 +25,6 @@ class LazyString(object):
     def getvalue(self):
         return self._func(self.msg)
     
-    def _getvalue(self, obj):
-        if isinstance(obj, LazyString):
-            return unicode(obj)
-        else:
-            return obj
-        
     def __repr__(self):
         return self.__str__()
     

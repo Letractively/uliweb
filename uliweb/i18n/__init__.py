@@ -21,8 +21,6 @@ _default_lang = None
 
 def set_default_language(lang):
     global _default_lang
-    if not isinstance(lang, (tuple, list)):
-        lang = [lang]
     _default_lang = lang
     
 def set_language(lang):

@@ -33,7 +33,7 @@ Uliweb快速入门(Quick Tutorial)
 使用Uliweb(General Topics)
 -----------------------------
 
-* Uliweb的结构和机制
+* `Uliweb的结构和机制(Architecture and Machenism of Uliweb) <{{= index('architecture') }}>`_
 * Uliweb的URL机制(Uliweb URLs)
 * 视图(Views)
 * 模板(Templates)
