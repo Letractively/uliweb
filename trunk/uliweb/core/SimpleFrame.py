@@ -130,8 +130,8 @@ class Dispatcher(object):
         self.debug = debug
         if not Dispatcher.installed:
             self.init(apps_dir)
-            callplugin('startup_installed', self, config, url_map)
-        callplugin('startup', self, config, url_map)
+            callplugin(self, 'startup_installed', config, url_map)
+        callplugin(self, 'startup', config, url_map)
         
     def init(self, apps_dir):
         global APPS_DIR
@@ -150,8 +150,8 @@ class Dispatcher(object):
         Dispatcher.env = self._prepare_env()
         Dispatcher.config = config
         Dispatcher.template_env = Storage(Dispatcher.env.copy())
-        callplugin('prepare_default_env', Dispatcher.env)
-        callplugin('prepare_template_env', Dispatcher.template_env)
+        callplugin(self, 'prepare_default_env', Dispatcher.env)
+        callplugin(self, 'prepare_template_env', Dispatcher.template_env)
         Dispatcher.installed = True
         
     def _prepare_env(self):

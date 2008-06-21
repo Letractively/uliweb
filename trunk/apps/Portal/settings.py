@@ -11,14 +11,14 @@ MIDDLEWARE_CLASSES = (
 )
 
 @plugin('prepare_template_env')
-def prepare_template_env(env):
+def prepare_template_env(sender, env):
     from uliweb.utils.rst import to_html
     def rst2html(filename):
         return to_html(file(env.get_file(filename)).read())
     env['rst2html'] = rst2html
     
 @plugin('startup_installed')
-def startup(application, config, *args):
+def startup(sender, config, *args):
     import os
     from uliweb.i18n import install, set_default_language, format_locale
     
@@ -33,6 +33,6 @@ def startup(application, config, *args):
     config['LANGUAGES'] = d
     
 @plugin('prepare_template_env')
-def prepare_template_env(env):
+def prepare_template_env(sender, env):
     from uliweb.i18n import ugettext_lazy
     env['_'] = ugettext_lazy
