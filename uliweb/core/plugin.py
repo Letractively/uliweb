@@ -8,7 +8,7 @@ LOW = 3
 
 _plugins = {}
 
-def plugin(plugin_name, sender=None, signal=None, kind=MIDDLE, nice=-1):
+def plugin(plugin_name, signal=None, kind=MIDDLE, nice=-1):
     """
     This is a decorator function, so you should use it as:
         
@@ -31,7 +31,7 @@ def plugin(plugin_name, sender=None, signal=None, kind=MIDDLE, nice=-1):
                 n = 900
         else:
             n = nice
-        _f = (n, {'func':func, 'signal':signal, 'sender':sender})
+        _f = (n, {'func':func, 'signal':signal})
         plugins.append(_f)
         return func
     return f
@@ -68,9 +68,10 @@ def callplugin(sender, name, *args, **kwargs):
     items.sort()
     for i in range(len(items)):
         nice, f = items[i]
+        print 'xxxx', f
         _f = f['func']
         if callable(_f):
-            if _test(kwargs, f):
+            if not _test(kwargs, f):
                 continue
             try:
                 _f(sender, *args, **kwargs)
@@ -94,7 +95,7 @@ def execplugin(sender, name, *args, **kwargs):
         nice, f = items[i]
         _f = f['func']
         if callable(_f):
-            if _test(kwargs, f):
+            if not _test(kwargs, f):
                 continue
             try:
                 v = _f(sender, *args, **kwargs)

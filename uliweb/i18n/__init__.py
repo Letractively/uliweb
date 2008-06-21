@@ -15,7 +15,7 @@ _active_locale = threading.local()
 
 _translations = {}
 _translation_objs = {}
-_localedir = None
+_localedir = []
 _domain = 'uliweb'
 _default_lang = None
 
