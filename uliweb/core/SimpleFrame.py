@@ -269,8 +269,8 @@ class Dispatcher(object):
         env = env or self.env
         if isinstance(result, dict):
             result = Storage(result)
-            if hasattr(response, 'view') and response.view:
-                tmpfile = response.view
+            if hasattr(response, 'template') and response.template:
+                tmpfile = response.template
             else:
                 tmpfile = request.function + config.TEMPLATE_SUFFIX
             response = self.render(tmpfile, result, env=env, request=request)
