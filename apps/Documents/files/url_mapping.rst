@@ -1,4 +1,4 @@
-URL映射
+URL Mapping
 =============
 
 :Author: Limodou <limodou@gmail.com>
