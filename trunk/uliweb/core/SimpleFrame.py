@@ -201,8 +201,8 @@ class Dispatcher(object):
                 return path
         return None
 #        errorpage("Can't find the file %s" % filename)
-    
-    def render(self, templatefile, vars, env=None, dirs=None, request=None):
+
+    def template(self, templatefile, vars, env=None, dirs=None, request=None):
         dirs = dirs or self.template_dirs
         env = self.get_template_env(env)
         if request:
@@ -224,9 +224,12 @@ class Dispatcher(object):
                 exec code in env, vars
                 return out.getvalue()
             
-            return Response(debug_template(templatefile, vars, env, dirs), content_type='text/html')
+            return debug_template(templatefile, vars, env, dirs)
         else:
-            return Response(template.template_file(templatefile, vars, env, dirs), content_type='text/html')
+            return template.template_file(templatefile, vars, env, dirs)
+    
+    def render(self, templatefile, vars, env=None, dirs=None, request=None):
+        return Response(self.template(templatefile, vars, env, dirs, request), content_type='text/html')
     
     def not_found(self, request, e):
         tmp_file = template.get_templatefile('404'+config.TEMPLATE_SUFFIX, self.template_dirs)

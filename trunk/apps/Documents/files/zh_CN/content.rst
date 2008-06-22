@@ -1,63 +1,65 @@
-基本信息(Basic Info)
+`英文版 <{{= url_for('%s.views.documents' % request.appname)+'?lang=en' }}>`_
+
+基本信息
 ---------------------
 {{ 
 def index(filename, lang=''):
     return url_for('%s.views.show_document' % request.appname, filename=filename, lang=lang)
 pass
 }}
-* `Uliweb简介(Introduction) <{{= index('introduction') }}>`_
-* `许可协议(License) <{{= index('license') }}>`_
-* 更新说明(Change Log)
-* `鸣谢(Credits) <{{= index('credits') }}>`_
-* `使用Uliweb的网站(Web Sites which use Uliweb) <{{= index('sites') }}>`_
+* `Uliweb简介 <{{= index('introduction') }}>`_
+* `许可协议 <{{= index('license') }}>`_
+* 更新说明
+* `鸣谢 <{{= index('credits') }}>`_
+* `使用Uliweb的网站 <{{= index('sites') }}>`_
 
-安装Uliweb(Installation)
+安装
 -------------------------
 
-* `系统需求(Requirements) <{{= index('requirements') }}>`_
-* `安装Uliweb(Install Uliweb) <{{= index('installation') }}>`_
-* `版本升级(Update) <{{= index('update') }}>`_
-* 修改配置文件(Configure Uliweb)
+* `系统需求 <{{= index('requirements') }}>`_
+* `安装Uliweb <{{= index('installation') }}>`_
+* `版本升级 <{{= index('update') }}>`_
+* 配置Uliweb
 
-Uliweb快速入门(Quick Tutorial)
+教程
 -------------------------------
 
-* `Hello, Uliweb(Your First web app with Uliweb) <{{= index('hello_uliweb') }}>`_ `English <{{= index('hello_uliweb', 'en') }}>`_
-* `迷你留言薄(Mini GuestBook) <{{= index('guestbook') }}>`_
-* 模板和视图(Views and Templates)
-* 快速构建博客(Build a weblog in minutes)
-* 用CSS美化你的博客(CSS Artwork for your weblog)
-* 深入了解Uliweb(Go ahead with Uliweb)
-* 参考资料(Reference list)
+* `Hello, Uliweb <{{= index('hello_uliweb') }}>`_ `English <{{= index('hello_uliweb', 'en') }}>`_
+* `迷你留言薄 <{{= index('guestbook') }}>`_
+* 模板和视图
+* 快速构建博客
+* 用CSS美化你的博客
+* 深入了解Uliweb
+* 参考资料
 
-使用Uliweb(General Topics)
+参考
 -----------------------------
 
-* `Uliweb的结构和机制(Architecture and Machenism of Uliweb) <{{= index('architecture') }}>`_
-* `URL映射(URL Mapping) <{{= index('url_mapping') }}>`_
-* 视图(Views)
-* 模板(Templates)
-* 数据库和ORM(Using Database and ORM)
-* `部署指南(Deployment Guide) <{{= index('deployment') }}>`_
-* `manage.py使用指南(manage.py User Guide) <{{= index('manage_guide') }}>`_
+* `体系统结构和机制 <{{= index('architecture') }}>`_
+* `URL映射 <{{= index('url_mapping') }}>`_
+* 视图
+* 模板
+* 数据库和ORM
+* `部署指南 <{{= index('deployment') }}>`_
+* `manage.py使用指南 <{{= index('manage_guide') }}>`_
 * `I18n <{{= index('i18n') }}>`_
 
-高级应用(Advanced Topics)
+高级话题
 -----------------------------
 
-* 扩展Uliweb(Extending Uliweb)
-* 详解配置文件(Full Details of Configuration Files)
-* 安全机制(Security)
-* 容错机制(Error Handling)
-* 在Uliweb中使用Ajax(Ajax in Uliweb)
+* 扩展Uliweb
+* 详解配置文件
+* 安全机制
+* 容错机制
+* 在Uliweb中使用Ajax
 * 与其他框架结合()
 
-系统类参考(Class Reference)
+系统类参考
 ------------------------------
 
-扩展主题(Additional Topics)
+扩展主题
 -------------------------------
 
-* 快速参考图(Quick Reference Chart)
+* 快速参考图
 
 
