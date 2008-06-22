@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: Fri Jun 20 10:42:58 2008\n"
+"POT-Creation-Date: Sun Jun 22 12:11:47 2008\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,19 +19,19 @@ msgstr ""
 msgid "Content:"
 msgstr ""
 
-#: apps\Post\templates\post.html:3
+#: apps\Post\templates\post.html:5
 msgid "Render reStructuredText"
 msgstr ""
 
-#: apps\Post\templates\post.html:5
+#: apps\Post\templates\post.html:7
 msgid "This is a very simple APP. You can use it to render any reStructuredText and see the result."
 msgstr ""
 
-#: apps\Post\templates\post.html:7
+#: apps\Post\templates\post.html:9
 msgid "Preview"
 msgstr ""
 
-#: apps\Post\templates\post.html:11
+#: apps\Post\templates\post.html:13
 msgid "Input reStructuredText"
 msgstr ""
 

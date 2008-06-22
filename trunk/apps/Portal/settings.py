@@ -27,8 +27,8 @@ def startup(sender, config, *args):
     import os
     from uliweb.i18n import install, set_default_language, format_locale
     
-    localedir = ([os.path.join(application.apps_dir, '..', 'locale')] + 
-        [os.path.join(application.apps_dir, appname) for appname in application.apps])
+    localedir = ([os.path.join(sender.apps_dir, '..', 'locale')] + 
+        [os.path.join(sender.apps_dir, appname) for appname in sender.apps])
     install('uliweb', localedir)
     set_default_language(config.get('LANGUAGE_CODE'))
     
