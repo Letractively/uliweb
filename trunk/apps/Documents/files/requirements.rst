@@ -1,18 +1,20 @@
-系统需求
-===========
+Requirements
+==============
 
-Uliweb 本身已经包含了运行所需的所有模块。但是你要注意，Uliweb 本身还包含了 
-http://uliwebproject.appspot.com 站点的主要代码，运行它还需要其它的模块。如果只是
-运行一个简单的例子，则从 Uliweb 网站下载代码后运行就足够了。Uliweb 是在 Python
-2.5版本上开发的，但应该可以运行在2.4环境下。
+Uliweb has already included everything it need. But it includes all source
+files of uliwebproject site, so if you want to test it in your machine, you
+should also install some third party modules, for example: docutils and pygments.
 
-基本要求
----------
+Uliweb is developed under Python 2.5, but I think it should be run at Python 2.4.
+If you find any problem, please email me.
+
+Basic Requirements
+----------------------
 
 * Python 2.4+
 
-网站代码
-----------
+Requirements for uliwebproject site
+-------------------------------------
 
 * `Python 2.4+ <http://python.org>`_
 * `Docutils 0.4 <http://docutils.sourceforge.net/>`_

@@ -125,10 +125,10 @@ MVT框架
 
 Uliweb也采用MVT的框架。目前Model是基于Geniusql封装的ORM。View则采函数。但当你在运行view
 函数，你会运行在一个环境下，这一点有些象web2py。不过web2py是基于exec，而Uliweb是通过
-向函数注入变量(f_globals)来实现的。这种在某种环境下运行的方式使得你减少了许多的导入，许
+向函数注入变量(func_globals)来实现的。这种在某种环境下运行的方式使得你减少了许多的导入，许
 多对象可以在view函数中直接使用，非常方便。Template一般你不需要主动来调用，Uliweb采用自动
 映射的做法，即当一个view函数返回一个dict变量时，会自动查找模板并进行处理。当返回值不是
-dict对象时将不自动套用模板。如果在response中直接给response.view指定模板名，可以不使用缺
+dict对象时将不自动套用模板。如果在response中直接给response.template指定模板名，可以不使用缺
 省的模板。缺省模板文件名是与view函数名一样，但扩展名为.html。
 
 在使用模板时也有一个环境变量，你可以直接在模板中直接使用预置的对象。同时Uliweb还提供了对

@@ -1,54 +1,59 @@
-体系结构和机制
-===============
+Architecture and Mechanism
+============================
 
 :Author: Limodou <limodou@gmail.com>
 
 .. contents:: 
-.. sectnum::
 
-组织结构
-----------
+Uliweb is also a MVT web framework, and it's released under GPLv2 license.
 
-如果你从svn中下载Uliweb源码，它不仅包括了Uliweb的核心组件，同时还包括了uliwebproject
-网站的全部源码和一些示例程序。Uliweb采用与web2py类似的管理方式，即核心代码与应用放在一
-起，到时会减少部署的一些麻烦。但是对于项目的组织是采用Django的管理方式，而不是web2py的
-方式。一个完整的项目将由一个或若干个App组织，它们都统一放在apps目录下。但Uliweb的app的
-组织更为完整，每个app有自已独立的：
+Project Organization
+-----------------------
 
-* settings.py 它是配置文件
-* templates目录用于存放模板
-* static目录用于存放静态文件
-* views文件，用于存放view代码
+If you download Uliweb's source code from svn, it'll contain all core components
+of Uliweb, also including full `uliwebproject <http://uliwebproject.appspot.com>`_ 
+site source code and other demo source code. Uliweb adopts the similar management
+from web2py, i.e. core source code are put with application source code, this
+way will reduce the trouble at deploy. But the organization of project is more 
+like Django, but not like web2py. All apps will be organized together into a whole
+site. They are placed in ``apps`` folder of your project directory, by default,
+all apps will available, but you can also define which apps are truely available
+in apps/settings.py. And the app organization in Uliweb is more complete, each
+app can has it own:
 
-这种组织方式使得Uliweb的App重用更为方便。
+* settings.py file, it's configure file of each app.
+* templates directory used for placing template files.
+* static directory used for placing static files.
 
-在uliweb的下载目录下，基本结构为：
+This organization way make app level reuse of Uliweb is more flexiable and easier.
+
+In Uliweb project directory, the basic directory structure is:
 
 ::
 
-    apps/               #App的存放目录
-    geniusql/           #缺省的数据库驱动包，使用geniusql项目
-    uliweb/             #Uliweb核心代码
-    webob/              #用于Request, Response的处理，使用webob项目
-    werkzeug/           #底层框架支撑库，使用werkzeug项目
-    app.yaml            #供部署在GAE上使用
-    gae_handler.py      #供部署在GAE上使用
-    manage.py           #Uliweb的命令行管理程序
-    wsgi_handler.wsgi   #供部署在apache+mod_wsgi上使用
+    apps/               #Store all apps
+    geniusql/           #Default database driven module
+    uliweb/             #Uliweb core source code
+    webob/              #Create Request, Response object
+    werkzeug/           #Underlying module
+    app.yaml            #Used for GAE deploying
+    gae_handler.py      #Used for GAE deploying
+    manage.py           #Command line management tool
+    wsgi_handler.wsgi   #Used for Apache+mod_wsgi deploying
     
-其中uliweb又分为：
+And structure of Uliweb is:
 
 ::
 
     uliweb/
-        core/           #核心模块
-        i18n/           #国际化处理模块
-        middlewares/    #middleware汇总
-        orm/            #缺省ORM库
-        test/           #测试程序
-        utils/          #输助模块
+        core/           #Core component
+        i18n/           #Internationalization process module
+        middlewares/    #Middleware collection directory
+        orm/            #Uliorm module
+        test/           #Testing scripts
+        utils/          #Utils modules
         
-apps的结构为：
+structure of apps is:
 
 ::
 
@@ -66,85 +71,113 @@ apps的结构为：
             templates/
             static/
     
-App管理
+App Organization
+------------------
+
+One Uliweb project can be consisted by one app or several apps, and each app structure
+doesn't need completely, but it should be a real Python package, so it need an
+empty __init__.py file at least. So one app can be:
+
+* Has only a settings.py, so it can just do some initalization work in it, for example:
+  database configure, I18n configure, etc.
+* Has only templates directory, so it can just provide public template files.
+* Has only static directory, so it can just provide public static files.
+* Other content what you want.
+
+By default, all apps in ``apps`` directory will be treated as available. So if you
+startup Uliweb, it'll process all apps automatically. But sometimes, you don't want
+all apps are available, so you can set an INSTALLED_APPS option in apps/settings.py, 
+for example:
+
+::
+    
+    INSTALLED_APPS = ['Hello', 'Documents']
+    
+So only ``Hello`` and ``Documents`` are available apps.
+
+At Uliweb startup, it'll automatically import settings.py from **available** apps.
+And it'll combine all configure options into a dict variable named ``config`` at the
+end. And you should notice that option variable name should be written in upper 
+case. Because settings.py will automatically imported at startup time, so you can
+also write some initialization code in there, for example: database initialization,
+etc.
+
+And at Uliweb startup, it'll automatically find views module in every **availabe** app
+directory. And views module are files which filename starts with ``views``. So 
+``views.py`` and ``views_about.py`` are both available views module, and they'll be 
+imported automatically at startup. Why doing this, because Uliweb need to 
+collect all URL mapping definition from all of these views modules. 
+  
+So in a reality project, you can have a main app, you can put public static files,
+public template files in it, and even doing some database initialization process
+or I18n initialization process. And other apps can also share with main app's
+resource.
+
+When you want to access a template file or static file, Uliweb will search in
+current app directory, if it can't find the file, it'll search from others directory.
+So you can treat all apps as an entirety.
+
+URL Mapping Process
+---------------------
+
+For now, URL in Uliweb is scattered in every views module, so it really may has
+some shortcomings:
+
+#. Can't be managed centralized, and can't be modified unified.
+#. It'll automatically import all views module at startup, may be slow when startup.
+
+But, there are some advantages also:
+
+#. Easy to add and change, because functionalities are added a little and a little.
+#. Only need to maintain in views module, it easy to reuse.
+
+So I'm considerring how to support centralized URL mapping management, for example:
+you can define URL mapping in views modules as normal, but when it'll be deployed
+into product environment, it can also extract URL mapping into a urls.py, and 
+Uliweb can use this urls.py directly and stop automatically importing views modules.
+But this feature is not existed yet.
+
+There are ``expose`` and ``url_for`` functions provided by Uliweb. The former can be 
+used for binding URL and view function. It's a decorator funtion. And the later
+can be used for URL reversed creation, it'll create URL according view function
+name. More details you can found at `URL Mapping <url_mapping>`_ document.
+
+MVT Framework
+---------------
+
+Uliweb also adopts MVT framework. 
+
+Now the Model is an ORM based on geniusql package.
+
+View is using function but not class, but when you run a view function, Uliweb
+will provide an environment for it, it very likes web2py way, but it's different.
+web2py uses ``exec`` to run the code, however Uliweb uses f_globals inject(You can 
+inject variables into function's ``func_globals`` property, so you can directly use
+these injected objects without importing or declaring them.) So you can use
+``request``, ``response``, etc. directly in the view function.
+
+For template, you don't need to invoke them in commonly, just return a dict
+variable from view function, and Uliweb will automatically find a matched 
+template for you according the function name. For example your view function
+is ``show_document()``, and the default template will be ``show_document.html``.
+And if you return other type object, Uliweb will not use default template for
+you. And you can assign ``response.template`` a template name to replace the
+default template.
+
+Extending
 -----------
 
-一个项目可以由一个App或多个App组成，而且每个App的结构不一定要求完整，但至少要求是一个
-Python的包的结构，即目录下需要一个__init__.py文件。因此一个App可以：
+Uliweb provides many ways to extend it:
 
-* 只有一个settings.py 这样可以做一些初始化配置的工作，比如：数据库配置，i18n的配置等
-* 只有templates，可以提供一些公共的模板
-* 只有static，可以提供一些公共的静态文件
-* 其它的内容
-
-Uliweb在启动时对于apps下的App有两种处理策略：
-
-#. 认为全部App都是生效的
-#. 根据apps/settings.py中的配置项INSTALLED_APPS来决定哪些App要生效
-
-Uliweb在启动时会根据生效的App来导入它们的settings.py文件，并将其中配置项进行合并最终
-形成一个完整的config变量供App来使用。同时在处理生效的App的同时，会自动查找所有views开头
-的文件和views子目录并进行导入，这块工作主要是为了收集所有定义在views文件中的URL。
-
-这样当Uliweb启动完毕，所有App下的settings.py和views文件将被导入。因此，你可以在settings.py
-文件中做一些初始化的工作。
-
-要注意，只有变量名全部为大写字母的才被认为是配置项，否则将被忽略掉。
-
-在实际的项目中，你可能有一个主控的App，你可以在它的settings.py中进行象：数据库初始化等工作。
-然后依赖于Uliweb的管理功能，让其它的App可以共享主控模块的信息。
-
-对于象templates和static，Uliweb会首先在当前App下进行搜索，如果没有找到，则去其它生效的App
-相应的目录下进行查找。因此，你可以把所有生效的App的templates和static看成一个整体。所以
-你完全可以编写只包含templates或static的App，主要是提供一些公共信息。
-
-URL处理
-------------
-
-Uliweb的URL目前是分散在不同的views文件中的，这样的确可能有以下问题：
-
-#. 不集中管理，不能统一进行修改
-#. 有性能问题
-
-不过，它也有好处：
-
-#. 符合开发过程，因为功能是逐步添加的
-#. 只需要在views中进行维护，方便重用。使用集中的管理，重用和分离比较麻烦
-
-因此未来可能会考虑支持URL的导出，这样当上线时可以导出URL配置，然后使用这个配置，不用将
-所有的views导入，提高效率。同时通过导出，基本上没有什么管理工作。
-
-URL的格式采用werkzeug的routing模块处理方式。可以定义参数，可以反向生成URL。在Uliweb
-中定义了两个方便的函数：
-
-* expose 用来将URL与view方法进行映射
-* url_for 用来根据view方法反向生成URL
-
-MVT框架
-------------
-
-Uliweb也采用MVT的框架。目前Model是基于Geniusql封装的ORM。View则采函数。但当你在运行view
-函数，你会运行在一个环境下，这一点有些象web2py。不过web2py是基于exec，而Uliweb是通过
-向函数注入变量(f_globals)来实现的。这种在某种环境下运行的方式使得你减少了许多的导入，许
-多对象可以在view函数中直接使用，非常方便。Template一般你不需要主动来调用，Uliweb采用自动
-映射的做法，即当一个view函数返回一个dict变量时，会自动查找模板并进行处理。当返回值不是
-dict对象时将不自动套用模板。如果在response中直接给response.view指定模板名，可以不使用缺
-省的模板。缺省模板文件名是与view函数名一样，但扩展名为.html。
-
-在使用模板时也有一个环境变量，你可以直接在模板中直接使用预置的对象。同时Uliweb还提供了对
-view函数和模板环境的扩展能力。
-
-扩展处理
----------
-
-Uliweb提供了多种扩展的能力：
-
-* plugin扩展。这是一种插件处理机制。Uliweb已经预设了一些调用点，这些调用点会在特殊的地方
-  被执行。你可以针对这些调用点编写相应的处理，并且将其放在settings.py中，当Uliweb在启动
-  时会自动对其进行采集，当程序运行到调用点位置时，自动调用对应的插件函数。
-* middleware扩展。它与Django的机制完全类似。你可以在配置文件中配置middleware类。每个
-  middleware可以处理请求和响应对象。
-* views模块的初始化处理。在views模块中，如果你写了一个名为__begin__的函数，它将在执行
-  要处理的view函数之前被处理，它相当于一个入口。因此你可以在这里面做一些模块级别的处理，
-  比如检查用户的权限。因此建议你根据功能将view函数分到不同的模块中。
+* Plugin extension. This is a plugin mechanism. It's similar as Dispatch module,
+  but I created it myself, and it's easy and simple. Uliweb has already predefined
+  some plugin invoke points, when it runs there, it'll find if there are some
+  matched plugin existed, and will invoke them one by one.
+* middleware extension. It's similar with Django. You can configure them in 
+  apps/settings.py, and it can be used for processing before or after the view
+  process.
+* views module initialization process. If you defined a function named as
+  ``__begin__``, it'll be invoked before invoke the exact view function. So you can
+  put some module level process code there. So I suggest that you can divide
+  different views modules via different functionalities.
 

@@ -11,6 +11,7 @@ pass
 * `License <{{= index('license') }}>`_
 * Change Log
 * `Credits <{{= index('credits') }}>`_
+* `Community & Links <{{= index('community') }}>`_
 * `Web sites which use Uliweb <{{= index('sites') }}>`_
 
 Installation
@@ -18,7 +19,7 @@ Installation
 
 * `Requirements <{{= index('requirements') }}>`_
 * `Install Uliweb <{{= index('installation') }}>`_
-* `How to update to new version <{{= index('update') }}>`_
+* `How to update Uliweb to new version <{{= index('update') }}>`_
 * How to config Uliweb
 
 Tutorials

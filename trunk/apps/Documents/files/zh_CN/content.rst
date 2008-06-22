@@ -24,8 +24,8 @@ pass
 教程
 -------------------------------
 
-* `Hello, Uliweb <{{= index('hello_uliweb') }}>`_ `English <{{= index('hello_uliweb', 'en') }}>`_
-* `迷你留言薄 <{{= index('guestbook') }}>`_
+* `Hello, Uliweb(易) <{{= index('hello_uliweb') }}>`_ `English <{{= index('hello_uliweb', 'en') }}>`_
+* `迷你留言薄(难) <{{= index('guestbook') }}>`_
 * 模板和视图
 * 快速构建博客
 * 用CSS美化你的博客

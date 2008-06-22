@@ -1,18 +1,19 @@
-鸣谢
-======
+Credits
+==========
 
-在这里感谢所有帮助过这个项目的人，如果有所遗漏请通知我。排名不分先后。
+I'll thank for all people here who helped this project, if you've contributed
+to this project but I lost your name, please email me. 
 
-开发贡献者
------------
+Development Contributors
+----------------------------
 
 ::
 
     limodou <limodou@gmail.com>
     头太晕 <terrycn@gmail.com>
 
-文档贡献者
------------
+Documents Contributors
+--------------------------
 
 ::
 
@@ -20,5 +21,5 @@
     icebird <icebird@gmail.com> 
     E.T <iwinux@gmail.com>
 
-设计贡献者
------------
+Design Contributors
+-------------------------
