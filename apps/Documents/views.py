@@ -7,11 +7,23 @@ def __begin__():
 
 @expose('/documents')
 def documents():
-    return _show('content.rst', env)
+    return _show(request, 'content.rst', env)
 
-def _show(filename, env, render=True):
+def _show(request, filename, env, lang=None, render=True):
     from uliweb.core.template import template
     from uliweb.utils.rst import to_html
+    from uliweb.i18n import get_language
+    if not filename.endswith('.rst'):
+        filename += '.rst'
+    if not lang:
+        #get from query string
+        lang = request.GET.get('lang')
+        if not lang:
+            lang = get_language()
+    if lang:
+        f = env.get_file(os.path.join(lang, filename))
+        if f:
+            filename = f
     content = file(env.get_file(filename)).read()
     if render:
         content = to_html(template(content, env=env))
@@ -25,8 +37,4 @@ def _show(filename, env, render=True):
 #this is also available
 @expose('/documents/<lang>/<regex(".*$"):filename>')
 def show_document(filename, lang):
-    if not filename.endswith('.rst'):
-        filename += '.rst'
-    if lang:
-        filename = os.path.join(lang, filename)
-    return _show(filename, env, False)
+    return _show(request, filename, env, lang, False)

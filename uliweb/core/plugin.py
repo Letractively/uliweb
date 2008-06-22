@@ -68,7 +68,6 @@ def callplugin(sender, name, *args, **kwargs):
     items.sort()
     for i in range(len(items)):
         nice, f = items[i]
-        print 'xxxx', f
         _f = f['func']
         if callable(_f):
             if not _test(kwargs, f):

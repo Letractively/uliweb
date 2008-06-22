@@ -99,6 +99,12 @@ class MultiDict(DictMixin):
                 result.append(v)
         return result
 
+    def get(self, key, default=None):
+        for k, v in self._items:
+            if key == k:
+                return v
+        return default
+        
     def getone(self, key):
         """
         Get one value matching the key, raising a KeyError if multiple
