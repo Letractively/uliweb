@@ -1,4 +1,4 @@
-import os, sys
+import os
 
 def getfiles(path):
     files_list = []
@@ -36,7 +36,7 @@ def _get_apps(apps_dir):
 
 def make_extract(apps_directory):
     apps_dir = apps_directory
-    def action(appname=('a', ''), all=False, locale=('l', 'en'), whole=('w', False)):
+    def action(appname=('a', ''), all=False, locale=('l', 'en'), whole=('w', False), merge=('m', False)):
         """
         extract i18n message catalog form app or all apps
         """
@@ -50,7 +50,8 @@ def make_extract(apps_directory):
             try:
                 extrace_files(files, output)
                 print 'Success! output file is %s' % output
-                merge(output[:-4]+'.po', output)
+                if merge:
+                    merge(output[:-4]+'.po', output)
             except:
                 raise
         elif all:
@@ -62,7 +63,8 @@ def make_extract(apps_directory):
                 try:
                     extrace_files(files, output)
                     print 'Success! output file is %s' % output
-                    merge(output[:-4]+'.po', output)
+                    if merge:
+                        merge(output[:-4]+'.po', output)
                 except:
                     raise
         elif whole:
@@ -72,7 +74,8 @@ def make_extract(apps_directory):
             try:
                 extrace_files(files, output)
                 print 'Success! output file is %s' % output
-                merge(output[:-4]+'.po', output)
+                if merge:
+                    merge(output[:-4]+'.po', output)
             except:
                 raise
     

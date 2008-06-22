@@ -1,4 +1,5 @@
-许可协议
+License
 ========
 
-本软件采用GPLv2协议发布，对于所包含的第三方软件包遵守原许可协议。
+Uliweb is distributed under GPLv2 license, for third party modules under their
+own license.
