@@ -6,22 +6,29 @@ URL Mapping
 .. contents:: 
 .. sectnum::
 
-Uliweb使用Werkzeug的Routing来进行URL的处理。当你使用manage.py的makeapp命令生成一个新
-的App时，它会自动生成views.py文件，其中会自动从uliweb.core.SimpleFrame中导出expose
-函数，它是一个decorator函数，用于修饰view函数。
+Uliweb uses Werkzeug's routing.py module to process URLs. When you use ``makeapp`` 
+command to create a new app directory, it'll automatically create a ``views.py``,
+and it'll automatically add some code for you, for example:
 
-通过expose可以将一个URL与一个view函数进行绑定，然后通过url_for(这是SimpleFrame提供的用
-于反向生成URL的方法)来生成反向的URL。
+.. code:: python
 
+    from uliweb.core.SimpleFrame import expose
+    
+So that you can directly use expose in view modules. ``expose`` is a decorator
+function. Using it you can binding an URL with a view function, and create
+reversed URL later by ``url_for`` function(It's another function provided by 
+SimpleFrame).
 
-expose说明
------------
+expose Description
+----------------------
 
-目前，Uliweb还不支持集中的URL配置，因此你需要在每个view方法前加上expose()来定义URL。
+For now, Uliweb doesn't support centralized URL management, so you need to add
+expose() in front of each view function. If there is no expose, the function will
+not be visited by browser.
 
-基本用法为：
+Basic usage is:
 
-#. 缺省映射
+#. Default Mapping
 
    .. code:: python
 
@@ -29,47 +36,55 @@ expose说明
         def index(arg1, arg2):
             return {}
         
-   当expose()不带任何参数时，将进行缺省的映射。即URL将为:
+   When there is no arguments in expose(), it'll execute default mapping process.
+   So the URL would be mapped to:
 
    ::
 
         /appname/view_function_name/<arg1>/<arg2>
     
-   如果view函数没有参数，则为：
+   And if there is no arugments in view function, the URL would be mapped to:
 
    ::
 
         /appname/view_function_name
     
-#. 固定映射
+#. Specified Mapping
 
    .. code:: python
 
         @expose('/index')
         def index():
             return {}
+            
+   You can specify any URL you want to use in expose() function, this URL will
+   be bound to below view function.
     
-#. 参数处理
+#. Argument Process
 
-   当URL只有可变内容，可以配置为参数。一个参数的基本形式为：
+   If there are something can be changed in the URL, you can configure them as
+   arguments. A basic argument format is like:
 
    .. code:: python
 
         <convertor(arguments):name>
     
-   其中convertor和arguments是可以缺省的。convertor类型目前可以设置为：int, float, 
-   any, string, unicode, path, regex等。不同的convertor需要不同的参数。详情请参见
-   下面的converter说明。最简单的形式就是<name>了，它将匹配/到/间的内容。
+   ``convertor`` and ``arguments`` can be omitted. convertor can be set as: int, float,
+   any, string, unicode, path, regex now. Different convertor can accept different
+   arguments. More details please see below section about convertor Description.
+   The simplest format is ``<name>``, it'll match the stuff between ``'/'`` and ``'/'``.
 
-   name为匹配后参数的名字，它需要与绑定的view方法中的参数名相匹配。
+   For ``name``, it's the argument name, it needs to be matched with the arugments
+   of view function it bounded.
 
-#. 其它参数
+#. Other arguments of expose
 
-   expose函数允许在义时除了给出URL字符串以外再提供其它的参数，比如：
+   ``expose`` function enable other arguments except for the first URL string, for example:
 
    defaults
 
-        它用来定义针对view函数中的参数的缺省值，例如你可以定义：
+        It can be used for defining the default arguments value of view function 
+        argument, for example, you can do:
         
         .. code:: python
         
@@ -78,37 +93,44 @@ expose说明
             def show(page):
                 return {}
                 
-        这样两个URL都指向相同的view函数，但由于show方法需要一个page参数，所以对于第一
-        个/all来说，需要定义一个缺省值。
+        You can see above two URLs will be bound to the same ``show()`` function, but because
+        ``show()`` need a ``page`` argument, so for the first URL, you should define
+        a default value of ``page`` argument.
         
     build_only
     
-        如果设置为True，将只用来生成URL，不用于匹配。目前Uliweb提供了静态文件的处理，
-        但一旦你想通过象Apache这样的web server来提供服务的话，就不再需要Uliweb的静态
-        文件服务了。但是有些文件的链接却是依赖于这个定义来反向生成的，因此为了不进行匹配，
-        可以加上这个参数，这样在访问时不会进行匹配，但是在反向生成URL时还可以使用。
+        If it be set as ``True``, then it means that this binding will only be used for 
+        creating reversed URL, it'll not be used for matching URL. For now, Uliweb
+        provide static files serving, just add static file serving view function
+        to view modules, and bind static URL to this view function.
+        But you may want to use web server(Like Apache) to serve static files.
+        And you probablely have already used ``url_for`` to create reversed URL,
+        then you can set this argument to ``True``, so that the ``url_for`` can be
+        still enabled, but URL matching will be disabled.
         
-    关于参数更多的说明请参见werkzeug下的routing.py程序。
+    There are more arguments you can use in ``expose`` function, you can see the 
+    routing.py of Werkzeug for more details.
     
 .. note::
 
-    在非GAE环境下不需要导入，因为Uliewb已经将其放入__builtin__环境中，可以直接使用，但是
-    在GAE环境下需要导入，GAE不允许注入。
+    In non-GAE environment, you don't need to import expose explicitly, because
+    Uliweb has already put it in __builtin__, so you can use it directly. But in GAE,
+    it'll disable this process, so you need to import it explicitly. But if you use
+    makeapp to create a new app, Uliweb has already put this line in views.py.
     
-    如果你使用makeapp来创建App目录，则在生成的views.py中已经加入了导入语句，因此可以直接
-    使用。
-    
-url_for说明
----------------
+url_for Description
+-----------------------
 
-url_for可以根据view方法的名字来反向生成URL。要注意，它需要一个字符串形式的view方法名，
-格式为：
+url_for can be used for creating reversed URL, it need a string format view
+function name, for example:
 
-::
+.. code:: python
 
     url_for('appname.views_module_name.function_name', **kwargs)
     
-其中kwargs是与view方法中的参数相对应的。例如你在Hello中定义了如下URL：
+kwargs will match with the arguments of view function.
+
+Let's see an example. Say you define an URL in ``Hello`` app:
 
 .. code:: python
 
@@ -116,76 +138,81 @@ url_for可以根据view方法的名字来反向生成URL。要注意，它需要
     def index():
         pass
         
-然后在反向生成URL时可以使用：
+Then when you want to get reversed URL, you can do:
 
 .. code:: python
 
-    url_for('Hello.views.index') #结果为'/index'
+    url_for('Hello.views.index') #Result will be '/index'
     
-如果你在运行时希望可以动态适应App名字的变化，可以使用：
+If you don't want to hard code app name here, you can do:
 
 .. code:: python
 
     url_for('%s.views.index' % request.appname)
     
-其中request是请求对象，它有一个appname的属性表示访问的App的名字。
+``request`` is request object, and it has a ``appname`` attribute, it's the current
+app name.
 
 .. note::
 
-    目前在views方法和template中都是可以直接使用这个函数的，不需要导入。
-
-convertor说明
---------------
+    For now, you can use url_for directory in both view functions and templates
+    without import it explicitly.
+    
+convertor Description
+------------------------
 
 * int
 
-  基本形式为：
+  Basic format is:
 
   ::
 
-    <int:name>                      #简单形式
-    <int(fixed_digits=4):name>      #带参数形式
+    <int:name>                      #Simple format
+    <int(fixed_digits=4):name>      #With arguments
     
-  支持参数有：
+  Supported arguments are:
 
-  * fixed_digits 固定长度
-  * min 最小值
-  * max 最大值
+  * fixed_digits Fixed length
+  * min Minimum
+  * max Maximum
 
 * float
 
-  基本形式为：
+  Basic format is:
 
   ::
 
-    <float:name>                    #简单形式
-    <float(min=0.01):name>          #带参数形式
+    <float:name>                    #Simple format
+    <float(min=0.01):name>          #With arguments
     
-  支持参数有：
+  Supported arguments are:
 
-  * min 最小值
-  * max 最大值
+  * min Minimum
+  * max Maximum
 
-* string 和 unicode
+* string and unicode
 
-  这两个其实是一样的。
+  They are the same actually
 
-  基本形式为：
+  Basic format is:
 
   ::
 
     <string:name>
     <unicode(length=2):name>
     
-  支持的参数有：
+  Supported arguments are:
 
-  * minlength 最小长度
-  * maxlength 最大长度
-  * length 定长
+  * minlength Minimal length
+  * maxlength Maximal length
+  * length Fixed length
 
 * path
 
-  与string和unicode类型，但是没有任何参数。就是匹配//之间的内容。基本形式为：
+  Just like ``string`` and ``unicode`` convertor, but has no arguments.
+  Used to match stuff between ``'/'`` and ``'/'``.
+
+  Basic format is:
 
   ::
 
@@ -193,20 +220,22 @@ convertor说明
     
 * any
 
-  基本形式为：
+  Basic format is:
 
   ::
 
     <any(about, help, imprint, u"class"):name>
 
-  将匹配任何一个字符串。
+  It'll match any of string listed.
 
 * regex
 
-  这是Uliweb中扩展的，用于匹配一个正则式，基本用法：
+  This is a extension by Uliweb, it'll be used for matching regular expression.
+
+  Basic format is:
 
   ::
 
     <regex(".*$"):filename>
     
-  参数是一个正则式。
+  The argument is a regular expression.

@@ -35,8 +35,8 @@ def make_app(appname=''):
                 print >>fp, "@expose('/')"
                 print >>fp, """def index():
     return '<h1>Hello, Uliweb</h1>'"""
-            elif f == 'settings.py':
-                print >>fp, "DEBUG=True"
+            elif f.endswith('../settings.py'):
+                print >>fp, "DEBUG = True"
             fp.close()
 
 #copy dirs

@@ -1,67 +1,78 @@
-迷你留言板
-=============
+Mini GuestBook
+================
 
 :Author: Limodou <limodou@gmail.com>
 
 .. contents:: 
 .. sectnum::
 
-也许你已经学过了 `Hello, Uliweb <hello_uliweb>`_ 这篇教程，对Uliweb已经有了一个感性的
-认识，那么好，现在让我们进入数据库的世界，看一看如何使用简单的数据库。
+Maybe you've learned `Hello, Uliweb <hello_uliweb>`_ this tutorial, and have some
+sense to Uliweb, so, let's step into database world together, and see how to 
+use database simply.
 
-准备
-------
+Prepare
+---------
 
-在Uliweb的源码中已经有一个留言板的代码。下载后，启用服务器。
+There is already the whole GuestBook source code in Uliweb apps directory.
+Just download the newest source code of Uliweb, then start developing server:
 
 ::
 
     python manage.py runserver
     
-然后在浏览器输入 http://localhost:8000/guestbook 这样就可以看到了。目前缺省是使用
-sqlite3。如果你安装了python 2.5它已经是内置的。否则要安装相应的数据库和Python的绑定模
-块。目前Uliweb使用geniusql作为数据库底层驱动，它支持多种数据库，如：mysql, sqlite,
-postgresql, sqlserver, access,　firebird。不过我只试过mysql和sqlite。
+Enter http://localhost:8000/guestbook in the browser, then you'll find it.
+By default, it'll use sqlite3, so if you are using Python 2.5, you'll not need
+to install sqlite Python binding module. Or you need to install pysqlite2 package
+yourself. For now, Uliweb uses geniusql for underlying database driven module,
+it already supports many database, such as: mysql, sqlite, postgresql, sqlserver, 
+access, firebird. But I just test with sqlite3 and mysql. Before you want to use
+other databases, you should also install their database module first.
 
-好了，源码准备好了，下一步，准备开发环境。
+Ok, let's begin to write code.
 
-创建工程
------------
+Create Project
+----------------
 
-因为Uliweb中已经包含了GuestBook的代码，所以你可能不希望在Uliweb目录下进行工作。那么Uliweb
-可以让你将整个项目干净地导出到一个目录下。执行:
+I suggest that you begin your work at a new directory, and Uliweb provides an 
+``export`` command, for example:
 
 ::
 
-    python manage.py export 目录
+    python manage.py export outputdir
     
-这样，整个Uliweb的环境就完全导到一个新的环境下了。然后进入这个新的目录，开始工作吧。
+So it'll export all necessary Uliweb source code to outputdir directory. Then
+goto this directory, ready to begin.
 
-创建APP
+Create App
 -----------
 
-进入前面创建的目录，这时apps可能还不存在，那么Uliweb提供了makeapp命令可以创建一个空的app结构。
-执行:
+Goto the project directory built in previous step, and use ``makeapp`` to create a
+new app.
 
 ::
 
     python manage.py makeapp GuestBook
     
-这样就自动会创建apps和相关的GuestBook目录。
+This will automatially create a ``GuestBook`` app for you in ``apps`` 
+directory of your project.
 
-配置数据库
-------------
+Configure Database
+--------------------
 
-Uliweb中的数据库不是缺省生效的，因此你需要配置一下才可以使用。并且Uliweb虽然提供了自已的
-ORM，但是你可以不使用它。Uliweb提供了插件机制，可以让你容易地在适当的时候执行初始化的工作。
-打开GuestBook/settings.py文件，这里你可以看到已经存在：
+Uliweb indeed provide a default database and ORM for you, but it's not configured
+by default, so you need configure it first. So if you don't like the ORM provided
+by Uliweb, you can easily change it. Uliweb provide a plugin mechanism, it lets you
+can add some initialization code when you need. Open ``GuestBook/settings.py`` file,
+you can see something already existed:
 
 .. code:: python
 
     from uliweb.core.plugin import plugin
     
-plugin是一个decorator，象expose一样，你可以用它来修饰函数，这样就可以来挂接函数到一个
-执行的入口上，并且当程序执行到这个点时，会自动执行所挂接的函数。好，加入以下内容：
+``plugin`` is a decorator too, just like ``expose``, you can use it to decorate a function,
+so it'll bind the function to a invoke point, and when the program runs at this
+point, Uliweb will execute all the plugin functions one bye one. Ok, let's add
+below code:
 
 .. code:: python
 
@@ -71,35 +82,39 @@ plugin是一个decorator，象expose一样，你可以用它来修饰函数，�
     DEBUG_LOG = True
     
     @plugin('prepare_template_env')
-    def prepare_template_env(env):
+    def prepare_template_env(sender, env):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
         
     @plugin('startup')
-    def startup(application, config, *args):
+    def startup(sender, config, *args):
         from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
         orm.set_auto_migirate(True)
         orm.get_connection(**connection)
         
-让我一点点来解释。
+Let me explain it bit by bit.
 
-数据库连接参数
-~~~~~~~~~~~~~~
+Connection String of Database
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-connection 用来设置数据库连接配置，它是一个字典。其中connection是必需的，对应一个数据库
-连接字符串。如果还有其它不方便写在连接串的参数，可以将它加在connection这个字典中。
+``connection`` is used for database connection configure, it's a dict variable. 
+The key ``connection`` is must, it the connection string of some database.
+If there are some arguments which are difficult to write in ``connection`` string,
+you can add them in the dict variable.
 
-这里我们使用了sqlite数据库，如果是mysql，可以是按它下面那么注释的格式来写。
+Here, we use sqlite database, and if you want to use MySql, you can write like 
+the comment line.
 
-连接字符串的基本格式为：
+A connection string format looks like
 
 ::
 
     provider://username:password@localhost:port/dbname?argu1=value1&argu2=value2
     
-其中有些参数是可以缺省或组织作为字典项放在connection中的。比如：
+Some arguments can be default or organized in the ``connection`` dict variable. 
+For example:
 
 .. code:: python
 
@@ -109,90 +124,101 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
     connection = {'connection':'mysql://localhost/test?username=limodou&password=password'}
     connection = {'connection':'mysql://limodou:password@localhost/test'}
     
-以上三种写法效果是一样的。如果有些参数没有提供，如port参数，则将使用缺省值。对于sqlite，
-因为没有什么用户名和口令之类的，所以可以直接写为：
+Above three formats are all the same effect. If there are some arguments doesn't
+provided, e.g. ``port`` argument, it'll use default value. For sqlite database,
+because there is no username and password, so you can directly write it as:
 
 .. code:: python
     
-    connection = {'connection':'sqlite'}    #内置数据库
-    connection = {'connection':'sqlite://'} #内存数据库
-    connection = {'connection':'sqlite'://path'}    #使用文件
+    connection = {'connection':'sqlite'}    #Memory database
+    connection = {'connection':'sqlite://'} #Memory database
+    connection = {'connection':'sqlite'://path'}    #Using file
     
-前两种是一样的，后一种将使用文件作为数据库。那么可以是绝对路径也可以是相对路径。
+The former two formats are the same. And the later will use file, you can use
+absolute path or relative path.
     
-数据库初始化
-~~~~~~~~~~~~
+Initialize Database
+~~~~~~~~~~~~~~~~~~~~~~~
 
-首先是设定一个参数 ``DEBUG_LOG = True`` ，注意全部是大写，它将用来控制是否要输出调试信息，这
-里为底层的SQL语句。
+Uliweb will not do it for you, you should do it yourself. But if you choice Uliorm
+(Uliweb ORM module), it's easy for you. Here we'll use Uliorm.
 
-然后：
+First we can set ``DEBUG_LOG = True``, notice that the ``DEBUG_LOG`` should be upper 
+case. And if you set it, the underlying Sql statements will be outputed in the console,
+so you can see if the Sql is what you want.
+
+Then:
 
 .. code:: python
 
     @plugin('startup')
-    def startup(application, config, *args):
+    def startup(sender, config, *args):
         from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
         orm.set_auto_migirate(True)
         orm.get_connection(**connection)
 
-它将当Uliweb在执行到startup的位置时会调用相关的插件函数。startup是插件函数调用点的名字，
-已经在SimpleFrame.py中定义了。每个调用点都有自已的名字和将要传递的参数。startup将传递
-application和config参数，加入*args是为了以后扩展使用。
+When Uliweb executing at the position of ``startup``, it'll invoke all matched
+plugin functions one by one. ``startup`` is a name of plugin invoking point,
+and it's already defined in SimpleFrame.py, when Uliweb starting, the ``startup`` will
+be invoked. Using ``*args`` here is in order to extend for later. Here ``sender`` is
+exactly the framework instance. The first argument of each plugin function
+is always the caller object.
 
-后面就是数据库初始化的工作了。因为Uliweb并不绑定一个数据库，因此初始化的工作需要由你来做，
-这样就比较自由。同时因为Uliweb组织方式为APP模式，它在启动时会自动查找所有APP下的settings.py
-并进行导入，进行配置参数的收集工作，因此你就可以在每个APP下的settings.py写自已需要的配
-置处理。一旦在一个地方设定的，它相当于全局生效了。所以这种方式的使用，当你希望每个APP尽可
-能独立时非常有用。因此在Uliweb中的APP，一方面它可以保持有自已的结构，甚至包含静态文件，
-配置文件，但同时在需要时也可以直接分享其它APP的信息。
+Then it's the database initialization process. Because Uliweb will automatically
+find and import each ``settings.py`` in every app directory, so you can write
+initialization code an any app ``settings.py`` file, but I suggest you put it in 
+your main app of your project.
 
-``set_debug_log(DEBUG_LOG)`` 用来设置显示底层的SQL，在开发服务器环境下，它将显示在命令行上。
+``set_debug_log(DEBUG_LOG)`` will enable Uliweb output SQL statements in console when
+running.
 
-``set_auto_bind(True)`` 自动绑定设置。这样当你导入一个Model时，它将自动与缺省的数据库连接
-进行绑定，就可以直接使用了。不然，你需要手动绑定每个Model需要与哪个连接关联。在只有单数据
-连接时可以打开，在使用多数据连接时可以关闭，然后进行手工绑定处理。
+``set_auto_bind(True)`` will enable automatically binding setting. So when you 
+import a Model, it'll be bound to default database connection, and you can use
+it directly. Otherwise, you need manully bind each table to database connection.
 
-``set_auto_migirate(True)`` 这个作用很大。首先，如果在运行时表还不存在，则Uliweb可以自动创
-建表结构。其次，如果你使用过web2py，你会知道当Model发生变化时可以自动更新表结构。那么
-Uliorm也可以做到，不过目前比较简单，只能处理象：增加，删除，修改
-的情况。对于修改，可能会造成数据丢失。现在无法判断字段的改名，所以一旦改名，其实就是删除旧
-的，创建新的，所以数据会丢失。这里可以把这个开关关闭，手工修改数据库，同时做好数据的备份。
-我认为采用数据备份，然后通过恢复程序来恢复是最安全的。不过现在Uliweb还没有这类的工具。
+``set_auto_migirate(True)`` will enable automatically table migirate process. It's
+very useful. Firstly, if when you startup Uliweb and the table is not existed
+in database yet, Uliweb will automatically create this table for you. Secondly,
+it'll automatically check the Model structure and table structure, adding or
+deleting fields automatically. So you don't need to change the table structure
+manually. But it can't find out renaming field, just delete old field and add
+new field, so this will make some data lost. So you should use it carefully.
 
-采用自动迁移在开发时用户不必考虑修改表结构的工作，只要改了就生效，会非常方便。
+Through above two steps, you can use Uliorm easily in Uliweb, just define it,
+then use it. Working like create table, change table structure will be finished
+automatically, it's very simple.
 
-经过上两部的设定，就可以在Uliweb环境下非常方便的使用数据库了。只要定义好，使用它就行了。
-象建表，修改表结构全部自动完成，非常方便。
+``orm.get_connection(**connection)`` will create database connection, and it'll 
+do initialization works according above settings. So above settings need to be
+done before you invoke get_connection() function. After creating database connection,
+it'll set this connection object as global defult connection object.
 
-``orm.get_connection(**connection)`` 将创建数据库连接对象，并根据上面相关的设定进行必要的
-初始化工作。所以上面的设定需要在调用get_conection()前完成。在调用完get_connection()之
-后，创建的连接将作为缺省连接供全局使用。
+Template Environment Extension
+---------------------------------
 
-模板环境的扩展
-----------------
-
-在settings.py中还有一个东西：
+There is other thing in settings.py
 
 .. code:: python
 
     @plugin('prepare_template_env')
-    def prepare_template_env(env):
+    def prepare_template_env(sender, env):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
 
-这也是一个插件的使用示例，它将向模板的环境中注入一个新的函数 ``text2html``, 这样你就可以
-在模板中直接使用text2html这个函数了。并且因为这个插入点是全局生效的，所以其它的APP可以
-复用它。
+This is also a plugin usage example, it'll inject a new template function 
+``text2html`` into template environment, so you can use it directly in template.
+And this process will be available for global scope, so you can also use ``text2html``
+in other apps.
 
-``text2html`` 的作用就是将文本转为HTML格式，包含Link的处理。这是我以前在开发Django时写的。
+``text2html`` can be used to convert plain text to HTML code, including hyperlink
+process. This is written by me when I developing web application in Django before.
 
-准备Model
------------
+Prepare Model
+----------------
 
-在GuestBook目录下创建一个名为models.py的文件，内容为：
+Creating a ``models.py`` file in GuestBook directory, and add below code:
 
 .. code:: python
 
@@ -206,21 +232,27 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
         email = Field(str)
         datetime = Field(datetime.datetime)
         
-很简单。
+It's easy now, right?
 
-首先要从 uliweb.orm 中导入全部东西，这样简单。
+First, you should import something from ``uliweb.orm``.
 
-然后是导入datetime模块。为什么会用到它，因为Uliorm在定义Model时支持两种定义方式：
+Then, you need to import datetime module. Why you need it? Because Uliorm
+supports two ways to define field:
 
-* 使用内部的Python类型，如：int, float, unicode, datetime.datetime, datetime.date,
-  datetime.time, decimal.Decimal, str, bool。另外还扩展了一些类型，如：blob, text。
-  所以你在定义时只要使用Python的类型就好了。
-* 然后就是象GAE一样的使用各种Property类，如：StringProperty, UnicodeProperty,
+* One way is using internal Python data type, e.g. int, float, unicode,
+  datetime.datetime, datetime.date, datetime.time, decimal.Decimal, str, bool, etc.
+  And I also extend some other types, such as: blob, text.
+
+  So you can use Python data type directly.
+
+* The other way is using any Property class just like GAE, e.g. StringProperty, UnicodeProperty,
   IntegerProperty, BlobProperty, BooleanProperty, DateProperty, DateTimeProperty,
-  TimeProperty, DecimalProperty, FloatProperty, TextProperty。
+  TimeProperty, DecimalProperty, FloatProperty, TextProperty.
 
-一个Model需要从 ``Model`` 类派生。然后每个字段就是定义为类属性。Field()是一个函数，它将
-会根据第一个参数来查找对应的属性类，因此：
+You should define your own model, and it should be inherited from ``Model`` class.
+Then you can define fields which you want to use. There is a handy function named
+``Field()``, you can pass it a Python data type, it'll automatically find a suit
+Property class for you.
 
 .. code:: python
 
@@ -231,36 +263,36 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
         email = StringProperty()
         datetime = DateTimeProperty()
         
-每个字段还可以有一些属性，如常用的：
+Each field may also has other arguments, for example:
 
-* default 缺省值
-* max_length 最大值
-* verbose_name 提示信息
+* default
+* max_length
+* verbose_name 
 
-等。具体的回头我会详细在数据文档中进行说明。
+etc. 
 
 .. note::
 
-    在定义Model时，Uliorm会自动为你添加id字段的定义，它将是一个主键，这一点与Django一样。
+    When you define Model class, Uliorm will automatically add a ``id`` field for
+    you, it'll be a primary key.
     
-静态文件处理
---------------
+Static Files Serving
+-----------------------
 
-打开GuestBook下的views.py文件，已经有内容了：
+If you open ``views.py`` in ``GuestBook`` directory, there should has some code:
 
 .. code:: python
 
     #coding=utf-8
     from uliweb.core.SimpleFrame import expose
     
-    
     @expose('/')
     def index():
         return '<h1>Hello, Uliweb</h1>'
     
-将不需要的index()代码删除。只保留前两行。
+Delete no usefule index() first, just keep the first two line.
 
-然后加入静态文件支持的代码：
+Then add static file serving code:
 
 .. code:: python
 
@@ -269,26 +301,26 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
     def static(filename):
         return static_serve(request, filename)
 
-Uliweb已经提供了静态文件的支持，因此一种方式你直接使用Uliweb来进行静态文件的服务，另
-一种就是让Web server来做这事。Uliweb中的每个APP都有自已的static目录，这样的目的主要
-是为了可以让每个APP尽可能独立。使用Uliweb在处理静态文件时，当访问一个静态文件时，它会
-先到当前APP的目录下查找文件，如果没有找到会到其它可用的APP下查询文件，因此APP间的static
-目录是共享的。并且Uliweb的静态文件支持可以对于已经下载到本地的文件返回304从而避免再次
-下载，这一点在开发服务器可以看到。另外支持trunk的分块方式文件下传。
+Uliweb has already provide static files serving support, so you can use it to 
+serve static files directly, or you can use other web server(Like Apache)
+to do that. Each app in Uliweb has its own static directory, the goal of it is
+to make each app individual as possible as it can. If you let Uliweb to 
+serve static file, it'll try to find matched file in current app's static
+directory, if it found it'll return the file, if not found, it'll search in
+other apps' static directory. And in order to reduce download the same file
+again, it'll just the modification of files, and return 304 response code if no
+changes at all. You can see this in console when you use develop server.
 
-如果你决定使用web server来处理静态文件，那么上面的代码就不需要了，同时要将所有static下
-的文件进行汇总到同一个目录下，然后在web server的配置中增加对静态URL的映射。这块因为教
-程中没有用到，就不多说了。
+Above expose uses regular expression, you can find more detail in `URL Mapping <url_mapping>`_
+document.
 
-上面的expose中使用到了正则匹配，一时不太明白没有关系，照猫画虎就成了。
-
-显示留言
+Display Comments
 -----------------------
 
-增加guestbook()的View方法
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Add guestbook() function to view
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-打开GuestBook下的views.py文件，加入显示留言的处理代码：
+Open ``views.py`` in ``GuestBook`` directory, and add displaying comments code:
 
 .. code:: python
 
@@ -299,23 +331,27 @@ Uliweb已经提供了静态文件的支持，因此一种方式你直接使用Ul
         notes = Note.filter(order=lambda z: [reversed(z.datetime)])
         return locals()
 
-先定义url为 ``/guestbook`` 。
+Here we define the ULR is ``/guestbook`` .
 
-然后是guestbook()函数的定义。我们先导入Note类，然后通过它的类方法filter进行数据库的查
-询。为了按时间倒序显示，我在filter中对order定义了一个lambda函数。这里是geniusql的语法，
-以后也可能会支持其它的语法。 ``lambda z: [reversed(z.datetime)]`` 这个函数的意思就是
-对 ``z`` 这个表的 ``datetime`` 字段进行倒序处理。可以看到都是Python的语法。reversed是一个
-Python的内置函数。
+Then we define ``guestbook()`` function.
 
-以下是一些简单的用法：
+In function, we import ``Note`` class, then get all comments via its ``filter()`` 
+method. In order to display the comments descend, we add a lambda function to 
+``order`` argument. This is genuisql query expression usage, just a Python 
+expression. It means that sorting the table ``z`` via ``datatime`` field in 
+descend order. And ``reversed`` is a builtin function of Python.
+
+Here are some simple usages:
 
 .. code:: python
 
-    notes = Note.filter()               #全部记录，不带条件
-    note = Note.get(3)                  #获取id值为3的记录
-    note = Note.get(username='limodou') #获取username为limodou的记录
+    notes = Note.filter()               #Gain all records, with no condition
+    note = Note.get(3)                  #Gain records with id equals 3
+    note = Note.get(username='limodou') #Gain records with username equals 'limodou'
     
-然后我们返回locals()，让模板来使用它。
+Then we'll return locals() (locals() will return a dict variable, it's
+easy then return {'a':1} format). Remember, when you return a dict variable,
+Uliweb will automatically find a matched template to render the HTML page.
 
 .. note::
 
@@ -328,8 +364,8 @@ Python的内置函数。
     View方法的字符串形式和对应的参数来反向生成URL，可以用来生成链接，在后面的模板中我
     们将看到。
 
-定义guestbook.html模板
-~~~~~~~~~~~~~~~~~~~~~~~~
+Create guestbook.html Template File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 在GuestBook/templates目录下创建与View方法同名的模板，后缀为.html。在guestbook.html中
 添加如下内容：
