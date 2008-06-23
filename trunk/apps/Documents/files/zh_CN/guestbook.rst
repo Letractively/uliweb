@@ -71,12 +71,12 @@ plugin是一个decorator，象expose一样，你可以用它来修饰函数，�
     DEBUG_LOG = True
     
     @plugin('prepare_template_env')
-    def prepare_template_env(env):
+    def prepare_template_env(sender, env):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
         
     @plugin('startup')
-    def startup(application, config, *args):
+    def startup(sender, config, *args):
         from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
@@ -91,7 +91,7 @@ plugin是一个decorator，象expose一样，你可以用它来修饰函数，�
 connection 用来设置数据库连接配置，它是一个字典。其中connection是必需的，对应一个数据库
 连接字符串。如果还有其它不方便写在连接串的参数，可以将它加在connection这个字典中。
 
-这里我们使用了sqlite数据库，如果是mysql，可以是按它下面那么注释的格式来写。
+这里我们使用了sqlite数据库，如果是mysql，可以是按它下面那行注释的格式来写。
 
 连接字符串的基本格式为：
 
@@ -114,11 +114,11 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
 
 .. code:: python
     
-    connection = {'connection':'sqlite'}    #内置数据库
+    connection = {'connection':'sqlite'}    #内存数据库
     connection = {'connection':'sqlite://'} #内存数据库
     connection = {'connection':'sqlite'://path'}    #使用文件
     
-前两种是一样的，后一种将使用文件作为数据库。那么可以是绝对路径也可以是相对路径。
+前两种是一样的。后一种将使用文件作为数据库，可以是使用绝对路径也可以使用相对路径。
     
 数据库初始化
 ~~~~~~~~~~~~
@@ -131,7 +131,7 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
 .. code:: python
 
     @plugin('startup')
-    def startup(application, config, *args):
+    def startup(sender, config, *args):
         from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
@@ -140,7 +140,8 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
 
 它将当Uliweb在执行到startup的位置时会调用相关的插件函数。startup是插件函数调用点的名字，
 已经在SimpleFrame.py中定义了。每个调用点都有自已的名字和将要传递的参数。startup将传递
-application和config参数，加入*args是为了以后扩展使用。
+sender和config参数，加入*args是为了以后扩展使用。这里sender就是框架实例。每一个插件函数
+的第一个参数都是调用者对象。
 
 后面就是数据库初始化的工作了。因为Uliweb并不绑定一个数据库，因此初始化的工作需要由你来做，
 这样就比较自由。同时因为Uliweb组织方式为APP模式，它在启动时会自动查找所有APP下的settings.py
@@ -164,7 +165,7 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 
 采用自动迁移在开发时用户不必考虑修改表结构的工作，只要改了就生效，会非常方便。
 
-经过上两部的设定，就可以在Uliweb环境下非常方便的使用数据库了。只要定义好，使用它就行了。
+经过上两步的设定，就可以在Uliweb环境下非常方便的使用数据库了。只要定义好，使用它就行了。
 象建表，修改表结构全部自动完成，非常方便。
 
 ``orm.get_connection(**connection)`` 将创建数据库连接对象，并根据上面相关的设定进行必要的
@@ -252,7 +253,6 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 
     #coding=utf-8
     from uliweb.core.SimpleFrame import expose
-    
     
     @expose('/')
     def index():

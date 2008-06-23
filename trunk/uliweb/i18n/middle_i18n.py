@@ -19,7 +19,9 @@ def get_language_from_request(request, config):
     if lang:
         return lang
 
-    accept = request.environ['HTTP_ACCEPT_LANGUAGE']
+    accept = request.environ.get('HTTP_ACCEPT_LANGUAGE', None)
+    if not accept:
+        return config.get('LANGUAGE_CODE')
     languages = config.get('LANGUAGES', {})
     for accept_lang, unused in parse_accept_lang_header(accept):
         if accept_lang == '*':

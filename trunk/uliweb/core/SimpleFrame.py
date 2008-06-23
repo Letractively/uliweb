@@ -93,9 +93,12 @@ def errorpage(message='', errorpage=None, request=None, **kwargs):
         kwargs.setdefault('link', request.path_info)
     raise HTTPError(errorpage, **kwargs)
 
-def static_serve(request, filename):
+def static_serve(request, filename, check=True):
     for p in request.application.apps:
-        f = os.path.join(APPS_DIR, p, 'static', filename)
+        path = os.path.normpath(os.path.join(APPS_DIR, p, 'static')).replace('\\', '/')
+        f = os.path.normpath(os.path.join(path, filename)).replace('\\', '/')
+        if check and not f.startswith(path):
+            errorpage("You can only visit the files under static directory.")
         if os.path.exists(f):
             from uliweb.core.FileApp import return_file
             return return_file(f)
