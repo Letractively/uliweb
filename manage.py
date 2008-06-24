@@ -163,6 +163,31 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     apps = application.apps
     dirs = [os.path.join('apps', appname, 'static') for appname in apps]
     _copy_dir2(dirs, outputdir, verbose, check)
+    
+def extracturls(urlfile='urls.py'):
+    """
+    Extract all url mappings from view modules to a specified file.
+    """
+    from uliweb.core import SimpleFrame
+    application = SimpleFrame.Dispatcher(apps_dir=apps_dir, use_urls=False)
+    filename = os.path.join(application.apps_dir, urlfile)
+    if os.path.exists(filename):
+        answer = raw_input("Error: [%s] is existed already, do you want to overwrite it(y/n):" % urlfile)
+        if answer.strip() != 'y':
+            return
+    f = file(filename, 'w')
+    print >>f, "from uliweb.core.rules import Mapping, add_rule\n"
+    print >>f, "url_map = Mapping()"
+    application.url_infos.sort()
+    for url, kw in application.url_infos:
+        endpoint = kw.pop('endpoint')
+        if kw:
+            s = ['%s=%r' % (k, v) for k, v in kw.items()]
+            t = ', %s' % ', '.join(s)
+        else:
+            t = ''
+        print >>f, "add_rule(url_map, %r, %r%s)" % (url, endpoint, t)
+    f.close()
 
 #def make_shell():
 #    from shorty import models, utils
@@ -179,5 +204,6 @@ if __name__ == '__main__':
     #action_initdb = lambda: make_app().init_database()
     from uliweb.i18n.i18ntool import make_extract
     action_i18n = make_extract('apps')
+    action_extracturls = extracturls
 
     script.run()

@@ -153,7 +153,7 @@ You can also use it to automatically merge .pot to existed .po file.
 
 ::
 
-    Usage: python manage.py [options]
+    Usage: python manage.py i18n [options]
     
     options:
     
@@ -187,3 +187,16 @@ Example:
     manage.py i18n --all -l zh      #All of available apps process
     manage.py i18n -w               #Whole apps process, and using default locale ``en``.
     
+extracturls
+-------------
+
+Extract URL definition from each view modules, so you should define URL via
+expose() first. It'll output the urls to apps/urls.py file. And if there is
+apps/urls.py, Uliweb will automatically import it then disable expose(). 
+
+::
+
+    Usage: python manage.py extracturls
+    
+If there is already a urls.py file in apps directory, it'll prompte you
+to confirm you want to overwrite it.

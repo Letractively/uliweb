@@ -120,22 +120,15 @@ So you can treat all apps as an entirety.
 URL Mapping Process
 ---------------------
 
-For now, URL in Uliweb is scattered in every views module, so it really may has
-some shortcomings:
+For now, Uliweb supports two ways to manage URL definition.
 
-#. Can't be managed centralized, and can't be modified unified.
-#. It'll automatically import all views module at startup, may be slow when startup.
+One way is you can define URL by expose function in each view modules. This way is
+very easy to use.
 
-But, there are some advantages also:
-
-#. Easy to add and change, because functionalities are added a little and a little.
-#. Only need to maintain in views module, it easy to reuse.
-
-So I'm considerring how to support centralized URL mapping management, for example:
-you can define URL mapping in views modules as normal, but when it'll be deployed
-into product environment, it can also extract URL mapping into a urls.py, and 
-Uliweb can use this urls.py directly and stop automatically importing views modules.
-But this feature is not existed yet.
+The other way is you can define URL in each view module as normal, but you can use
+extracturls command to dump these urls to apps/urls.py, then Uliweb will automaticall
+find it and import it, and the expose will be automatically disabled. So if 
+you like this way you can do it easilynow.
 
 There are ``expose`` and ``url_for`` functions provided by Uliweb. The former can be 
 used for binding URL and view function. It's a decorator funtion. And the later

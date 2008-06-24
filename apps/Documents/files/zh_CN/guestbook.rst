@@ -76,7 +76,7 @@ plugin是一个decorator，象expose一样，你可以用它来修饰函数，�
         env['text2html'] = text2html
         
     @plugin('startup')
-    def startup(sender, config, *args):
+    def startup(sender):
         from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
@@ -131,7 +131,7 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
 .. code:: python
 
     @plugin('startup')
-    def startup(sender, config, *args):
+    def startup(sender):
         from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
@@ -140,8 +140,7 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
 
 它将当Uliweb在执行到startup的位置时会调用相关的插件函数。startup是插件函数调用点的名字，
 已经在SimpleFrame.py中定义了。每个调用点都有自已的名字和将要传递的参数。startup将传递
-sender和config参数，加入*args是为了以后扩展使用。这里sender就是框架实例。每一个插件函数
-的第一个参数都是调用者对象。
+sender参数，这里sender就是框架实例。每一个插件函数的第一个参数都是调用者对象。
 
 后面就是数据库初始化的工作了。因为Uliweb并不绑定一个数据库，因此初始化的工作需要由你来做，
 这样就比较自由。同时因为Uliweb组织方式为APP模式，它在启动时会自动查找所有APP下的settings.py
@@ -350,8 +349,8 @@ Python的内置函数。
 第一行将从base.html模板进行继承。这里不想多说，只是要注意在base.html中有一个{{include}}
 的定义，它表示子模板要插入的位置。你可以从Uliweb的源码中将base.html拷贝到你的目录下。
 
-h2 显示一个标准。并且是一个链接，它连接到添加留言的URL上去了。注意模板没有将显示与添加的
-Form写在一起，因为那样代码比较多，同且如果用户输入出错，将再次显示所有的留言(因为这里
+h2 标签将显示一个链接，它将用来调用添加留言的view函数。注意模板没有将显示与添加的
+Form代码写在一起，因为那样代码比较多，同且如果用户输入出错，将再次显示所有的留言(因为这里
 没有考虑分页)，这样处理比较慢，所以分成不同的处理了。
 
 ``{{for}}`` 是一个循环。记住Uliweb使用的是web2py的模板，不过进行了改造。所有在{{}}中的代码
@@ -416,7 +415,7 @@ Form写在一起，因为那样代码比较多，同且如果用户输入出错�
 
 可以看到链接是 ``/guestbook/new_comment`` 。
 
-首先我们导入了一些模板，包括Note这个Model。那么NoteForm是什么呢？它是用来生成录入Form的
+首先我们导入了一些类，包括Note这个Model。那么NoteForm是什么呢？它是用来生成录入Form的
 对象，并且可以用来对数据进行校验。一会儿会对它进行介绍。
 
 然后创建form对象。
