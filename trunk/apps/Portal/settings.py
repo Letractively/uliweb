@@ -23,19 +23,19 @@ def prepare_template_env(sender, env):
     env['rst2html'] = rst2html
     
 @plugin('startup_installed')
-def startup(sender, config, *args):
+def startup(sender):
     import os
     from uliweb.i18n import install, set_default_language, format_locale
     
     localedir = ([os.path.join(sender.apps_dir, '..', 'locale')] + 
         [os.path.join(sender.apps_dir, appname) for appname in sender.apps])
     install('uliweb', localedir)
-    set_default_language(config.get('LANGUAGE_CODE'))
+    set_default_language(sender.config.get('LANGUAGE_CODE'))
     
     d = {}
-    for k, v in config.get('LANGUAGES', {}).items():
+    for k, v in sender.config.get('LANGUAGES', {}).items():
         d[format_locale(k)] = v
-    config['LANGUAGES'] = d
+    sender.config['LANGUAGES'] = d
     
 @plugin('prepare_template_env')
 def prepare_template_env(sender, env):

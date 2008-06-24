@@ -87,7 +87,7 @@ below code:
         env['text2html'] = text2html
         
     @plugin('startup')
-    def startup(sender, config, *args):
+    def startup(sender):
         from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
@@ -152,7 +152,7 @@ Then:
 .. code:: python
 
     @plugin('startup')
-    def startup(sender, config, *args):
+    def startup(sender):
         from uliweb import orm
         orm.set_debug_log(DEBUG_LOG)
         orm.set_auto_bind(True)
@@ -162,9 +162,8 @@ Then:
 When Uliweb executing at the position of ``startup``, it'll invoke all matched
 plugin functions one by one. ``startup`` is a name of plugin invoking point,
 and it's already defined in SimpleFrame.py, when Uliweb starting, the ``startup`` will
-be invoked. Using ``*args`` here is in order to extend for later. Here ``sender`` is
-exactly the framework instance. The first argument of each plugin function
-is always the caller object.
+be invoked. Here ``sender`` is exactly the framework instance. The first argument 
+of each plugin function is always the caller object.
 
 Then it's the database initialization process. Because Uliweb will automatically
 find and import each ``settings.py`` in every app directory, so you can write
@@ -355,20 +354,23 @@ Uliweb will automatically find a matched template to render the HTML page.
 
 .. note::
 
-    在Uliweb中每个访问的URL与View之间要通过定义来实现，如使用expose。它需要一个URL的
-    参数，然后在运行时，会把这个URL与所修饰的View方法进行对应，View方法将转化为：
+    In Uliweb, every visit URL should be bound to a view function. Using ``expose``
+    you should pass a URL to it, and it'll bind this URL to below function. And it'll
+    convert a view function object to a string format, just like:
     
-        appname.viewmodule.functioname
+    ::
+    
+        apps.appname.viewmodule.functioname
         
-    的形式。它将是一个字符串。然后同时Uliweb还提供了一个反向函数url_for，它将用来根据
-    View方法的字符串形式和对应的参数来反向生成URL，可以用来生成链接，在后面的模板中我
-    们将看到。
+    And Uliweb also provides a reversed URL creating function - url_for, you can 
+    use it to create a URL according view function string like above format. We
+    will see its usage in template later.
 
 Create guestbook.html Template File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-在GuestBook/templates目录下创建与View方法同名的模板，后缀为.html。在guestbook.html中
-添加如下内容：
+Create a ``guestbook.html`` file in ``GuestBook/templates`` directory, it's main filename
+should be the same with ``guestbook()`` function. And add below code to it:
 
 .. code:: django+html
 
@@ -383,50 +385,59 @@ Create guestbook.html Template File
     </div>
     {{pass}}
     
-第一行将从base.html模板进行继承。这里不想多说，只是要注意在base.html中有一个{{include}}
-的定义，它表示子模板要插入的位置。你可以从Uliweb的源码中将base.html拷贝到你的目录下。
+The first line means this template will inherit from ``base.html``. I don't want to 
+say so much about it, you just need to notice in ``base.html`` should has a 
+``{{include}}`` in it, it means the child template insertion position will be there.
+You can copy base.html from ``apps/GuestBook/templates`` to ``yourproject/apps/GuestBook/templates`` 
+directory.
 
-h2 显示一个标准。并且是一个链接，它连接到添加留言的URL上去了。注意模板没有将显示与添加的
-Form写在一起，因为那样代码比较多，同且如果用户输入出错，将再次显示所有的留言(因为这里
-没有考虑分页)，这样处理比较慢，所以分成不同的处理了。
+h2 tag will display an URL, this URL will link to add comment view function. 
+Notice that I didn't put the display code with add comment Form code together,
+because the code will be much in that way. And if there are some errors when
+user input the comment, it'll display all comments again, so the process will
+be slow, so I separate them into different processes.
 
-``{{for}}`` 是一个循环。记住Uliweb使用的是web2py的模板，不过进行了改造。所有在{{}}中的代码
-可以是任意的Python代码，所以要注意符合Python的语法。因此后面的':'是不能省的。Uliweb的模
-板允许你将代码都写在{{}}中，但对于HTML代码因为不是Python代码，要使用 ``out.write(htmlcode)`` 
-这种代码来输出。也可以将Python代码写在{{}}中，而HTML代码放在括号外面，就象上面所做的。
+``{{for}}`` is a loop. Remember Uliweb uses web2py template module, but makes some
+improvements. The code between {{}} can be any Python code, so they should
+follow the Python syntax. Thus, the ``:`` at the end of line can't be omitted.
+You can also put html code in {{}}, but can't use them directly, you should
+output them using ``out.write(htmlcode)``. When the block is ended, don't forget
+to add a ``{{pass}}`` statement. And you don't need to worry about the indent,
+Uliweb will reindent for you, as long as you add the correct pass statement.
 
-在循环中对notes变量进行处理，然后显示一个删除的图形链接，用户信息和用户留言。
+In loop, it'll process the notes object, and then display a delete link, and 
+then user info and user comments.
 
-看到 ``{{=text2html(n.message)}}`` 了吗？它使用了我们在settings.py中定义的text2html函
-数对文本进行格式化处理。
+Have you seen ``{{=text2html(n.message)}}``? It uses ``text2html`` function which we
+defined in settings.py to convert plain text to html code.
 
-``{{pass}}`` 是必须的。在Uliweb模板中，不需要考虑缩近，但是需要在块语句结束时添加pass，表示缩
-近结果。这样相当于把Python对缩近的严格要求进行了转换，非常方便。
+``{{pass}}`` is must.
 
-好，在经过上面的工作后，显示留言的工作就完成了。但是目前还不能添加留言，下一步就让我们看如
-何添加留言。
+Good, after above working, display comments is finished. But for now, you can
+add comment yet, so let's see how to adding comment.
 
 .. note::
 
-    因为在base.html中和guestbook.html用到了一些css和图形文件，因此你可以从Uliweb的
-    GuestBook/static目录下将全部文件拷贝到你的目录下。
+    Because there are some CSS and image files used in base.html and guestbook.html,
+    so you can copy them from Uliweb source directory to your project.
     
-增加留言
-----------
+Add comment
+--------------
 
-增加new_comment()的View方法
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Add new_comment() function to view
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-在前面的模板中我们定义了增加留言的链接：
+In the guestbook.htmk, we've already add some code to create add comment URL:
 
 .. code:: html
 
     <a href="{{=url_for('%s.views.new_comment' % request.appname)}}">New Comment</a>
     
-可以看出，我们使用了url_for来生成反向的链接。关于url_for在前面已经讲了，这里要注意的就是
-函数名为new_comment，因此我们需要在views.py中生成这样的一个方法。
+You can see, I use ``url_for`` to create reversed URL. ``url_for`` we've covered before,
+the only thing you need notice here is the function named ``new_comment``, so we 
+need to create such function in views.py.
 
-打开views.py，加入以下代码：
+Open the views.py file, and add below code:
 
 .. code:: python
 
@@ -450,23 +461,28 @@ Form写在一起，因为那样代码比较多，同且如果用户输入出错�
                 message = "There is something wrong! Please fix them."
                 return {'form':form.html(request.params, data, py=False), 'message':message}
 
-可以看到链接是 ``/guestbook/new_comment`` 。
+The URL will be ``/guestbook/new_comment`` for ``new_comment()`` function.
 
-首先我们导入了一些模板，包括Note这个Model。那么NoteForm是什么呢？它是用来生成录入Form的
-对象，并且可以用来对数据进行校验。一会儿会对它进行介绍。
+First, we import some class, including ``Note`` Model. So what's NoteForm? It's a
+form class, we can use it to validate data, and even output HTML form code. I'll
+introduce it later.
 
-然后创建form对象。
+Then creating an instance from NoteForm.
 
-再根据request.method是GET还是POST来执行不同的操作。对于GET将显示一个空Form，对于POST
-表示用户提交了数据，要进行处理。使用GET和POST可以在同一个链接下处理不同的动作，这是一种
-约定，一般中读操作使用GET，写或修改操作使用POST。
+According to ``request.method`` is ``GET`` or ``POST``, we can decide to execute different
+process. For GET method, I'll display an empty Form, for POST method, it means
+user has submitted data, need to process. Through judging GET or POST, you can 
+do different process under the same URL, for GET, means read operation, for
+POST, means write operation.
 
-在request.method为GET时，我们只是返回空的form对象和一个空的message变量。form.html()可
-以返回一个空的HTML表单代码。而message将用来提示出错的信息。
+If the ``request.method`` is ``GET``, we just return empty form HTML code, and 
+empty message variable. ``form.html()`` can return empty form html code, while
+message will be used for display error message.
 
-在request.method为POST时， 首先调用 ``form.validate(request.params)`` 对数据进行校验。
-它将返回一个二元的tuple。第一个参数表示成功还是出错，第二个为成功时将转换为Python格式后
-的数据，失败时为出错信息。
+If the ``request.method`` is ``POST``, we'll invoke ``form.validate(request.params)`` 
+to validate submitted data by user. It'll return two element tuple, and first is
+result flag, means success or fail, second will be the converted Python data or 
+error messages according to the result flag.
 
 当flag为True时，进行成功处理。一会我们可以看到在表单中并没有datetime字段，因此这里我们
 手工添加一个值，表示留言提交的时间。然后通过 ``n = Note(**data)``` 来生成Note记录，但这里并没有提

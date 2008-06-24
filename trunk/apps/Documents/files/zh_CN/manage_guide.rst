@@ -139,7 +139,7 @@ i18n处理工具，用来从项目中提取_()形式的信息，并生成.pot文
 
 ::
 
-    Usage: python manage.py [options]
+    Usage: python manage.py i18n [options]
     
     options:
     
@@ -171,3 +171,15 @@ i18n处理工具，用来从项目中提取_()形式的信息，并生成.pot文
     manage.py i18n --all -l zh      #全部已安装app的处理
     manage.py i18n -w               #整个apps目录的处理，缺省locale为en
     
+extracturls
+-------------
+
+从每个view模块中抽取URL定义，所以你需要首先使用expose()来定义它们。它将会把所有的URL
+输出到apps/urls.py中。如果存在apps/urls.py文件，Uliweb在启动时将自动进行导入，并
+禁止expose()。
+
+::
+
+    Usage: python manage.py extracturls
+    
+如果已经在apps目录下存在urls.py文件，它将提示你是否你想要覆盖。

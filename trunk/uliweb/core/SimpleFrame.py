@@ -12,7 +12,7 @@ from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
 from werkzeug.routing import RequestRedirect
 
 from werkzeug import Local, LocalManager
-from werkzeug.routing import Map, Rule
+from uliweb.core.rules import Mapping, add_rule
 from uliweb.core import template
 from uliweb.core.storage import Storage
 from uliweb.core.plugin import *
@@ -22,19 +22,9 @@ APPS_DIR = 'apps'
 local = Local()
 local_manager = LocalManager([local])
 
-from werkzeug.routing import BaseConverter
-class RegexConverter(BaseConverter):
-    """
-    Matches regular expression::
-
-        Rule('/<regex("pattern"):argu_name>')
-    """
-
-    def __init__(self, map, *items):
-        BaseConverter.__init__(self, map)
-        self.regex = items[0]
-
-url_map = Map(converters={'regex':RegexConverter})
+url_map = Mapping()
+_urls = []
+__use_urls = False
 config = None
 
 def expose(rule=None, **kw):
@@ -48,6 +38,8 @@ def expose(rule=None, **kw):
         will be url_map.add('index', index)
     """
     if callable(rule):
+        if __use_urls:
+            return rule
         f = rule
         import inspect
         args = inspect.getargspec(f)[0]
@@ -56,12 +48,16 @@ def expose(rule=None, **kw):
         appname = f.__module__.split('.')[1]
         rule = '/' + '/'.join([appname, f.__name__] + args)
         kw['endpoint'] = f.__module__ + '.' + f.__name__
-        url_map.add(Rule(rule, **kw))
+        add_rule(url_map, rule, **kw)
+        _urls.append((rule, kw))
         return f
         
     def decorate(f):
+        if __use_urls:
+            return f
         kw['endpoint'] = f.__module__ + '.' + f.__name__
-        url_map.add(Rule(rule, **kw))
+        add_rule(url_map, rule, **kw)
+        _urls.append((rule, kw))
         return f
     return decorate
 
@@ -129,15 +125,17 @@ class Loader(object):
         
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir=APPS_DIR):
+    def __init__(self, apps_dir=APPS_DIR, use_urls=None):
+        global __use_urls
         self.debug = False
+        self.use_urls = __use_urls = use_urls
         if not Dispatcher.installed:
             self.init(apps_dir)
-            callplugin(self, 'startup_installed', config, url_map)
-        callplugin(self, 'startup', config, url_map)
+            callplugin(self, 'startup_installed')
+        callplugin(self, 'startup')
         
     def init(self, apps_dir):
-        global APPS_DIR
+        global APPS_DIR, url_map
         import __builtin__
         setattr(__builtin__, 'expose', expose)
         setattr(__builtin__, 'plugin', plugin)
@@ -146,9 +144,23 @@ class Dispatcher(object):
         APPS_DIR = apps_dir
         Dispatcher.apps_dir = apps_dir
         Dispatcher.apps = self.get_apps()
-        Dispatcher.modules = self.collect_modules()
+        #add urls.py judgement
+        flag = True
+        if self.use_urls is None or self.use_urls is True:
+            try:
+                import urls
+                url_map = urls.url_map
+                flag = False
+            except ImportError:
+                pass
+        Dispatcher.modules = self.collect_modules(flag)
+        Dispatcher.url_map = url_map
+        if flag:
+            self.install_views(self.modules['views'])
+            Dispatcher.url_infos = _urls
+        else:
+            Dispatcher.url_infos = []
         self.install_settings(self.modules['settings'])
-        self.install_views(self.modules['views'])
         Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.env = self._prepare_env()
         Dispatcher.config = config
@@ -165,6 +177,7 @@ class Dispatcher(object):
         env['error'] = errorpage
         env['url_map'] = url_map
         env['render'] = self.render
+        env['template'] = self.template
         env['config'] = config
         from werkzeug import html, xhtml
         env['html'] = html
@@ -234,10 +247,30 @@ class Dispatcher(object):
     def render(self, templatefile, vars, env=None, dirs=None, request=None):
         return Response(self.template(templatefile, vars, env, dirs, request), content_type='text/html')
     
+    def _page_not_found(self, **kwargs):
+        text = """<h1>Page Not Found</h1>
+    <p>Can't visit the URL "{{=url}}"</p>
+    <h3>Current URL Mapping is</h3>
+    <table border="1">
+    <tr><th>URL</th><th>View Functions</th></tr>
+    {{for url, endpoint in urls:}}
+    <tr><td>{{=url}}</td><td>{{=endpoint}}</td></tr>
+    {{pass}}
+    </table>
+    """
+        return Response(template.template(text, kwargs), status='404')
+        
     def not_found(self, request, e):
+        if self.debug:
+            urls = []
+            for r in self.url_map.iter_rules():
+                urls.append((r.rule, r.endpoint))
+            urls.sort()
+            return self._page_not_found(url=request.path, urls=urls)
         tmp_file = template.get_templatefile('404'+config.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
+            response.status = '404'
         else:
             response = e
         return response
@@ -246,6 +279,7 @@ class Dispatcher(object):
         tmp_file = template.get_templatefile('500'+config.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
+            response.status = '500'
         else:
             response = e
         return response
@@ -319,7 +353,7 @@ class Dispatcher(object):
         result, env = self._call_function(handler, request, response, **values)
         return self.wrap_result(result, request, response, env)
             
-    def collect_modules(self):
+    def collect_modules(self, check_view=True):
         modules = {}
         views = set()
         settings = []
@@ -349,11 +383,12 @@ class Dispatcher(object):
                 continue
             if os.path.isdir(path):
                 #deal with views
-                views_path = os.path.join(p, 'views')
-                if os.path.exists(views_path) and os.path.isdir(views_path):
-                    enum_views(views_path, p, 'views')
-                else:
-                    enum_views(path, p, pattern='views*')
+                if check_view:
+                    views_path = os.path.join(p, 'views')
+                    if os.path.exists(views_path) and os.path.isdir(views_path):
+                        enum_views(views_path, p, 'views')
+                    else:
+                        enum_views(path, p, pattern='views*')
                 #deal with settings
                 if p in self.apps:
                     settings_files = ['.'.join([os.path.basename(self.apps_dir), p, 'settings']) for x in ['.py', '.pyc', '.pyo']
@@ -392,19 +427,17 @@ class Dispatcher(object):
         local.url_adapter = adapter = url_map.bind_to_environ(environ)
         try:
             endpoint, values = adapter.match()
-            for v in self.modules['views']:
-                if endpoint.startswith(v):
-                    break
-            else:
-                raise NotFound()
-            
+
             #middleware process
             middlewares = config.get('MIDDLEWARE_CLASSES', [])
             response = None
             _clses = {}
             _inss = {}
             for middleware in middlewares:
-                cls = import_func(middleware)
+                try:
+                    cls = import_func(middleware)
+                except ImportError:
+                    raise NotFound()
                 _clses[middleware] = cls
                 if hasattr(cls, 'process_request'):
                     ins = cls(self, config)
