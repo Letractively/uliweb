@@ -264,7 +264,7 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 .. code:: python
 
     from uliweb.core.SimpleFrame import static_serve
-    @expose('/static/<regex(".*$"):filename>')
+    @expose('/static/<path:filename>')
     def static(filename):
         return static_serve(request, filename)
 
@@ -548,8 +548,7 @@ URL参数定义
 
 请注意，这里expose使用了一个参数，即 ``<id>`` 形式。一旦在expose中的url定义
 中有 ``<type:para>`` 的形式，就表示定义了一个参数。其中type:可以省略，它可以是int等类型。而
-int将自动转化为 ``\d+`` 这种形式的正则式。Uliweb内置了象: int, float, path, any, string,
-regex等类型，你可以在 `URL Mapping <url_mapping>`_ 文档中了解更多的细节。如果你只定义了
+int将自动转化为 ``\d+`` 这种形式的正则式。Uliweb内置了象: int, float, path, any, string等类型，你可以在 `URL Mapping <url_mapping>`_ 文档中了解更多的细节。如果你只定义了
 ``<name>`` 这种形式，它表示匹配 ``//`` 间的内容。一旦在URL中定义了参数，则需要
 在View函数中也需要定义相应的参数，因此del_comment函数就写为了： ``del_comment(id)`` 。
 这里的id与URL中的id是一样的。

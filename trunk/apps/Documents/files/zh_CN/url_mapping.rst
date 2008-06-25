@@ -58,7 +58,7 @@ expose说明
         <convertor(arguments):name>
     
    其中convertor和arguments是可以缺省的。convertor类型目前可以设置为：int, float, 
-   any, string, unicode, path, regex等。不同的convertor需要不同的参数。详情请参见
+   any, string, unicode, path等。不同的convertor需要不同的参数。详情请参见
    下面的converter说明。最简单的形式就是<name>了，它将匹配/到/间的内容。
 
    name为匹配后参数的名字，它需要与绑定的view方法中的参数名相匹配。
@@ -185,11 +185,26 @@ convertor说明
 
 * path
 
-  与string和unicode类型，但是没有任何参数。就是匹配//之间的内容。基本形式为：
+  与string和unicode类型，但是没有任何参数。就是匹配从第一个不是 ``/`` 的字符到跟着的字
+  符串或末尾之间的内容。基本形式为：
 
   ::
 
     <path:name>
+    
+  举例：
+
+  ::
+
+    '/static/<path:filename>'
+    
+  可以匹配：
+
+  ::
+
+    '/static/a.css'
+    '/static/css/a.css'
+    '/static/image/a.gif'
     
 * any
 
@@ -201,12 +216,3 @@ convertor说明
 
   将匹配任何一个字符串。
 
-* regex
-
-  这是Uliweb中扩展的，用于匹配一个正则式，基本用法：
-
-  ::
-
-    <regex(".*$"):filename>
-    
-  参数是一个正则式。
