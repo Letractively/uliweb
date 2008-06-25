@@ -297,7 +297,7 @@ Then add static file serving code:
 .. code:: python
 
     from uliweb.core.SimpleFrame import static_serve
-    @expose('/static/<regex(".*$"):filename>')
+    @expose('/static/<path:filename>')
     def static(filename):
         return static_serve(request, filename)
 
@@ -616,7 +616,7 @@ URL Arguments Definition
 Notice, here, expose() uses an argument, i.e. ``<id>``. Once there are something 
 like ``<type:para>`` in the URL, that's means you defined an argument. And ``type``
 can be optional. Uliweb provides many builtin types, such as: int, float, path,
-any, string, uniocde, regex. And you can find more details in `URL Mapping <url_mapping>`_
+any, string, uniocde. And you can find more details in `URL Mapping <url_mapping>`_
 document. If you just define ``<name>`` format, it just means matching something 
 between ``//``. Once you defined some arguments in the URL, you must define the
 same arguments in the view function, so ``del_comment()`` function should be written
@@ -678,15 +678,15 @@ Conclusion
 
 Wow, we've learnt so much things for now:
 
-#. ORM usage, including: ORM initilization, Model definition, simple add, delete, qurry
-#. Form usage, including: Form definition, Form layout, HTML creation, data validation, error process
-#. Template usage, including: {{extend}} usage, add custom variables to template 
-   environment, define variables in child template, write Python code in template
-#. View usage, including: redirect usage, error usage, static files serving
-#. URL mapping usage, including: expose usage, arguments definition
-#. manage.py usage, including: export and makeapp usage
-#. Architecture knowledge, inclueing: the organization of Uliweb, settings process
-   flow mechanism, the mapping between view function and template file
+#. ORM usage, including: ORM initilization, Model definition, simple add, delete, qurry.
+#. Form usage, including: Form definition, Form layout, HTML creation, data validation, error process.
+#. Template usage, including: {{extend}} usage, add custom variables to template.
+   environment, define variables in child template, write Python code in template.
+#. View usage, including: redirect usage, error usage, static files serving.
+#. URL mapping usage, including: expose usage, arguments definition.
+#. manage.py usage, including: export and makeapp usage.
+#. Architecture knowledge, inclueing: the organization of Uliweb, settings process.
+   flow mechanism, the mapping between view function and template file.
 
 Yes, there are too much things. However these are not the whole stuff of Uliewb yet.
 Along with the application becomes more complex, the functionalities of frameworks

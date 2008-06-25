@@ -70,7 +70,7 @@ Basic usage is:
         <convertor(arguments):name>
     
    ``convertor`` and ``arguments`` can be omitted. convertor can be set as: int, float,
-   any, string, unicode, path, regex now. Different convertor can accept different
+   any, string, unicode, path now. Different convertor can accept different
    arguments. More details please see below section about convertor Description.
    The simplest format is ``<name>``, it'll match the stuff between ``'/'`` and ``'/'``.
 
@@ -210,7 +210,7 @@ convertor Description
 * path
 
   Just like ``string`` and ``unicode`` convertor, but has no arguments.
-  Used to match stuff between ``'/'`` and ``'/'``.
+  Used to match stuff between ``'/'`` and next string or the end.
 
   Basic format is:
 
@@ -218,6 +218,20 @@ convertor Description
 
     <path:name>
     
+  Example:
+
+  ::
+
+    '/static/<path:filename>'
+  
+  can match:
+
+  ::
+
+    '/static/a.css'
+    '/static/css/a.css'
+    '/static/image/a.gif'
+
 * any
 
   Basic format is:
@@ -228,14 +242,3 @@ convertor Description
 
   It'll match any of string listed.
 
-* regex
-
-  This is a extension by Uliweb, it'll be used for matching regular expression.
-
-  Basic format is:
-
-  ::
-
-    <regex(".*$"):filename>
-    
-  The argument is a regular expression.
