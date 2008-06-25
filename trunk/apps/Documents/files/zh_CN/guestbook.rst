@@ -432,7 +432,7 @@ Form代码写在一起，因为那样代码比较多，同且如果用户输入�
 的数据，失败时为出错信息。
 
 当flag为True时，进行成功处理。一会我们可以看到在表单中并没有datetime字段，因此这里我们
-手工添加一个值，表示留言提交的时间。然后通过 ``n = Note(**data)``` 来生成Note记录，但这里并没有提
+手工添加一个值，表示留言提交的时间。然后通过 ``n = Note(**data)`` 来生成Note记录，但这里并没有提
 交到数据库中，因此再执行一个 ``n.put()`` 来保存记录到数据库中。使用 ``n.save()`` 也可以。
 
 然后执行完毕后，调用 ``redirect`` 进行页面的跳转，跳回留言板的首页。这里又使用了url_for来反
@@ -472,7 +472,7 @@ table元素生成的，另一种是使用div元素生成的。table布局是缺�
 
 接着就是创建NoteForm元素了。这里我定义了4个字段，每个字段对应一种类型。象TextAreaField
 表示多行的文本编辑，TextField表示单行文本，你还可以使用象：HiddenField, SelectField,
-FieldField, IntField, PasswordField, RadioSelectField等字段类型。目前Form的定义方式
+FileField, IntField, PasswordField, RadioSelectField等字段类型。目前Form的定义方式
 与Uliorm的不太一致，因为Form创建的时间更早，以后也可以考虑写一个统一的Field来进行一致性
 的处理。
 
@@ -547,9 +547,10 @@ URL参数定义
 ~~~~~~~~~~~~
 
 请注意，这里expose使用了一个参数，即 ``<id>`` 形式。一旦在expose中的url定义
-中有<type:para>的形式，就表示定义了一个参数。其中type:可以省略，它可以是int等类型。而
+中有 ``<type:para>`` 的形式，就表示定义了一个参数。其中type:可以省略，它可以是int等类型。而
 int将自动转化为 ``\d+`` 这种形式的正则式。Uliweb内置了象: int, float, path, any, string,
-regex等类型。如果只是 ``<name>`` 则表示匹配 //　间的内容。一旦在URL中定义了参数，则需要
+regex等类型，你可以在 `URL Mapping <url_mapping>`_ 文档中了解更多的细节。如果你只定义了
+``<name>`` 这种形式，它表示匹配 ``//`` 间的内容。一旦在URL中定义了参数，则需要
 在View函数中也需要定义相应的参数，因此del_comment函数就写为了： ``del_comment(id)`` 。
 这里的id与URL中的id是一样的。
 
