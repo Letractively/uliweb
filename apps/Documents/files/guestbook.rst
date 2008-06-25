@@ -163,7 +163,8 @@ When Uliweb executing at the position of ``startup``, it'll invoke all matched
 plugin functions one by one. ``startup`` is a name of plugin invoking point,
 and it's already defined in SimpleFrame.py, when Uliweb starting, the ``startup`` will
 be invoked. Here ``sender`` is exactly the framework instance. The first argument 
-of each plugin function is always the caller object.
+of each plugin function is always the caller object. Here is the application instance
+object.
 
 Then it's the database initialization process. Because Uliweb will automatically
 find and import each ``settings.py`` in every app directory, so you can write
@@ -289,7 +290,7 @@ If you open ``views.py`` in ``GuestBook`` directory, there should has some code:
     def index():
         return '<h1>Hello, Uliweb</h1>'
     
-Delete no usefule index() first, just keep the first two line.
+Delete no useful index() first, just keep the first two lines.
 
 Then add static file serving code:
 
@@ -300,11 +301,11 @@ Then add static file serving code:
     def static(filename):
         return static_serve(request, filename)
 
-Uliweb has already provide static files serving support, so you can use it to 
+Uliweb has already provided static files serving support, so you can use it to 
 serve static files directly, or you can use other web server(Like Apache)
 to do that. Each app in Uliweb has its own static directory, the goal of it is
 to make each app individual as possible as it can. If you let Uliweb to 
-serve static file, it'll try to find matched file in current app's static
+serve static files, it'll try to find matched file in current app's static
 directory, if it found it'll return the file, if not found, it'll search in
 other apps' static directory. And in order to reduce download the same file
 again, it'll just the modification of files, and return 304 response code if no
@@ -484,29 +485,36 @@ to validate submitted data by user. It'll return two element tuple, and first is
 result flag, means success or fail, second will be the converted Python data or 
 error messages according to the result flag.
 
-当flag为True时，进行成功处理。一会我们可以看到在表单中并没有datetime字段，因此这里我们
-手工添加一个值，表示留言提交的时间。然后通过 ``n = Note(**data)``` 来生成Note记录，但这里并没有提
-交到数据库中，因此再执行一个 ``n.put()`` 来保存记录到数据库中。使用 ``n.save()`` 也可以。
+When the flag is ``True``, it means the validation is successful. We can
+see there is no ``datetime`` field, so we add it manually, it'll be used for the submited
+datetime of the comment. Then we can invoke ``n = Note(**data)`` to create a new
+Note record, but we have not commit it to the database yet, so we can invoke
+``n.put()`` to store the record to the database. You can also use ``n.save()`` to 
+store the record, it's the same.
 
-然后执行完毕后，调用 ``redirect`` 进行页面的跳转，跳回留言板的首页。这里又使用了url_for来反
-向生成链接。注意redirect前不需要有 ``return`` 。
+After that, we will invoke ``redirect`` to jump another page, it's the homepage of
+GuestBook. Here we use ``url_for`` again to create reversed URL. Notice you don't
+need to write return before it.
     
-当flag为False时，进行出错处理。这里我们向message中填入了出错提示，然后通过
-``form.html(request.params, data, py=False)`` 来生成带出错信息的表单。这里data为出错
-信息。 ``py=False`` 是表示在使用数据时不进行Python数据转换。因为Form在校验数据之后会根据
-你所定义的数据类型，将上传的数据转换为Python的内部数据，如：int, float之类的。但是当出错
-时，不存在转换后的Python数据，因此不能做这种转换，这时要使用 ``py=False`` 参数。如果data
-是校验成功的数据，你想通过表单显示出来，可以直接使用 ``form.html(data)`` 就可以了。
+If the flag is ``False``, it means validation is failed. So we assign an error message
+to ``message`` variable, then invoke ``form.html(request.params, data, py=False)`` 
+to create a form with error message. And data is the error details of each 
+field. ``py=False`` means we will use submitted data directly but not Python
+data. Because if the validation is failed,  the valid Python data has not 
+existed yet. If you want to render valid Python data, you can just use
+``form.html(data)``.
 
-定义录入表单
+Define Form
 ~~~~~~~~~~~~~
 
-为了与后台进行交互，让用户可以通过浏览器进行数据录入，需要使用HTML的form系列元素来定义
-录入元素。对于有经验的Web开发者可以直接手写HTML代码，但是对于初学者很麻烦。并且你还要考虑
-出错处理，数据格式转换的处理。因此许多框架都提供了生成表单的工具，Uliweb也不例外。Form模
-块就是干这个用的。
+In order to interact with server, uesr can through browser to input data,
+so you should provide Form HTML element to receive the input. For an experienced
+web developer, he can write HTML code manually, but it's difficult for newbies.
+And you should also think about how to deal with error, data format conversion, etc.
+So many frameworks supply such Form helper tool, Uliweb also provides such thing.
+The Form module will be used for this.
 
-在GuestBook目录下创建forms.py文件，然后添加以下代码：
+Creating a ``forms.py`` file in ``GuestBook`` directory, then add below code:
 
 .. code:: python
 
@@ -520,31 +528,32 @@ error messages according to the result flag.
         homepage = Form.TextField(label='Homepage:')
         email = Form.TextField(label='Email:')
 
-首先导入Form模块，然后设定Form类使用css布局。目前Uliweb的Form提供两种布局，一种是使用
-table元素生成的，另一种是使用div元素生成的。table布局是缺省的。
+First, importing ``Form`` module, then set CSSLayout. For now, Uliweb supports two
+form layout, one it table layout which uses ``table`` tag, the other is css layout
+which uses ``div`` tag. And table layout is default.
 
-接着就是创建NoteForm元素了。这里我定义了4个字段，每个字段对应一种类型。象TextAreaField
-表示多行的文本编辑，TextField表示单行文本，你还可以使用象：HiddenField, SelectField,
-FieldField, IntField, PasswordField, RadioSelectField等字段类型。目前Form的定义方式
-与Uliorm的不太一致，因为Form创建的时间更早，以后也可以考虑写一个统一的Field来进行一致性
-的处理。
+Then, we'll create NoteForm class, here I define 4 fields, each field maps a 
+type. For example, TextAreaField means multilines text input, TextField means
+single line text input, and you can also use: HiddenField, SelectField,
+FileField, IntField, PasswordField, RadioSelectField, etc. 
 
-也许你看到了，这其中有一些是带有类型的，如IntField，那么它将会转换为对应的Python数据类
-型，同时当生成HTML代码时再转换回字符串。
+Maybe you've seen that, some of these fields have type, e.g. IntField, so it'll
+be automatically convert submitted data to Python data type, and convert back
+when creating HTML code.
 
-每个Field类型可以定义若干的参数，如：
+Each field may has some arguments, for example:
 
-* label 用来显示一个标签
-* required 用来校验是否输入，即不允许为空
-* default 缺省值
-* validators 校验器
+* label used to display a label tag
+* required if a field can't be empty
+* default default vallue
+* validators used to validate the data
 
-很象Model的定义，但有所不同。
+It likes the definition of Model, but they are different.
 
-编写new_comment.html模板文件
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Create new_comment.html Template File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-在GuestBook/templates下创建new_comment.html，然后添加以下内容：
+Creating a ``new_comment.html`` file in ``GuestBook/templates`` directory, then add beclow code:
 
 .. code:: html
 
@@ -557,28 +566,33 @@ FieldField, IntField, PasswordField, RadioSelectField等字段类型。目前For
     {{Xml(form)}}
     </div>
 
-首先是 ``{{extend "base.html"}}`` 表示从base.html继承。
+First line is ``{{extend "base.html"}}``, it means that you'll extend from ``base.html``
+template file.
 
-然后是一个 if 判断是否有message信息，如果有则显示。这里要注意if后面的':'号。
+Then it's a if statement, it'll test if the message is not empty, if not, then
+display it. Notice the ``:`` at the end of the line.
 
-然后显示form元素，这里使用了 ``{{Xml(form)}}`` 。form是从View中传入的，而Xml()是模板中
-的内置方法，它用来原样输出内容，对HTML的标签不会进行转换。而 {{=variable}} 将对variable
-变量的HTML标签进行转换。因此，如果你想输出原始的HTML文本，要使用Xml()来输出。
+Then display form element, here I used ``{{Xml(form)}}``. ``form`` is passwd from view
+function, but ``Xml()`` is a builtin function define in template system, you can 
+use it directly, it'll output the code directly without any escape process.
+For ``{{= variable}}`` will escape the output, it'll convert HTML tag to HTML entities.
+So if you don't want the output be escaped, you should use ``Xml()``.
 
-现在可以在浏览器中试一下了。
+Now, you can try current work in the browser.
 
-删除留言
-----------
+Delete Comment
+---------------
 
-在前面guestbook.html中，我们在每条留言前定义了一个删除的图形链接，形式为：
+In ``guestbook.html``, we defined a link which will be used to delete comment, the format
+is:
 
 .. code::
 
     <a href="/guestbook/delete/{{=n.id}}"><img src="/static/delete.gif"/></a>
     
-那么下面就让我们实现它。
+So let's implement it.
 
-打开GuestBook/views.py文件，然后添加：
+Open ``GuestBook/views.py`` file, and append below code:
 
 .. code:: python
 
@@ -593,31 +607,32 @@ FieldField, IntField, PasswordField, RadioSelectField等字段类型。目前For
         else:
             error("No such record [%s] existed" % id)
 
-删除很简单，导入Note，然后通过 ``Note.get(int(id))`` 来得到对象，然后再调用对象的delete()
-方法来删除。
+Delete is simple, just import Note model, then invoke ``Note.get(int(id))`` to 
+get the object, next invoke ``delete()`` function of object to delete the record.
 
-URL参数定义
-~~~~~~~~~~~~
+URL Arguments Definition
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-请注意，这里expose使用了一个参数，即 ``<id>`` 形式。一旦在expose中的url定义
-中有<type:para>的形式，就表示定义了一个参数。其中type:可以省略，它可以是int等类型。而
-int将自动转化为 ``\d+`` 这种形式的正则式。Uliweb内置了象: int, float, path, any, string,
-regex等类型。如果只是 ``<name>`` 则表示匹配 //　间的内容。一旦在URL中定义了参数，则需要
-在View函数中也需要定义相应的参数，因此del_comment函数就写为了： ``del_comment(id)`` 。
-这里的id与URL中的id是一样的。
+Notice, here, expose() uses an argument, i.e. ``<id>``. Once there are something 
+like ``<type:para>`` in the URL, that's means you defined an argument. And ``type``
+can be optional. Uliweb provides many builtin types, such as: int, float, path,
+any, string, uniocde, regex. And you can find more details in `URL Mapping <url_mapping>`_
+document. If you just define ``<name>`` format, it just means matching something 
+between ``//``. Once you defined some arguments in the URL, you must define the
+same arguments in the view function, so ``del_comment()`` function should be written
+in ``del_command(id)``. There the ``id`` arugment is the same as the one in URL.
 
-好了，现在你可以试一试删除功能是否可用了。
+Ok, now you can try if the delete function can be used.
 
-出错页面
+Error Page
 ~~~~~~~~~~~~~~~~
 
-当程序出错时，你可能需要向用户提示一个错误信息，因此可以使用error()方法来返回一个出错
-的页面。它的前面不需要return。只需要一个出错信息就可以了。
+When there are something wrong, you may need to show an error page to user, so
+you can use ``error()`` function to return an error page. ``return`` is no need in front
+of it, just give it an error message, that's enough.
 
-那么出错信息的模板怎么定义呢？在你的templates目录下定义一个名为error.html的文件，并加
-入一些内容即可。
-
-创建error.html，然后，输入如下代码：
+How to create error template file? Just create a file named ``error.html`` in
+your app templates directory, and add something like:
 
 .. code:: html
 
@@ -627,46 +642,56 @@ regex等类型。如果只是 ``<name>`` 则表示匹配 //　间的内容。一
     <p>{{=message}}</p>
 
 
-这个页面很简单，就是定义了一个title变量，然后是继承base.html，再接着是显示出错内容。
+It's simple right, we just define a ``title`` variable and then extend the ``base.html``,
+then output the message.
 
-不过这里有一个很重要的技巧，那就是在 {{extend}} 前面定义的内容在渲染模板时，将出现在最
-前面。这样，一旦父模板中有一些变量需要处理，但是你没有通过View方法来传入，而是在子模板
-中来定义它，通过这种方法就可以将定义放在使用语句的前面，从而不会报未定义的错误。
+But here is an imortant trick, that's if you write something before ``{{extend}}``,
+these things will be placed at the top of the template rendering output. So 
+if there are some variables used in parent template, but you didn't pass them
+through view funcion, however define them in child template, by this trick,
+you can put the variables definition in front of the using statements, and 
+this will not cause syntax error.
 
 .. note::
 
-    这是我对web2py模板的一个扩展。以前web2py要求{{extend}}是第一行的，但现在可以不是。
-    并且这种处理可以很好的处理：在子模板中定义在父模板中要使用的变量的情况。
+    This is my extension for web2py template system. In the past, web2py requires
+    ``{{extend}}`` should be the first statement, but for now, you can put something
+    in front of it. This way can easy deal with defining variable in child tamplte.
     
-运行
+Run
 ------
 
-在前面的开发过程中你可以启动一个开发服务器进行调试。启动开发服务器的命令为：
+In previous developing process, you can also start a developing server to test
+your project. The command of starting a developing server is:
 
 ::
 
     python manage.py runserver
     
-当启动后，在浏览器输入： ``http://localhost:8000/guestbook``
+When it starting, you can input ``http://localhost:8000/guestbook`` to test this
+GuestBook demo.
 
-注意，这里不是从/开始的。
+Notice, here is not begin with ``/``.
     
-结论
--------
+Conclusion
+-------------
 
-经过学习，我们了解了许多内容：
+Wow, we've learnt so much things for now:
 
-#. ORM的使用，包括：ORM的初始化配置，Model的定义，简单的增加，删除，查询
-#. Form使用，包括：Form的定义，Form的布局，HTML代码生成，数据校验，出错处理
-#. 模板的使用，包括： {{extend}} 的使用，在模板环境中增加自定义函数，子模板变量定义的
-   技巧，错误模板的使用，Python代码的嵌入
-#. View的使用，包括：redirect, error的使用, 静态文件处理
-#. URL映射的使用，包括：expose的使用，参数定义，与View函数的对应
-#. manage.py的使用，包括：export, makeapp的使用
-#. 结构的了解，包括：Uliweb的app组织，settings.py文件的处理机制，view函数与模板文件
-   的对应关系
+#. ORM usage, including: ORM initilization, Model definition, simple add, delete, qurry
+#. Form usage, including: Form definition, Form layout, HTML creation, data validation, error process
+#. Template usage, including: {{extend}} usage, add custom variables to template 
+   environment, define variables in child template, write Python code in template
+#. View usage, including: redirect usage, error usage, static files serving
+#. URL mapping usage, including: expose usage, arguments definition
+#. manage.py usage, including: export and makeapp usage
+#. Architecture knowledge, inclueing: the organization of Uliweb, settings process
+   flow mechanism, the mapping between view function and template file
 
-内容很多，的确。而这些还远远不是一个框架的全部。随着应用的复杂，框架的功能也会越来越多。
-而一个好的框架应该就是让有经验的人用来首先构建出一个更易于使用，易于管理的环境，然后
-让团队中的人在这个环境下去开发，让对框架有经验的人对环境进行不断的调整和完善，使其越来
-越方便和强大。Uliweb正在向着这个目标前进。
+Yes, there are too much things. However these are not the whole stuff of Uliewb yet.
+Along with the application becomes more complex, the functionalities of frameworks
+will be more and more. But I think a good framework should enable experienced 
+developers build an environment which should be easy to use and easy to manage,
+then the others of this team could work under this environment,
+and the duty of those expericenced developers should to change to make this environment better
+and powerful. I hope Uliweb can step foward to this goal.
