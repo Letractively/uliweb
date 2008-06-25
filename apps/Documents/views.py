@@ -35,10 +35,10 @@ def _show(request, response, filename, env, lang=None, render=True):
     response.write(application.template('show_document.html', locals()))
     return response
     
-@expose('/documents/<regex(".*$"):filename>', defaults={'lang':''})
+@expose('/documents/<path:filename>', defaults={'lang':''})
 #@expose('/documents/<regex(".*$"):filename>')
 #def show_document(filename, lang=''):
 #this is also available
-@expose('/documents/<lang>/<regex(".*$"):filename>')
+@expose('/documents/<lang>/<path:filename>')
 def show_document(filename, lang):
     return _show(request, response, filename, env, lang, False)
