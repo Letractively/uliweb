@@ -54,7 +54,7 @@ def _copy_dir(d, dst, verbose, exact=False):
         if not os.path.exists(dd):
             os.makedirs(dd)
         for r in os.listdir(f):
-            if r in ['.svn']:
+            if r in ['.svn', '_svn']:
                 continue
             fpath = os.path.join(f, r)
             if os.path.isdir(fpath):
@@ -126,7 +126,7 @@ def _copy_dir2(d, dst, verbose=False, check=True):
         if verbose:
             sys.stdout.write("Info : Processing %s...\n" % f)
         for r in os.listdir(f):
-            if r in ['.svn']:
+            if r in ['.svn', '_svn']:
                 continue
             fpath = os.path.join(f, r)
             if os.path.isdir(fpath):
