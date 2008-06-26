@@ -38,7 +38,7 @@ pass
 * `体系统结构和机制 <{{= index('architecture') }}>`_
 * `URL映射 <{{= index('url_mapping') }}>`_
 * `视图 <{{= index('views') }}>`_
-* 模板
+* `模板 <{{= index('template') }}>`_
 * 数据库和ORM
 * `部署指南 <{{= index('deployment') }}>`_
 * `manage.py使用指南 <{{= index('manage_guide') }}>`_
