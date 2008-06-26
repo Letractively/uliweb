@@ -24,7 +24,7 @@ pass
 教程
 -------------------------------
 
-* `Hello, Uliweb(易) <{{= index('hello_uliweb') }}>`_ `English <{{= index('hello_uliweb', 'en') }}>`_
+* `Hello, Uliweb(易) <{{= index('hello_uliweb') }}>`_
 * `迷你留言薄(难) <{{= index('guestbook') }}>`_
 * 模板和视图
 * 快速构建博客
@@ -37,7 +37,7 @@ pass
 
 * `体系统结构和机制 <{{= index('architecture') }}>`_
 * `URL映射 <{{= index('url_mapping') }}>`_
-* 视图
+* `视图 <{{= index('views') }}>`_
 * 模板
 * 数据库和ORM
 * `部署指南 <{{= index('deployment') }}>`_

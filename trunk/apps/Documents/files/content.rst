@@ -38,7 +38,7 @@ References
 
 * `Architecture and Mechanism <{{= index('architecture') }}>`_
 * `URL Mapping <{{= index('url_mapping') }}>`_
-* Views
+* `Views <{{= index('views') }}>`_
 * Templates
 * Database and ORM
 * `Deployment Guide <{{= index('deployment') }}>`_

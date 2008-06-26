@@ -228,9 +228,9 @@ convertor Description
 
   ::
 
-    '/static/a.css'
-    '/static/css/a.css'
-    '/static/image/a.gif'
+    '/static/a.css'         -> filename='a.css'
+    '/static/css/a.css'     -> filename='css/a.css'
+    '/static/image/a.gif'   -> filename='image/a.gif'
 
 * any
 

@@ -36,7 +36,7 @@ def _show(request, response, filename, env, lang=None, render=True):
     return response
     
 @expose('/documents/<path:filename>', defaults={'lang':''})
-#@expose('/documents/<regex(".*$"):filename>')
+#@expose('/documents/<path:filename>')
 #def show_document(filename, lang=''):
 #this is also available
 @expose('/documents/<lang>/<path:filename>')
