@@ -329,16 +329,20 @@ class Dispatcher(object):
         request.appname = handler.__module__.split('.')[1]
         request.function = handler.__name__
         request.application = self
-        if not handler.func_globals.get('__bounded__', False):
-            for k, v in self.env.iteritems():
-                handler.func_globals[k] = v
-            handler.func_globals['__bounded__'] = True
+#        if not handler.func_globals.get('__bounded__', False):
+#            for k, v in self.env.iteritems():
+#                handler.func_globals[k] = v
+#            handler.func_globals['__bounded__'] = True
         
         #prepare local env
         local_env = {}
         local_env['application'] = self
         local_env['request'] = request
         local_env['response'] = response
+        local_env['url_for'] = url_for
+        local_env['redirect'] = redirect
+        local_env['error'] = errorpage
+        local_env['config'] = config
         
         for k, v in local_env.iteritems():
             handler.func_globals[k] = v
