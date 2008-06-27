@@ -10,7 +10,6 @@ def documents():
     return _show(request, response, 'content.rst', env)
 
 def _show(request, response, filename, env, lang=None, render=True):
-    print 'xxxxxxxxxxxxxxxxxxxxx'
     from uliweb.core.template import template
     from uliweb.utils.rst import to_html
     from uliweb.i18n import get_language, format_locale
@@ -29,7 +28,6 @@ def _show(request, response, filename, env, lang=None, render=True):
         if f:
             filename = f
     _f = env.get_file(filename)
-    print _f, filename
     if _f:
         content = file(_f).read()
         if render:
