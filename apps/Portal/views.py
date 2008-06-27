@@ -12,3 +12,11 @@ from uliweb.core.SimpleFrame import static_serve
 @expose('/static/<path:filename>')
 def static(filename):
     return static_serve(request, filename)
+
+@expose('/favicon.ico')
+def static(filename):
+    return static_serve(request, 'favicon.ico')
+
+@expose('/robots.txt')
+def static(filename):
+    return static_serve(request, 'robots.txt')

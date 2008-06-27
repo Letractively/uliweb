@@ -1,47 +1,56 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-	<title>{{=Get('title') or 'Uliweb Project Site'}}</title>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/reset-fonts-grids.css') }}">
-	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/site.css') }}">
-	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/examples.css') }}">
-	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='nifty/niftyCorners.css') }}">
-	<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='nifty/niftyPrint.css') }}" media="print">
-	<script type="text/javascript" src="{{= url_for('Portal.views.static', filename='nifty/nifty.js') }}"></script>
-	<script type="text/javascript">
-	window.onload=function(){
-	if(!NiftyCheck())
-	    return;
-	Rounded("div.tabs","#FFFFFF","#0B045C");
-	}
-	</script>
+<title>{{=Get('title') or 'Uliweb Project Site'}}</title>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<!-- add your meta tags here -->
+
+<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/my_layout.css') }}">
+<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/site.css') }}">
+<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/examples.css') }}">
+<!--[if lte IE 7]>
+<link rel="stylesheet" type="text/css" href="{{= url_for('Portal.views.static', filename='css/patches/patch_my_layout.css') }}">
+<![endif]-->
 </head>
 <body>
-<div id="doc4" class="yui-t7">
- <div class="doc-wrapper1">
-  <div class="doc-wrapper2">
+  <div id="page_margins">
+    <div id="border-top">
+      <div id="edge-tl"></div>
+      <div id="edge-tr"></div>
+    </div>
+    <div id="page">
+      <div id="header">
+        <div id="topnav">
+          <!-- start: skip link navigation -->
+          <a class="skip" title="skip link" href="#navigation">Skip to the navigation</a><span class="hideme">.</span>
+          <a class="skip" title="skip link" href="#content">Skip to the content</a><span class="hideme">.</span>
+          <!-- end: skip link navigation --><a href="#">Login</a> | <a href="#">Contact</a> | <a href="#">Imprint</a>
+        </div>
+		<h1><a href="{{= url_for('Portal.views.index')}}">Uliweb Project</a></h1>  
+		<span>Simple, easy Python web framework</span>
+      </div>
+      <div id="nav">
+        <!-- skiplink anchor: navigation -->
+          <!-- main navigation: #nav_main -->
+          <ul id="minitabs">
+           {{for f, c, a in Get(response.menu, []):}}
+              {{if f:}}<li><a href="{{=a}}" id="current">{{=c}}</a></li>
+              {{else:}}<li><a href="{{=a}}">{{=c}}</a></li>
+              {{pass}}
+            {{pass}}
+          </ul>
+      </div>
+      <div id="main">
+        {{include}}
+      </div>
+      <!-- begin: #footer -->
+      <div id="footer">Copyleft Limodou <a href="http://hi.baidu.com/limodou">Author Blog</a>
+      </div>
+    </div>
+    <div id="border-bottom">
+      <div id="edge-bl"></div>
+      <div id="edge-br"></div>
+    </div>
   </div>
-  <div class="doc-wrapper3">
-  </div>
-  <div class="doc-wrapper4">
-   <div id="hd">
-     <div class="head">
-	   <div class="links"></div>
-	   <em class="acct"><strong>Welcome Guest</strong> (<a href="/register" rel="nofollow">Register</a> | <a href="/login" rel="nofollow">Login</a>)</em>
-	   <div class="tabs">
-	     {{for f, c, a in Get(response.menu, []):}}
-		   {{if f:}}<a href="{{=a}}" class="current">{{=c}}</a>
-		   {{else:}}<a href="{{=a}}">{{=c}}</a>
-		   {{pass}}
-		 {{pass}}
-	   </div>
-	 </div>
-   </div>
-   <div id="bd">{{include}}</div>
-   <div id="ft"></div>
-  </div>
- </div>
-</div>
 </body>
 </html>
