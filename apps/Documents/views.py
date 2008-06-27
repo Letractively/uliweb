@@ -10,6 +10,7 @@ def documents():
     return _show(request, response, 'content.rst', env)
 
 def _show(request, response, filename, env, lang=None, render=True):
+    print 'xxxxxxxxxxxxxxxxxxxxx'
     from uliweb.core.template import template
     from uliweb.utils.rst import to_html
     from uliweb.i18n import get_language, format_locale
@@ -27,13 +28,18 @@ def _show(request, response, filename, env, lang=None, render=True):
         f = env.get_file(os.path.join(lang, filename))
         if f:
             filename = f
-    content = file(env.get_file(filename)).read()
-    if render:
-        content = to_html(template(content, env=env))
+    _f = env.get_file(filename)
+    print _f, filename
+    if _f:
+        content = file(_f).read()
+        if render:
+            content = to_html(template(content, env=env))
+        else:
+            content = to_html(content)
+        response.write(application.template('show_document.html', locals()))
+        return response
     else:
-        content = to_html(content)
-    response.write(application.template('show_document.html', locals()))
-    return response
+        error("Can't find the file %s" % filename)
     
 @expose('/documents/<path:filename>', defaults={'lang':''})
 #@expose('/documents/<path:filename>')
