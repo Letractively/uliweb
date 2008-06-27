@@ -83,7 +83,7 @@ class HTTPError(Exception):
 def redirect(url):
     raise RequestRedirect(url)
 
-def errorpage(message='', errorpage=None, request=None, **kwargs):
+def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
     kwargs.setdefault('message', message)
     if request:
         kwargs.setdefault('link', request.path_info)
@@ -467,7 +467,7 @@ class Dispatcher(object):
         except RequestRedirect, e:
             response = e
         except HTTPError, e:
-            response = self.render(e.errorpage, Storage(e.errors))
+            response = self.render(e.errorpage, Storage(e.errors), request=req)
         except NotFound, e:
             response = self.not_found(req, e)
         except InternalServerError, e:
