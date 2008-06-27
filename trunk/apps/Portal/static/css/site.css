@@ -1,4 +1,4 @@
-blockquote,ul,ol,dl {
+/*blockquote,ul,ol,dl {
 	margin:1em;
 }
 ol,ul,dl {
@@ -10,15 +10,17 @@ ol li {
 ul li {
 	list-style: disc outside;
 }
+*/
 
 /*begin YDN/YUI styles*/
+/*
 h1, h2, h3, h4, h5, h6 {font-weight:bold;}
 h1, h2, h3, h4, h5, h6, p {line-height:1.2em; font-size:100%; margin:1em 0 0 0;}
 p { margin-bottom:1em; line-height:1.5em; font-size:100%;}
 h1 { font-size: 150%; padding:0; padding-top:18px}
 h2 { font-size: 129%; margin-top:1.5em; margin-bottom:.2em; padding:1em 0 0 0;  border-bottom:1px solid #dedede;}
 h2.first { border-top:none; margin-top:0; margin-bottom:.2em;}
-#doc3 h2.first { float:none; /*float specified to resolve conflict on generic float declaration for .first in grids*/}
+#doc3 h2.first { float:none; }
 h3 {font-size:114%; display:inline; margin-bottom:0;}
 h4 {margin-top:1em; color: #000;}
 ul, ol, dl, dd {margin-left:30px;}
@@ -39,14 +41,14 @@ a:active, a:active code {color: #f00;}
 #bd ol li ol li {margin-bottom:1em}
 #bd ol li ol li ol{list-style:lower-roman}
 #bd ol li ol li ol li {margin-bottom:1em}
-
+*/
 /*formerly #bd targeting*/
+/*
 ul {margin-top:2px; }
 ul li { margin:0 17px 0 7px; }
 ul li ul { margin-top:0em }
 
 html{background-color:#e7e7e7;}
-body{font-family:arial;color:#4e4e4e;background:#e7e7e7;}
 #doc4{background:#fff url(/static/images/bg_shadow_left.gif) repeat-y;width:76.15em;min-width:990px;*width:74.26em;position:relative;}
 .doc-wrapper1{background:url(/static/images/bg_shadow_right.gif) repeat-y right top;}
 .doc-wrapper2{position:absolute;background-position:-340px -20px;width:10px;height:500px;left:0;}
@@ -66,12 +68,21 @@ body{font-family:arial;color:#4e4e4e;background:#e7e7e7;}
 #hd .tabs .current{color:#ffae00;}
 
 #bd {clear:both; margin-top:50px;}
-
+*/
 div.left {float:left; margin-right:30px;}
 div.clear {clear:both;}
 
-div.contents.topic {float:right; border:1px solid #dedede;padding:5px; margin:5px; background-color:#FFF8AF;}
+div.contents.topic {float:right; border:1px solid #dedede;padding:5px 20px 5px 5px; margin:5px; background-color:#FFF8AF;}
 div.document pre {border:1px solid #dedede; padding:5px; margin:5px; background-color:#FFF8AF; line-height:1.5em;}
 div.document h1 {margin-bottom:10px;}
 div.document div.note {border:1px solid #ff0000; padding:5px; margin:5px; background-color:#FF9F9F;}
 div.document tt.docutils.literal {border:1px solid #dedede;background-color:#A4FF9F;}
+
+ul#minitabs{list-style: none;margin: 0;padding: 7px 0;
+  border-bottom: 1px solid #CCC;font-weight: bold;
+  text-align: center;white-space: nowrap}
+ul#minitabs li{display: inline;margin: 0 5px}
+ul#minitabs a{text-decoration: none;padding: 0 0 3px;
+  border-bottom: 4px solid #FFF;color: #999}
+ul#minitabs a#current{border-color: #F60;color: #06F}
+ul#minitabs a:hover{border-color: #F60;color: #666}
