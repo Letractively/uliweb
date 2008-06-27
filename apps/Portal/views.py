@@ -14,9 +14,9 @@ def static(filename):
     return static_serve(request, filename)
 
 @expose('/favicon.ico')
-def static(filename):
+def favicon():
     return static_serve(request, 'favicon.ico')
 
 @expose('/robots.txt')
-def static(filename):
+def robots():
     return static_serve(request, 'robots.txt')
