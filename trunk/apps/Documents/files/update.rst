@@ -16,9 +16,6 @@ working directory, you can do it by running manage.py command tool, for example:
         Completely sync operation. It'll delete the old version of Uliweb in 
         outputdir directory first, then do the copy work.
     
-    -n
-        Skip the database component geniusql shipped with Uliweb.
-    
 So you can use ``export`` command to create a clear working directory.
 
 While the Uliweb is updated to a new version, you can still use ``export`` to

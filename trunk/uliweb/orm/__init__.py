@@ -1,4 +1,4 @@
-# This module is used for wrapping geniusql to a simple ORM
+# This module is used for wrapping SqlAlchemy to a simple ORM
 # Author: limodou <limodou@gmail.com>
 # 2008.06.11
 
@@ -223,7 +223,10 @@ class Property(object):
         return value
     
     def convert(self, value):
-        return self.data_type(value)
+        if isinstance(value, unicode):
+            return value.encode('utf-8')
+        else:
+            return self.data_type(value)
     
     def __repr__(self):
         return ("<Property 'type':%r, 'verbose_name':%r, 'name':%r, " 
@@ -253,6 +256,12 @@ class StringProperty(Property):
 class UnicodeProperty(StringProperty):
     data_type = unicode
     field_class = Unicode
+    
+    def convert(self, value):
+        if isinstance(value, str):
+            return unicode(value, 'utf-8')
+        else:
+            return self.data_type(value)
     
 class TextProperty(StringProperty):
     field_class = Text

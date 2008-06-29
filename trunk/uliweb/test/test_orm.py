@@ -1,53 +1,36 @@
 #coding=utf-8
 import time, sys
-sys.path.insert(0, '../..')
-sys.path.insert(0, '..')
 
-print 'import...', time.time()
-from uliweb.orm import *
-import geniusql
-print 'end import...', time.time()
+from orm import *
 
-def show(tablename):
-    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
-    schema = db._schema
-    t = schema.discover(tablename)
-    
-    for k, v in t.items():
-        print k, v
-        
-    print t.select_all()
-    
-def clear(table):
-    table.delete_all()
-    
 def test1():
     set_auto_bind(True)
-    set_auto_migirate(True)
+    set_auto_migrate(True)
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
-    db = get_connection('sqlite')
+    db = get_connection('sqlite://')
     
     class Test(Model):
         username = Field(unicode)
         year = Field(int, default=0)
         
+    print dir(Test), Test.metadata
     Test(username='limodou').save()
     Test(username='limodou1').save()
     b = Test(username=u'中文').save()
-    print list(Test.filter())
+    print list(Test.all())
     print b, type(b.username), b.username.encode('gbk')
     b.delete()
     print list(Test.filter())
-    Test.remove(username='limodou')
-    print list(Test.filter())
+    Test.remove(Test.c.username==u'limodou')
+    print list(Test.all())
     
     
 def test2():
-    set_debug_log(True)
+    set_debug_query(True)
     set_auto_bind(True)
-    set_auto_migirate(True)
+    set_auto_migrate(True)
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
-    db = get_connection('sqlite')
+    db = get_connection('sqlite://')
     class Test(Model):
         username = Field(str)
         year = Field(int)
@@ -67,7 +50,7 @@ def test3():
 
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
     set_auto_bind(True)
-    set_auto_migirate(True)
+    set_auto_migrate(True)
     db = get_connection('sqlite')
     print 'begin', time.time()
     class Other(Model):
@@ -115,8 +98,8 @@ def test4():
 def test5():
     import decimal
     set_auto_bind(True)
-    set_auto_migirate(True)
-    set_debug_log(True)
+    set_auto_migrate(True)
+    set_debug_query(True)
 
     from geniusql import logic, logicfuncs
     logicfuncs.init()
@@ -137,7 +120,7 @@ def test5():
 def test6():
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
     set_auto_bind(True)
-    set_auto_migirate(True)
+    set_auto_migrate(True)
     db = get_connection('sqlite')
     db.create()
 
@@ -166,8 +149,8 @@ def test6():
 def test7():
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
     set_auto_bind(True)
-    set_auto_migirate(True)
-    set_debug_log(True)
+    set_auto_migrate(True)
+    set_debug_query(True)
     db = get_connection('sqlite')
     db.create()
 
@@ -197,7 +180,7 @@ def test7():
 def test8():
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
     set_auto_bind(True)
-    set_auto_migirate(True)
+    set_auto_migrate(True)
     db = get_connection('sqlite')
     db.create()
 
@@ -213,9 +196,9 @@ def test8():
 
 def test9():
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
-    set_debug_log(False)
+    set_debug_query(False)
     set_auto_bind(True)
-    set_auto_migirate(True)
+    set_auto_migrate(True)
     db = get_connection('sqlite')
     db.create()
 
@@ -285,4 +268,4 @@ def test10():
     print list(db.select((A&B, [A.keys(), B.keys()], lambda x, y:y.a_id==1)))
     
 if __name__ == '__main__':
-    test2()
+    test1()
