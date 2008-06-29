@@ -4,6 +4,7 @@ import sys, os
 path = os.path.dirname(__file__)
 sys.path.insert(0, path)
 sys.path.insert(0, os.path.join(path, 'apps'))
+sys.path.insert(0, os.path.join(path, 'lib'))
 #sys.path.insert(0, os.path.join(path, 'uliweb'))
 
 from werkzeug import script
@@ -68,7 +69,7 @@ def _copy_dir(d, dst, verbose, exact=False):
                 shutil.copy2(fpath, dd)
             
             
-def export(outputdir=('o', ''), withsql=('n', True), verbose=('v', False), exact=('e', False), appname=('a', '')):
+def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appname=('a', '')):
     """
     Export Uliweb to a directory.
     """
@@ -104,9 +105,7 @@ def export(outputdir=('o', ''), withsql=('n', True), verbose=('v', False), exact
             else:
                 shutil.copy2(f, path)
             
-        dirs = ['uliweb', 'webob', 'werkzeug']
-        if withsql:
-            dirs.append('geniusql')
+        dirs = ['uliweb', 'lib']
         _copy_dir(dirs, outputdir, verbose, exact)
         
 def _copy_dir2(d, dst, verbose=False, check=True):

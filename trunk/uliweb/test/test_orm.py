@@ -43,6 +43,7 @@ def test1():
     
     
 def test2():
+    set_debug_log(True)
     set_auto_bind(True)
     set_auto_migirate(True)
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
@@ -50,6 +51,7 @@ def test2():
     class Test(Model):
         username = Field(str)
         year = Field(int)
+        name = Field(str, max_length=65536)
         
     Test(username='limodou').save()
     show('test')
@@ -57,7 +59,6 @@ def test2():
     class Test(Model):
         username = Field(str, max_length=20)
         year = Field(int)
-        name = Field(str, max_length=65536)
         
     show('test')
     
@@ -284,4 +285,4 @@ def test10():
     print list(db.select((A&B, [A.keys(), B.keys()], lambda x, y:y.a_id==1)))
     
 if __name__ == '__main__':
-    test7()
+    test2()

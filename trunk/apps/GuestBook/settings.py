@@ -1,6 +1,6 @@
 from uliweb.core.plugin import plugin
 
-connection = {'connection':'sqlite://database.db'}
+connection = {'connection':'sqlite:///database.db'}
 #connection = {'connection':'mysql://root:limodou@localhost/test'}
 
 DEBUG = True
@@ -14,7 +14,7 @@ def prepare_template_env(sender, env):
 @plugin('startup')
 def startup(sender):
     from uliweb import orm
-    orm.set_debug_log(DEBUG_LOG)
+    orm.set_debug_query(DEBUG_LOG)
     orm.set_auto_bind(True)
-    orm.set_auto_migirate(True)
+    orm.set_auto_migrate(True)
     orm.get_connection(**connection)

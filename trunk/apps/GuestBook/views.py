@@ -9,8 +9,9 @@ def static(filename):
 @expose('/guestbook')
 def guestbook():
     from models import Note
+    from sqlalchemy import desc
     
-    notes = Note.filter(order=lambda z: [reversed(z.datetime)])
+    notes = Note.filter(order_by=[desc(Note.c.datetime)])
     return locals()
       
 @expose('/guestbook/new_comment')
@@ -25,7 +26,6 @@ def new_comment():
     elif request.method == 'POST':
         flag, data = form.validate(request.params)
         if flag:
-            data['datetime'] = datetime.datetime.now()
             n = Note(**data)
             n.put()
             redirect(url_for('%s.views.guestbook' % request.appname))
