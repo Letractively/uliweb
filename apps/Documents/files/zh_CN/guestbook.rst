@@ -20,8 +20,8 @@
     
 然后在浏览器输入 http://localhost:8000/guestbook 这样就可以看到了。目前缺省是使用
 sqlite3。如果你安装了python 2.5它已经是内置的。否则要安装相应的数据库和Python的绑定模
-块。目前Uliweb使用geniusql作为数据库底层驱动，它支持多种数据库，如：mysql, sqlite,
-postgresql, sqlserver, access,　firebird。不过我只试过mysql和sqlite。
+块。目前Uliweb使用 `SqlAlchemy <http://www.sqlalchemy.org>`_ 作为数据库底层驱动，
+它支持多种数据库，如：mysql, sqlite, postgresql, 等。
 
 好了，源码准备好了，下一步，准备开发环境。
 
@@ -65,7 +65,7 @@ plugin是一个decorator，象expose一样，你可以用它来修饰函数，�
 
 .. code:: python
 
-    connection = {'connection':'sqlite://database.db'}
+    connection = {'connection':'sqlite:///database.db'}
     #connection = {'connection':'mysql://root:limodou@localhost/test'}
     
     DEBUG_LOG = True
@@ -78,9 +78,9 @@ plugin是一个decorator，象expose一样，你可以用它来修饰函数，�
     @plugin('startup')
     def startup(sender):
         from uliweb import orm
-        orm.set_debug_log(DEBUG_LOG)
+        orm.set_debug_query(DEBUG_LOG)
         orm.set_auto_bind(True)
-        orm.set_auto_migirate(True)
+        orm.set_auto_migrate(True)
         orm.get_connection(**connection)
         
 让我一点点来解释。
@@ -99,26 +99,13 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
 
     provider://username:password@localhost:port/dbname?argu1=value1&argu2=value2
     
-其中有些参数是可以缺省或组织作为字典项放在connection中的。比如：
-
-.. code:: python
-
-    connection = {'connection':'mysql://localhost/test',
-        'username':'limodou',
-        'password':'password'}
-    connection = {'connection':'mysql://localhost/test?username=limodou&password=password'}
-    connection = {'connection':'mysql://limodou:password@localhost/test'}
+    对于Sqlite连接字符串有些不同：
     
-以上三种写法效果是一样的。如果有些参数没有提供，如port参数，则将使用缺省值。对于sqlite，
-因为没有什么用户名和口令之类的，所以可以直接写为：
-
-.. code:: python
-    
-    connection = {'connection':'sqlite'}    #内存数据库
-    connection = {'connection':'sqlite://'} #内存数据库
-    connection = {'connection':'sqlite'://path'}    #使用文件
-    
-前两种是一样的。后一种将使用文件作为数据库，可以是使用绝对路径也可以使用相对路径。
+    sqlite_db = create_engine('sqlite:////absolute/path/to/database.txt')
+    sqlite_db = create_engine('sqlite:///d:/absolute/path/to/database.txt')
+    sqlite_db = create_engine('sqlite:///relative/path/to/database.txt')
+    sqlite_db = create_engine('sqlite://')  # in-memory database
+    sqlite_db = create_engine('sqlite://:memory:')  # the same
     
 数据库初始化
 ~~~~~~~~~~~~
@@ -133,7 +120,7 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
     @plugin('startup')
     def startup(sender):
         from uliweb import orm
-        orm.set_debug_log(DEBUG_LOG)
+        orm.set_debug_query(DEBUG_LOG)
         orm.set_auto_bind(True)
         orm.set_auto_migirate(True)
         orm.get_connection(**connection)
@@ -149,13 +136,13 @@ sender参数，这里sender就是框架实例。每一个插件函数的第一�
 能独立时非常有用。因此在Uliweb中的APP，一方面它可以保持有自已的结构，甚至包含静态文件，
 配置文件，但同时在需要时也可以直接分享其它APP的信息。
 
-``set_debug_log(DEBUG_LOG)`` 用来设置显示底层的SQL，在开发服务器环境下，它将显示在命令行上。
+``set_debug_query(DEBUG_LOG)`` 用来设置显示底层的SQL，在开发服务器环境下，它将显示在命令行上。
 
 ``set_auto_bind(True)`` 自动绑定设置。这样当你导入一个Model时，它将自动与缺省的数据库连接
 进行绑定，就可以直接使用了。不然，你需要手动绑定每个Model需要与哪个连接关联。在只有单数据
 连接时可以打开，在使用多数据连接时可以关闭，然后进行手工绑定处理。
 
-``set_auto_migirate(True)`` 这个作用很大。首先，如果在运行时表还不存在，则Uliweb可以自动创
+``set_auto_migrate(True)`` 这个作用很大。首先，如果在运行时表还不存在，则Uliweb可以自动创
 建表结构。其次，如果你使用过web2py，你会知道当Model发生变化时可以自动更新表结构。那么
 Uliorm也可以做到，不过目前比较简单，只能处理象：增加，删除，修改
 的情况。对于修改，可能会造成数据丢失。现在无法判断字段的改名，所以一旦改名，其实就是删除旧
@@ -201,10 +188,10 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
     
     class Note(Model):
         username = Field(str)
-        message = Field(str, max_length=1024)
+        message = Field(text)
         homepage = Field(str)
         email = Field(str)
-        datetime = Field(datetime.datetime)
+        datetime = Field(datetime.datetime, auto)
         
 很简单。
 
@@ -226,7 +213,7 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 
     class Note(Model):
         username = StringProperty()
-        message = TextProperty(max_length=1024)
+        message = TextProperty()
         homepage = StringProperty()
         email = StringProperty()
         datetime = DateTimeProperty()
@@ -291,20 +278,18 @@ Uliweb已经提供了静态文件的支持，因此一种方式你直接使用Ul
 
 .. code:: python
 
-    @expose('/guestbook')
     def guestbook():
         from models import Note
+        from sqlalchemy import desc
         
-        notes = Note.filter(order=lambda z: [reversed(z.datetime)])
+        notes = Note.filter(order_by=[desc(Note.c.datetime)])
         return locals()
 
 先定义url为 ``/guestbook`` 。
 
 然后是guestbook()函数的定义。我们先导入Note类，然后通过它的类方法filter进行数据库的查
-询。为了按时间倒序显示，我在filter中对order定义了一个lambda函数。这里是geniusql的语法，
-以后也可能会支持其它的语法。 ``lambda z: [reversed(z.datetime)]`` 这个函数的意思就是
-对 ``z`` 这个表的 ``datetime`` 字段进行倒序处理。可以看到都是Python的语法。reversed是一个
-Python的内置函数。
+询。为了按时间倒序显示，我在filter中对 ``order_by`` 定义了降序排序，这里是SqlAlchemy的查询
+语法。这个条件的意思就是对 ``datetime`` 字段进行倒序处理。
 
 以下是一些简单的用法：
 
@@ -312,7 +297,7 @@ Python的内置函数。
 
     notes = Note.filter()               #全部记录，不带条件
     note = Note.get(3)                  #获取id值为3的记录
-    note = Note.get(username='limodou') #获取username为limodou的记录
+    note = Note.get(Note.c.username=='limodou') #获取username为limodou的记录
     
 然后我们返回locals()，让模板来使用它。
 
@@ -340,11 +325,13 @@ Python的内置函数。
     <h2><a href="{{=url_for('%s.views.new_comment' % request.appname)}}">New Comment</a></h2>
     {{for n in notes:}}
     <div class="message">
-    <h3><a href="/guestbook/delete/{{=n.id}}"><img src="/static/delete.gif"/></a> 
-    {{=n.username}} at {{=n.datetime}} say:</h3>
+    <h3><a href="{{= url_for('%s.views.del_comment' % request.appname, id=n.id) }}">
+    <img src="{{= url_for('%s.views.static' % request.appname, filename='delete.gif') }}"/>
+    </a> {{=n.username}} at {{=n.datetime.strftime('%Y/%m/%d %H:%M:%S')}} say:</h3>
     <p>{{=text2html(n.message)}}</p>
     </div>
     {{pass}}
+    
     
 第一行将从base.html模板进行继承。这里不想多说，只是要注意在base.html中有一个{{include}}
 的定义，它表示子模板要插入的位置。你可以从Uliweb的源码中将base.html拷贝到你的目录下。
@@ -405,7 +392,6 @@ Form代码写在一起，因为那样代码比较多，同且如果用户输入�
         elif request.method == 'POST':
             flag, data = form.validate(request.params)
             if flag:
-                data['datetime'] = datetime.datetime.now()
                 n = Note(**data)
                 n.put()
                 redirect(url_for('%s.views.guestbook' % request.appname))
@@ -521,7 +507,7 @@ FileField, IntField, PasswordField, RadioSelectField等字段类型。目前Form
 
 .. code::
 
-    <a href="/guestbook/delete/{{=n.id}}"><img src="/static/delete.gif"/></a>
+    <a href="{{=url_for('%s.views.new_comment' % request.appname)}}">New Comment</a>
     
 那么下面就让我们实现它。
 

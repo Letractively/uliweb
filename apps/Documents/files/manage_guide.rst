@@ -80,10 +80,6 @@ So you can use it to create new project or update uliweb version.
         Completely sync operation. It'll delete the old version of Uliweb in 
         outputdir directory first, then do the copy work.
         
-    
-    -n
-        Skip the database component geniusql shipped with Uliweb.
-        
     -v 
 
         Output verbose infomation, default is no output.

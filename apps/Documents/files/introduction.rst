@@ -32,7 +32,7 @@ It's not a totally created from scratch, I've used some modules, for example:
   for example: command line, URL Mapping, Debug, etc.
 * `webob <http://pythonpaste.org/webob/>`_  Used to create Request, Response
   object, and static file process.
-* `geniusql <http://www.aminus.net/geniusql>`_ I wrapped an ORM based on it,
+* `SqlAlchemy <http://www.sqlalchemy.org>`_ I wrapped an ORM based on it,
   so you can use ORM to access database, and you can also use this module directly.
 
 I also reference some code from other frames, for example:
@@ -46,7 +46,7 @@ And I also made some new "wheels" myself, for example:
 * Form process, you can use it to create HTML code, validate submitted data and 
   convert submitted data to Python data type.
 * I18n process, including template support, language lazy process.
-* Uliorm, it an ORM module, built on geniusql now, and I also referenced from 
+* Uliorm, it an ORM module, built on SqlAlchemy now, and I also referenced from 
   GAE datastore modeul.
 * Framework runtime process.
 * Plugin mechanism, I borrowed from `UliPad <http://code.google.com/p/ulipad>`_ project.

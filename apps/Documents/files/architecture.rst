@@ -32,10 +32,11 @@ In Uliweb project directory, the basic directory structure is:
 ::
 
     apps/               #Store all apps
-    geniusql/           #Default database driven module
+        sqlalchemy/     #Default database driven module
+        migrate/        #migrate package of sqlalchemy
+        webob/          #Create Request, Response object
+        werkzeug/       #Underlying module
     uliweb/             #Uliweb core source code
-    webob/              #Create Request, Response object
-    werkzeug/           #Underlying module
     app.yaml            #Used for GAE deploying
     gae_handler.py      #Used for GAE deploying
     manage.py           #Command line management tool
@@ -140,7 +141,7 @@ MVT Framework
 
 Uliweb also adopts MVT framework. 
 
-Now the Model is an ORM based on geniusql package.
+Now the Model is an ORM based on SqlAlchemy package.
 
 View is using function but not class, but when you run a view function, Uliweb
 will provide an environment for it, it very likes web2py way, but it's different.

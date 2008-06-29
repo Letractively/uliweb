@@ -23,9 +23,9 @@ Just download the newest source code of Uliweb, then start developing server:
 Enter http://localhost:8000/guestbook in the browser, then you'll find it.
 By default, it'll use sqlite3, so if you are using Python 2.5, you'll not need
 to install sqlite Python binding module. Or you need to install pysqlite2 package
-yourself. For now, Uliweb uses geniusql for underlying database driven module,
-it already supports many database, such as: mysql, sqlite, postgresql, sqlserver, 
-access, firebird. But I just test with sqlite3 and mysql. Before you want to use
+yourself. For now, Uliweb uses `SqlAlchemy <http://www.sqlalchemy.org>`_ for 
+underlying database driven module, it already supports many database, such as: 
+mysql, sqlite, postgresql, etc. Before you want to use
 other databases, you should also install their database module first.
 
 Ok, let's begin to write code.
@@ -76,7 +76,7 @@ below code:
 
 .. code:: python
 
-    connection = {'connection':'sqlite://database.db'}
+    connection = {'connection':'sqlite:///database.db'}
     #connection = {'connection':'mysql://root:limodou@localhost/test'}
     
     DEBUG_LOG = True
@@ -89,9 +89,9 @@ below code:
     @plugin('startup')
     def startup(sender):
         from uliweb import orm
-        orm.set_debug_log(DEBUG_LOG)
+        orm.set_debug_query(DEBUG_LOG)
         orm.set_auto_bind(True)
-        orm.set_auto_migirate(True)
+        orm.set_auto_migrate(True)
         orm.get_connection(**connection)
         
 Let me explain it bit by bit.
@@ -113,29 +113,13 @@ A connection string format looks like
 
     provider://username:password@localhost:port/dbname?argu1=value1&argu2=value2
     
-Some arguments can be default or organized in the ``connection`` dict variable. 
-For example:
-
-.. code:: python
-
-    connection = {'connection':'mysql://localhost/test',
-        'username':'limodou',
-        'password':'password'}
-    connection = {'connection':'mysql://localhost/test?username=limodou&password=password'}
-    connection = {'connection':'mysql://limodou:password@localhost/test'}
+    For Sqlite, the conntection is somewhat different:
     
-Above three formats are all the same effect. If there are some arguments doesn't
-provided, e.g. ``port`` argument, it'll use default value. For sqlite database,
-because there is no username and password, so you can directly write it as:
-
-.. code:: python
-    
-    connection = {'connection':'sqlite'}    #Memory database
-    connection = {'connection':'sqlite://'} #Memory database
-    connection = {'connection':'sqlite'://path'}    #Using file
-    
-The former two formats are the same. And the later will use file, you can use
-absolute path or relative path.
+    sqlite_db = create_engine('sqlite:////absolute/path/to/database.txt')
+    sqlite_db = create_engine('sqlite:///d:/absolute/path/to/database.txt')
+    sqlite_db = create_engine('sqlite:///relative/path/to/database.txt')
+    sqlite_db = create_engine('sqlite://')  # in-memory database
+    sqlite_db = create_engine('sqlite://:memory:')  # the same
     
 Initialize Database
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -154,7 +138,7 @@ Then:
     @plugin('startup')
     def startup(sender):
         from uliweb import orm
-        orm.set_debug_log(DEBUG_LOG)
+        orm.set_debug_query(DEBUG_LOG)
         orm.set_auto_bind(True)
         orm.set_auto_migirate(True)
         orm.get_connection(**connection)
@@ -171,14 +155,14 @@ find and import each ``settings.py`` in every app directory, so you can write
 initialization code an any app ``settings.py`` file, but I suggest you put it in 
 your main app of your project.
 
-``set_debug_log(DEBUG_LOG)`` will enable Uliweb output SQL statements in console when
+``set_debug_query(DEBUG_LOG)`` will enable Uliweb output SQL statements in console when
 running.
 
 ``set_auto_bind(True)`` will enable automatically binding setting. So when you 
 import a Model, it'll be bound to default database connection, and you can use
 it directly. Otherwise, you need manully bind each table to database connection.
 
-``set_auto_migirate(True)`` will enable automatically table migirate process. It's
+``set_auto_migrate(True)`` will enable automatically table migirate process. It's
 very useful. Firstly, if when you startup Uliweb and the table is not existed
 in database yet, Uliweb will automatically create this table for you. Secondly,
 it'll automatically check the Model structure and table structure, adding or
@@ -227,7 +211,7 @@ Creating a ``models.py`` file in GuestBook directory, and add below code:
     
     class Note(Model):
         username = Field(str)
-        message = Field(str, max_length=1024)
+        message = Field(text)
         homepage = Field(str)
         email = Field(str)
         datetime = Field(datetime.datetime)
@@ -258,7 +242,7 @@ Property class for you.
 
     class Note(Model):
         username = StringProperty()
-        message = TextProperty(max_length=1024)
+        message = TextProperty()
         homepage = StringProperty()
         email = StringProperty()
         datetime = DateTimeProperty()
@@ -324,11 +308,11 @@ Open ``views.py`` in ``GuestBook`` directory, and add displaying comments code:
 
 .. code:: python
 
-    @expose('/guestbook')
     def guestbook():
         from models import Note
+        from sqlalchemy import desc
         
-        notes = Note.filter(order=lambda z: [reversed(z.datetime)])
+        notes = Note.filter(order_by=[desc(Note.c.datetime)])
         return locals()
 
 Here we define the ULR is ``/guestbook`` .
@@ -336,10 +320,8 @@ Here we define the ULR is ``/guestbook`` .
 Then we define ``guestbook()`` function.
 
 In function, we import ``Note`` class, then get all comments via its ``filter()`` 
-method. In order to display the comments descend, we add a lambda function to 
-``order`` argument. This is genuisql query expression usage, just a Python 
-expression. It means that sorting the table ``z`` via ``datatime`` field in 
-descend order. And ``reversed`` is a builtin function of Python.
+method. In order to display the comments descend, we add some condition to 
+``order_by`` argument. This is SqlAlchemy query expression usage. 
 
 Here are some simple usages:
 
@@ -347,7 +329,7 @@ Here are some simple usages:
 
     notes = Note.filter()               #Gain all records, with no condition
     note = Note.get(3)                  #Gain records with id equals 3
-    note = Note.get(username='limodou') #Gain records with username equals 'limodou'
+    note = Note.get(Note.c.username=='limodou') #Gain records with username equals 'limodou'
     
 Then we'll return locals() (locals() will return a dict variable, it's
 easy then return {'a':1} format). Remember, when you return a dict variable,
@@ -380,11 +362,13 @@ should be the same with ``guestbook()`` function. And add below code to it:
     <h2><a href="{{=url_for('%s.views.new_comment' % request.appname)}}">New Comment</a></h2>
     {{for n in notes:}}
     <div class="message">
-    <h3><a href="/guestbook/delete/{{=n.id}}"><img src="/static/delete.gif"/></a> 
-    {{=n.username}} at {{=n.datetime}} say:</h3>
+    <h3><a href="{{= url_for('%s.views.del_comment' % request.appname, id=n.id) }}">
+    <img src="{{= url_for('%s.views.static' % request.appname, filename='delete.gif') }}"/>
+    </a> {{=n.username}} at {{=n.datetime.strftime('%Y/%m/%d %H:%M:%S')}} say:</h3>
     <p>{{=text2html(n.message)}}</p>
     </div>
     {{pass}}
+    
     
 The first line means this template will inherit from ``base.html``. I don't want to 
 say so much about it, you just need to notice in ``base.html`` should has a 
@@ -454,7 +438,6 @@ Open the views.py file, and add below code:
         elif request.method == 'POST':
             flag, data = form.validate(request.params)
             if flag:
-                data['datetime'] = datetime.datetime.now()
                 n = Note(**data)
                 n.put()
                 redirect(url_for('%s.views.guestbook' % request.appname))
@@ -588,7 +571,7 @@ is:
 
 .. code::
 
-    <a href="/guestbook/delete/{{=n.id}}"><img src="/static/delete.gif"/></a>
+    <a href="{{=url_for('%s.views.new_comment' % request.appname)}}">New Comment</a>
     
 So let's implement it.
 

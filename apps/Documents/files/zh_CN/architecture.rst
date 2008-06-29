@@ -27,10 +27,12 @@
 ::
 
     apps/               #App的存放目录
-    geniusql/           #缺省的数据库驱动包，使用geniusql项目
+    lib/
+        sqlalchemy/     #缺省的数据库驱动包，使用sqlalchemy项目
+        migrate/        #sqlalchemy的migrate包
+        webob/          #用于Request, Response的处理，使用webob项目
+        werkzeug/       #底层框架支撑库，使用werkzeug项目
     uliweb/             #Uliweb核心代码
-    webob/              #用于Request, Response的处理，使用webob项目
-    werkzeug/           #底层框架支撑库，使用werkzeug项目
     app.yaml            #供部署在GAE上使用
     gae_handler.py      #供部署在GAE上使用
     manage.py           #Uliweb的命令行管理程序
@@ -118,7 +120,7 @@ URL的格式采用werkzeug的routing模块处理方式。可以定义参数，�
 MVT框架
 ------------
 
-Uliweb也采用MVT的框架。目前Model是基于Geniusql封装的ORM。View则采函数。但当你在运行view
+Uliweb也采用MVT的框架。目前Model是基于SqlAlchemy封装的ORM。View则采函数。但当你在运行view
 函数，你会运行在一个环境下，这一点有些象web2py。不过web2py是基于exec，而Uliweb是通过
 向函数注入变量(func_globals)来实现的。这种在某种环境下运行的方式使得你减少了许多的导入，许
 多对象可以在view函数中直接使用，非常方便。Template一般你不需要主动来调用，Uliweb采用自动
