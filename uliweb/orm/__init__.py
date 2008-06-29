@@ -2,12 +2,9 @@
 # Author: limodou <limodou@gmail.com>
 # 2008.06.11
 
-import sys
 
-sys.path.insert(0, '../..')
-
-__all__ = ['Field', 'get_connection', 'Model', 'migirate_table',
-    'set_auto_bind', 'set_auto_migirate', 'set_debug_log', 
+__all__ = ['Field', 'get_connection', 'Model', 'migrate_table',
+    'set_auto_bind', 'set_auto_migrate', 'set_debug_query', 
     'blob', 'text',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FileProperty', 'FloatProperty',
@@ -19,51 +16,13 @@ __all__ = ['Field', 'get_connection', 'Model', 'migirate_table',
 
 __default_connection__ = None  #global connection instance
 __auto_bind__ = False
-__auto_migirate__ = False
-__debug_log__ = None
+__auto_migrate__ = False
+__debug_query__ = None
 
-import re
-import geniusql
 import decimal
 import threading
 import datetime
-
-_SELF_REFERENCE = object()
-
-def set_auto_bind(flag):
-    global __auto_bind__
-    __auto_bind__ = flag
-    
-def set_auto_migirate(flag):
-    global __auto_migirate__
-    __auto_migirate__ = flag
-    
-def set_debug_log(log):
-    global __debug_log__
-    __debug_log__ = log
-
-def get_connection(connection='', default=True, **args):
-    global __default_connection__
-    global __orm__
-    
-    if default:
-        if __default_connection__:
-            return __default_connection__
-        
-    if not connection.startswith('gae'):
-        db = DB(connection, **args)
-    if db:
-        if default:
-            __default_connection__ = db
-        db.__default_connection__ = __default_connection__
-        db.__auto_bind__ = __auto_bind__
-        db.__auto_migirate__ = __auto_migirate__
-        db.__debug_log__ = __debug_log__
-
-    return db
-
-def _default_sql_log(message):
-    sys.stdout.write("[Debug] SQL -- %s\n" % message)
+from sqlalchemy import *
 
 class Error(Exception):pass
 class ReservedWordError(Error):pass
@@ -74,87 +33,36 @@ class BadValueError(Error):pass
 class KindError(Error):pass
 class ConfigurationError(Error):pass
 
-def DB(connection='', **args):
-    d = parse(connection, **args)
-    provider = d.pop('provider')
-    if provider == 'sqlite':
-        if d.get('db', None):
-            d['name'] = d['db']
-        else:
-            d['name'] = ':memory:'
-    elif provider == 'firebird':
-        if d.get('passwd', None):
-            d['password'] = d['passwd']
-    elif provider == 'mysql':
-        d['encoding'] = d.setdefault('encoding', 'utf8')
-    db = geniusql.db(provider, **d)
-    if provider == 'sqlite':
-        db.create()
-    db._schema = db.schema()
-    db._schema.create()
-    
-    if __debug_log__:
-        if __debug_log__ is True:
-            log = _default_sql_log
-        else:
-            log = __debug_log__
-        setattr(db, 'log', log)
-        
-    return db
+_SELF_REFERENCE = object()
 
-r_spec = re.compile('(?P<provider>.*?)://(?:(?P<user>.*?)(?::(?P<password>.*?))?@)?(?:(?P<url>.*?)(?:\?(?P<arguments>.*))?)?$')
-def parse(connection, **args):
-    """
-    A connection should be formatted like:
-        provider://<user:password@>host:port/dbname<?arg1=value1&arg2=value2>
-        
-        <> can be optional
-        
-        for provider, they are: 
-        
-            sqlite, access, firebird, mysql, postgres, psycopg, sqlserver
-        
-        For sqlite:
-        sqlite:///absolute/path/to/databasefile
-        sqlite://relative/path/to/databasefile
-        sqlite://   #in-memory database
-        sqlite      #also in-memory database
-        gae         #GAE
-    """
-    b = r_spec.match(connection)
-    if b:
-        d = b.groupdict()
-        url = d.pop('url')
-        if url:
-            if d['provider'] == 'sqlite':
-                d['db'] = url
-                d['host'] = None
-                d['port'] = None
-            else:
-                a, db = url.split('/')
-                d['db'] = db
-                if ':' in a:
-                    d['host'], d['port'] = a.split(':')
-                    d['port'] = int(d['port'])
-                else:
-                    d['host'], d['port'] = a, None
-        else:
-            d['db'] = url
-            d['host'] = None
-            d['port'] = None
-        argus = d.pop('arguments')
-        if argus:
-            x = dict([i.split('=') for i in argus.split('&')])
-            d.update(x)    
-    else:
-        d = {'provider':connection}
-    #clear empty key
-    for k, v in d.copy().items():
-        if not v:
-            del d[k]
-            
-    d.update(args)
-    return d
+def set_auto_bind(flag):
+    global __auto_bind__
+    __auto_bind__ = flag
+    
+def set_auto_migrate(flag):
+    global __auto_migrate__
+    __auto_migrate__ = flag
+    
+def set_debug_query(flag):
+    global __debug_query__
+    __debug_query__ = flag
+
+def get_connection(connection='', default=True, debug=None, **args):
+    global __default_connection__
+    if debug is None:
+        debug = __debug_query__
+    
+    if default and __default_connection__:
+        return __default_connection__
+    
+    db = create_engine(connection)
+    if default:
+        __default_connection__ = db
+    if debug:
+        db.echo = debug
+    metadata = MetaData(db)
+    db.metadata = metadata
+    return db
 
 class SQLStorage(dict):
     """
@@ -172,10 +80,12 @@ def check_reserved_word(f):
         raise ReservedWordError(
             "Cannot define property using reserved word '%s'. " % f
             )
-    
+
 class ModelMetaclass(type):
     def __init__(cls, name, bases, dct):
         super(ModelMetaclass, cls).__init__(name, bases, dct)
+        if name == 'Model':
+            return
         cls._set_tablename()
         
         cls.properties = {}
@@ -199,29 +109,29 @@ class ModelMetaclass(type):
                     raise DuplicatePropertyError('Duplicate property: %s' % attr_name)
                 defined.add(attr_name)
                 cls.properties[attr_name] = attr
-                attr.name = attr_name
                 attr.__property_config__(cls, attr_name)
                 
         if 'id' not in cls.properties:
             cls.properties['id'] = f = Field(int, autoincrement=True, key=True)
             f.__property_config__(cls, 'id')
-            f.name = 'id'
             setattr(cls, 'id', f)
 
         fields_list = [(k, v) for k, v in cls.properties.items()]
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls._fields_list = fields_list
         
-        if cls.__class__.__name__ != 'Model' and __auto_bind__:
-            cls.bind(auto_create=__auto_migirate__)
+        if __auto_bind__:
+            cls.bind(auto_create=__auto_migrate__)
         
 class Property(object):
     data_type = str
+    field_class = String
     creation_counter = 0
 
     def __init__(self, verbose_name=None, name=None, default=None,
          required=False, validator=None, choices=None, max_length=None, **kwargs):
         self.verbose_name = verbose_name
+        self.property_name = None
         self.name = name
         self.default = default
         self.required = required
@@ -232,10 +142,30 @@ class Property(object):
         self.creation_counter = Property.creation_counter
         self.value = None
         Property.creation_counter += 1
+        
+    def create(self):
+        args = self.kwargs.copy()
+        args['key'] = self.name
+        args['default'] = self.default_value()
+        args['primary_key'] = self.kwargs.pop('key', False)
+        args['autoincrement'] = self.kwargs.pop('autoincrement', False)
+        args['index'] = self.kwargs.pop('index', False)
+        args['unique'] = self.kwargs.pop('unique', False)
+        args['nullable'] = self.kwargs.pop('nullable', True)
+        f_type = self._create_type()
+        return Column(self.property_name, f_type, **args)
 
+    def _create_type(self):
+        if self.max_length:
+            f_type = self.field_class(self.max_length)
+        else:
+            f_type = self.field_class
+        return f_type
+    
     def __property_config__(self, model_class, property_name):
         self.model_class = model_class
-        if self.name is None:
+        self.property_name = property_name
+        if not self.name:
             self.name = property_name
 
     def __get__(self, model_instance, model_class):
@@ -315,19 +245,24 @@ class Property(object):
     
 class StringProperty(Property):
     data_type = str
+    field_class = String
     
     def empty(self, value):
         return not value
 
 class UnicodeProperty(StringProperty):
     data_type = unicode
+    field_class = Unicode
     
-class TextProperty(StringProperty): pass
-
-class BlobProperty(StringProperty): pass
-
+class TextProperty(StringProperty):
+    field_class = Text
+    
+class BlobProperty(StringProperty):
+    field_class = BLOB
+    
 class DateTimeProperty(Property):
     data_type = datetime.datetime
+    field_class = DateTime
     
     DEFAULT_DATETIME_INPUT_FORMATS = (
         '%Y-%m-%d %H:%M:%S',     # '2006-10-25 14:30:59'
@@ -383,7 +318,8 @@ class DateTimeProperty(Property):
     
 class DateProperty(DateTimeProperty):
     data_type = datetime.date
-
+    field_class = Date
+    
     def get_value_for_datastore(self, model_instance):
         value = super(DateProperty, self).get_value_for_datastore(model_instance)
         if value is not None:
@@ -399,6 +335,7 @@ class TimeProperty(DateTimeProperty):
     """A time property, which stores a time without a date."""
 
     data_type = datetime.time
+    field_class = Time
     
     def get_value_for_datastore(self, model_instance):
         value = super(TimeProperty, self).get_value_for_datastore(model_instance)
@@ -418,6 +355,7 @@ class IntegerProperty(Property):
     """An integer property."""
 
     data_type = int
+    field_class = Integer
     
     def validate(self, value):
         value = super(IntegerProperty, self).validate(value)
@@ -432,10 +370,23 @@ class FloatProperty(Property):
     """A float property."""
 
     data_type = float
-
+    field_class = Float
+    
     def __init__(self, verbose_name=None, default=0.0, **kwds):
         super(FloatProperty, self).__init__(verbose_name, default=default, **kwds)
    
+    def _create_type(self):
+        if self.max_length:
+            precision = self.max_length
+        if self.kwargs.get('precision', None):
+            precision = self.kwargs.pop('precision')
+        length = 2
+        if self.kwargs.get('length', None):
+            length = self.kwargs.pop('length')
+        
+        f_type = self.field_class(**dict(precision=precision, length=length))
+        return f_type
+    
     def validate(self, value):
         value = super(FloatProperty, self).validate(value)
         if value is not None and not isinstance(value, float):
@@ -446,7 +397,8 @@ class DecimalProperty(Property):
     """A float property."""
 
     data_type = decimal.Decimal
-
+    field_class = Numeric
+    
     def __init__(self, verbose_name=None, default='0.0', **kwds):
         super(DecimalProperty, self).__init__(verbose_name, default=default, **kwds)
    
@@ -460,7 +412,8 @@ class BooleanProperty(Property):
     """A boolean property."""
 
     data_type = bool
-
+    field_class = Boolean
+    
     def __init__(self, verbose_name=None, default=False, **kwds):
         super(BooleanProperty, self).__init__(verbose_name, default=default, **kwds)
     
@@ -472,25 +425,27 @@ class BooleanProperty(Property):
 
 class PickleProperty(Property):
     data_type = None
+    field_class = PickleType
 
     def validate(self, value):
         return value
     
-    def get_value_for_datastore(self, model_instance):
-        value = super(TimeProperty, self).get_value_for_datastore(model_instance)
-        if value is not None:
-            import cPickle
-            value = cPickle.loads(value)
-        return value
-
-    def make_value_from_datastore(self, value):
-        if value is not None:
-            import cPickle
-            value = cPickle.dumps(value)
-        return value
+#    def get_value_for_datastore(self, model_instance):
+#        value = super(TimeProperty, self).get_value_for_datastore(model_instance)
+#        if value is not None:
+#            import cPickle
+#            value = cPickle.loads(value)
+#        return value
+#
+#    def make_value_from_datastore(self, value):
+#        if value is not None:
+#            import cPickle
+#            value = cPickle.dumps(value)
+#        return value
     
 class FileProperty(Property):
     data_type = None
+    field_class = BLOB
     
     def validate(self, value):
         value = super(IntegerProperty, self).validate(value)
@@ -518,6 +473,7 @@ class FileProperty(Property):
 class ReferenceProperty(Property):
     """A property that represents a many-to-one reference to another model.
     """
+    field_class = Integer
 
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
         reference_fieldname=None, **attrs):
@@ -544,7 +500,19 @@ class ReferenceProperty(Property):
                         reference_class is _SELF_REFERENCE):
             raise KindError('reference_class must be Model or _SELF_REFERENCE')
         self.reference_class = self.data_type = reference_class
-
+        
+    def create(self):
+        args = self.kwargs.copy()
+        args['key'] = self.name
+        args['default'] = self.default_value()
+        args['primary_key'] = self.kwargs.pop('key', False)
+        args['autoincrement'] = self.kwargs.pop('autoincrement', False)
+        args['index'] = self.kwargs.pop('index', False)
+        args['unique'] = self.kwargs.pop('unique', False)
+        args['nullable'] = self.kwargs.pop('nullable', True)
+        f_type = self._create_type()
+        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
+    
     def __property_config__(self, model_class, property_name):
         """Loads all of the references that point to this model.
         """
@@ -583,8 +551,8 @@ class ReferenceProperty(Property):
                 return resolved
             else:
                 id_field = self.__id_attr_name()
-                d = {id_field:reference_id}
-                instance = self.reference_class.get(**d)
+                d = self.reference_class.c[id_field]
+                instance = self.reference_class.get(d==reference_id)
                 if instance is None:
                     raise Error('ReferenceProperty failed to be resolved')
                 setattr(model_instance, self.__resolved_attr_name(), instance)
@@ -700,8 +668,8 @@ class _ReverseReferenceProperty(Property):
             _id = getattr(model_instance, self.__reversed_id, None)
             if _id is not None:
                 b_id = self.__reference_id
-                d = {b_id:_id}
-                return self.__model.filter(**d)
+                d = self.__model.c[self.__reference_id]
+                return self.__model.filter(d==_id)
             else:
                 return []
         else:
@@ -715,7 +683,6 @@ class blob(type):pass
 class text(type):pass
 
 _fields_mapping = {
-    basestring:StringProperty,
     str:StringProperty,
     unicode: UnicodeProperty,
     text:TextProperty,
@@ -780,6 +747,8 @@ class Model(object):
                 x = getattr(self, k, None)
                 if isinstance(x, Model):
                     x = x.id
+                if isinstance(v, DateTimeProperty) and v.auto_now:
+                    d[k] = v.default_value()
                 if (x is not None and t is not None) and repr(t) != repr(x):
                     d[k] = x
         
@@ -792,87 +761,20 @@ class Model(object):
         d = self._get_data()
         if d:
             if not self.id:
-                obj = self.table.insert(**d)
-                setattr(self, 'id', obj['id'])
+                obj = self.table.insert().execute(**d)
+                setattr(self, 'id', obj.lastrowid)
             else:
-                self.table.save(**d)
+                self.table.update(self.table.c.id == self.id).execute(**d)
             self._set_saved()
         return self
     
     save = put
     
     def delete(self):
-        self.table.delete(id=self.id)
+        self.table.delete(self.table.c.id==self.id).execute()
         self.id = None
         self._old_values = {}
             
-#    def __getattr__(self, name):
-#        if name.startswith('reference_'):
-#            b_id = name[10:]
-#            def _f(b, restriction=None, order=None, limit=None, self=self, b_id=b_id, **kwargs):
-#                return self._reference(b, b_id=b_id, restriction=restriction, 
-#                    order=order, limit=limit, **kwargs)
-#            setattr(self, name, _f)
-#            return _f
-#        else:
-#            raise AttributeError, 'Name %s does not exist' % name
-        
-#    def foreign(self, b):
-#        r = self._reference(b, None)
-#        if r:
-#            try:
-#                return r.next()
-#            except StopIteration:
-#                return None
-#    
-#    def reference(self, b, restriction=None, order=None, limit=None, **kwargs):
-#        return self._reference(b, None, restriction, order, limit, **kwargs)
-#    
-#    def _reference(self, b, b_id=None, restriction=None, order=None, limit=None, **kwargs):
-#        from geniusql import logic
-#        condition = None
-#        if restriction:
-#            condition = logic.Expression(restriction)
-#        if not issubclass(b, Model):
-#            raise ModelInstanceException("First argument must be Model class")
-#        #find reference between a and b
-#        b_id = b_id
-#        ref_flag = None
-#        if not b_id:
-#            c = None
-#            d = {}
-#            #B -> A (B has a reference to A)
-#            for k, v in b.table.references.items():
-#                if v[1] == self.tablename:
-#                    b_id = v[0]
-#                    d = {b_id:self.id}
-#                    ref_flag = 'B->A'
-#                    break
-#            #A -> B (A has a reference to B)
-#            if not ref_flag:
-#                for k, v in self.table.references.items():
-#                    if v[1] == b.tablename:
-#                        b_id = v[2]
-#                        d = {b_id:getattr(self, v[0], None)}
-#                        ref_flag = 'A->B'
-#                        break
-#        else:
-#            d = {b_id:self.id}
-#            
-#        if b_id:
-#            c = logic.filter(**d)
-#            if condition:
-#                condition = condition + c
-#            else:
-#                condition = c
-#            cls = b
-#            for obj in cls.table._select_lazy(condition, order, limit, **kwargs):
-#                o = cls(**obj)
-#                o._set_saved()
-#                yield o
-#        else:
-#            raise StopIteration
-
     def __repr__(self):
         s = []
         for k, v in self._fields_list:
@@ -897,137 +799,140 @@ class Model(object):
         try:
             if not db and not __default_connection__:
                 return
+            if __auto_migrate__:
+                import migrate.changeset
+                
             if not hasattr(cls, '_created') or force:
                 cls.db = db or get_connection()
-                cls.schema = schema = cls.db._schema
-                cls.table = table = schema.table(cls.tablename)
+                cls.metadata = metadata = cls.db.metadata
+#                cls.table = table = schema.table(cls.tablename)
+                cols = []
                 for k, f in cls.properties.items():
-                    args = {}
-                    args['dbtype'] = f.kwargs.get('dbtype', None)
-                    args['default'] = f.default_value()
-                    args['key'] = f.kwargs.get('key', None)
-                    args['autoincrement'] = f.kwargs.get('autoincrement', None)
-                    args['hints'] = hints = f.kwargs.get('hints', {})
-                    
-                    if f.max_length:
-                        if f.data_type is float or f.data_type is decimal.Decimal:
-                            hints['precision'] = f.max_length
-                            scale = f.kwargs.get('scale', None)
-                            if scale:
-                                hints['scale'] = scale
-                        else:
-                            hints['bytes'] = f.max_length
-                            
-                    column = schema.column(f.data_type, **args)
-                    table[k] = column
-#                    if isinstance(f, Reference):
-#                        cls.add_reference(k, f.tablename, f.ref_field)
-                dict.__setitem__(schema, cls.tablename, table)
+                    cols.append(f.create())
+                cls.table = Table(cls.tablename, metadata, *cols)
+                
                 if auto_create:
-                    cls.create(migirate=True)
-                table.created = True
+                    cls.create(migrate=__auto_migrate__)
+                cls.c = cls.table.c
+                cls.columns = cls.table.c
                 cls._created = True
         finally:
             cls._lock.release()
             
     @classmethod
-    def is_existed(cls):
-        try:
-            cls.schema._get_table(cls.tablename)
-            return True
-        except geniusql.errors.MappingError:
-            return False
-    
-    @classmethod
-    def create(cls, force=False, migirate=False):
+    def create(cls, migrate=False):
         cls._c_lock.acquire()
         try:
-            f = cls.is_existed()
-            if not f or (f and force):
-                cls.table.create()
-            if f and migirate and not force:
-                migirate_table(cls.table, cls.schema)
+            cls.table.create(checkfirst=True)
+            if migrate:
+                migrate_table(cls.table)
         finally:
             cls._c_lock.release()
             
-#    @classmethod
-#    def add_reference(cls, fieldname, tablename, ref_field):
-#        cls.table.references[tablename] = (fieldname, tablename, ref_field)
-#        cls.table.add_index(fieldname)
-        
     @classmethod
-    def get(cls, restriction=None, **kwargs):
-        if isinstance(restriction, int):
-            obj = cls.table.select(id=restriction)
+    def get(cls, condition=None, **kwargs):
+        if isinstance(condition, int):
+            for obj in cls.filter(cls.c.id==condition):
+                return obj
         else:
-            obj = cls.table.select(restriction, **kwargs)
-        o = None
-        if obj:
-            o = cls(**obj)
-            o._set_saved()
-        return o
+            for obj in cls.filter(condition):
+                return obj
     
     @classmethod
-    def filter(cls, restriction=None, order=None, limit=None, **kwargs):
-        for obj in cls.table._select_lazy(restriction, order, limit, **kwargs):
-            o = cls(**obj)
+    def all(cls):
+        r = cls.table.select().execute()
+        for obj in r:
+            d = [(str(x), y) for x, y in obj.items()]
+            o = cls(**dict(d))
+            o._set_saved()
+            yield o
+        
+    @classmethod
+    def filter(cls, condition=None, **kwargs):
+        r = select([cls.table], condition, **kwargs).execute()
+        for obj in r:
+            d = [(str(x), y) for x, y in obj.items()]
+            o = cls(**dict(d))
             o._set_saved()
             yield o
             
     @classmethod
-    def remove(cls, restriction=None, **kwargs):
-        if isinstance(restriction, int):
-            obj = cls.table.delete(id=restriction)
+    def remove(cls, condition=None, **kwargs):
+        if isinstance(condition, int):
+            cls.table.delete(cls.c.id==condition, **kwargs).execute()
+        if isinstance(condition, (tuple, list)):
+            cls.table.delete(cls.c.id.in_(condition)).execute()
         else:
-            obj = cls.table.delete_all(restriction, **kwargs)
+            cls.table.delete(condition, **kwargs).execute()
             
-def migirate_table(table, schema):
+    @classmethod
+    def count(cls, condition=None, **kwargs):
+        obj = cls.table.count(condition, **kwargs).execute()
+        count = 0
+        if obj:
+            r = obj.fetchone()
+            if r:
+                count = r[0]
+        else:
+            count = 0
+        return count
+            
+def migrate_table(table):
     def compare_column(a, b):
-        return ((a.pytype is b.pytype) and (a.dbtype.__class__.__name__ == b.dbtype.__class__.__name__)
-            and (a.default == b.default) and (a.key == b.key))
-
-    t = schema.discover(table.name)
+        return ((a.key == b.key) 
+            and issubclass(b.type.__class__, a.type.__class__)
+            and (bool(a.nullable) == bool(b.nullable))
+            and (bool(a.primary_key) == bool(b.primary_key))
+            )
     
-    for k, v in table.items():
+    metadata = MetaData(table.bind)
+    _t = Table(table.name, metadata, autoload=True)
+    t = {}
+    for k in _t.c.keys():
+        t[k] = _t.c[k]
+    for k in table.c.keys():
+        v = table.c[k]
         if k in t:
             if not compare_column(v, t[k]):
-                table[k] = v
-            dict.__delitem__(t, k)
+                t[k].alter(v)
+            del t[k]
         elif not k in t:
-            table._add_column(v)
+            r = v.copy()
+            r.create(_t)
     for k, v in t.items():
-        del t[k]
-    
-if __name__ == '__main__':
-    set_debug_log(True)
-    set_auto_bind(True)         #auto bind table to db and schema
-    set_auto_migirate(True)     #if you changed model, then automatically change the table
+        t[k].drop()
 
-    db = get_connection('sqlite')
-    db.create()
+if __name__ == '__main__':
+#    set_debug_query(True)
+    set_auto_bind(True)         #auto bind table to db and schema
+    set_auto_migrate(True)     #if you changed model, then automatically change the table
+    get_connection('sqlite://')
     
     class Test(Model):
         username = Field(str)
         year = Field(int)
-        salery = Field(decimal.Decimal, max_length=16)
+        
+    class Test1(Model):
+        test = Reference(Test)
+        name = Field(str)
+        
+    a1 = Test(username='limodou1').save() #use nomally insert
+    a2 = Test(username='limodou2').save() #use nomally insert
+    a3 = Test(username='limodou3').save() #use nomally insert
     
-    Test.table.insert(username='tttttt')
-    Test(username='limodou').save() #use nomally insert
-    Test(username='xxxxxxx').save()
-    print list(Test.filter())       #filter will return a generator of Test instance
-    t = Test(username='zoom', year=30)  #or create an table instance
-    t.put()         #save it
-    print list(Test.filter())
-    t.username += 'add'
-    print t
-    t.delete()  #remove an object from table
-    print list(Test.filter())
-    t = Test.get(username='limodou')    #get a single object
-    print t
-    
-#    class Test(Model):
-#        username = Field(str)
-#        year = Field(int)
-#        age = Field(int)
+    b1 = Test1(name='zoom', test=a1).save()
+    b2 = Test1(name='aaaa', test=a1).save()
+    b3 = Test1(name='bbbb', test=a2).save()
+#    print a
+#    a.username = 'zoom'
+#    a.save()
+#    print a
+#    a.delete()
+#    for o in Test.filter(order_by=[desc(Test.c.username)]):
+#        print o
 #        
-#    print list(Test.select_all())
+#    print b2.test.username
+    for o in a1.test1_set:
+        print o
+#    for k in Test1.filter():
+#        print k
