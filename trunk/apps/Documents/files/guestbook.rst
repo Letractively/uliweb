@@ -440,7 +440,7 @@ Open the views.py file, and add below code:
             if flag:
                 n = Note(**data)
                 n.put()
-                redirect(url_for('%s.views.guestbook' % request.appname))
+                return redirect(url_for('%s.views.guestbook' % request.appname))
             else:
                 message = "There is something wrong! Please fix them."
                 return {'form':form.html(request.params, data, py=False), 'message':message}
@@ -475,9 +475,8 @@ Note record, but we have not commit it to the database yet, so we can invoke
 ``n.put()`` to store the record to the database. You can also use ``n.save()`` to 
 store the record, it's the same.
 
-After that, we will invoke ``redirect`` to jump another page, it's the homepage of
-GuestBook. Here we use ``url_for`` again to create reversed URL. Notice you don't
-need to write return before it.
+After that, we will invoke ``return redirect`` to jump another page, it's the homepage of
+GuestBook. Here we use ``url_for`` again to create reversed URL. 
     
 If the flag is ``False``, it means validation is failed. So we assign an error message
 to ``message`` variable, then invoke ``form.html(request.params, data, py=False)`` 
@@ -586,7 +585,7 @@ Open ``GuestBook/views.py`` file, and append below code:
         n = Note.get(int(id))
         if n:
             n.delete()
-            redirect(url_for('%s.views.guestbook' % request.appname))
+            return redirect(url_for('%s.views.guestbook' % request.appname))
         else:
             error("No such record [%s] existed" % id)
 

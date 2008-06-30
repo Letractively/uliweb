@@ -55,7 +55,7 @@ def get_connection(connection='', default=True, debug=None, **args):
     if default and __default_connection__:
         return __default_connection__
     
-    db = create_engine(connection)
+    db = create_engine(connection, strategy='threadlocal')
     if default:
         __default_connection__ = db
     if debug:
@@ -832,9 +832,11 @@ class Model(object):
     def create(cls, migrate=False):
         cls._c_lock.acquire()
         try:
-            cls.table.create(checkfirst=True)
-            if migrate:
-                migrate_table(cls.table)
+            if not cls.table.exists():
+                cls.table.create(checkfirst=True)
+            else:
+                if migrate:
+                    migrate_table(cls.table)
         finally:
             cls._c_lock.release()
             
@@ -889,7 +891,7 @@ class Model(object):
 def migrate_table(table):
     def compare_column(a, b):
         return ((a.key == b.key) 
-            and issubclass(b.type.__class__, a.type.__class__)
+#            and issubclass(b.type.__class__, a.type.__class__)
             and (bool(a.nullable) == bool(b.nullable))
             and (bool(a.primary_key) == bool(b.primary_key))
             )

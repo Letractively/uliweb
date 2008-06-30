@@ -8,6 +8,7 @@ LANGUAGES = {
 }
 MIDDLEWARE_CLASSES = (
     'uliweb.i18n.middle_i18n.I18nMiddle',
+    'uliweb.orm.middle_transaction.TransactionMiddle',
 )
 
 @plugin('prepare_template_env')

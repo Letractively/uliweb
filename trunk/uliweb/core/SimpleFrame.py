@@ -4,12 +4,11 @@
 ####################################################################
 
 #defautl global settings
-import os
+import os, cgi
 from webob import Request, Response
 #from werkzeug import Request, Response
 from werkzeug import ClosingIterator
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
-from werkzeug.routing import RequestRedirect
 
 from werkzeug import Local, LocalManager
 from uliweb.core.rules import Mapping, add_rule
@@ -79,9 +78,17 @@ class HTTPError(Exception):
 
     def __str__(self):
         return self.e
-    
-def redirect(url):
-    raise RequestRedirect(url)
+   
+def redirect(location, code=302):
+    response = Response(
+        '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">\n'
+        '<title>Redirecting...</title>\n'
+        '<h1>Redirecting...</h1>\n'
+        '<p>You should be redirected automatically to target URL: '
+        '<a href="%s">%s</a>.  If not click the link.' %
+        (cgi.escape(location), cgi.escape(location)), status=str(code), content_type='text/html')
+    response.headers['Location'] = location
+    return response
 
 def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
     kwargs.setdefault('message', message)
@@ -89,16 +96,19 @@ def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
         kwargs.setdefault('link', request.path_info)
     raise HTTPError(errorpage, **kwargs)
 
-def static_serve(request, filename, check=True):
+def static_serve(request, filename, check=True, dir=None):
     for p in request.application.apps:
-        path = os.path.normpath(os.path.join(APPS_DIR, p, 'static')).replace('\\', '/')
+        if not dir:
+            path = os.path.normpath(os.path.join(APPS_DIR, p, 'static')).replace('\\', '/')
+        else:
+            path = dir
         f = os.path.normpath(os.path.join(path, filename)).replace('\\', '/')
         if check and not f.startswith(path):
             errorpage("You can only visit the files under static directory.")
         if os.path.exists(f):
             from uliweb.core.FileApp import return_file
             return return_file(f)
-    raise NotFound()
+    raise NotFound("Can't found the file %s" % filename)
 
 class Loader(object):
     def __init__(self, tmpfilename, vars, env, dirs, notest=False):
@@ -247,9 +257,11 @@ class Dispatcher(object):
     def render(self, templatefile, vars, env=None, dirs=None, request=None):
         return Response(self.template(templatefile, vars, env, dirs, request), content_type='text/html')
     
-    def _page_not_found(self, **kwargs):
+    def _page_not_found(self, description=None, **kwargs):
+        if not description:
+            description = "Can't visit the URL \"{{=url}}\""
         text = """<h1>Page Not Found</h1>
-    <p>Can't visit the URL "{{=url}}"</p>
+    <p>%s</p>
     <h3>Current URL Mapping is</h3>
     <table border="1">
     <tr><th>URL</th><th>View Functions</th></tr>
@@ -257,8 +269,8 @@ class Dispatcher(object):
     <tr><td>{{=url}}</td><td>{{=endpoint}}</td></tr>
     {{pass}}
     </table>
-    """
-        return Response(template.template(text, kwargs), status='404')
+    """ % description
+        return Response(template.template(text, kwargs), status='404', content_type='text/html')
         
     def not_found(self, request, e):
         if self.debug:
@@ -266,7 +278,7 @@ class Dispatcher(object):
             for r in self.url_map.iter_rules():
                 urls.append((r.rule, r.endpoint))
             urls.sort()
-            return self._page_not_found(url=request.path, urls=urls)
+            return self._page_not_found(description=e.description, url=request.path, urls=urls)
         tmp_file = template.get_templatefile('404'+config.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
@@ -432,7 +444,7 @@ class Dispatcher(object):
         try:
             endpoint, values = adapter.match()
 
-            #middleware process
+            #middleware process request
             middlewares = config.get('MIDDLEWARE_CLASSES', [])
             response = None
             _clses = {}
@@ -441,7 +453,7 @@ class Dispatcher(object):
                 try:
                     cls = import_func(middleware)
                 except ImportError:
-                    raise NotFound()
+                    raise NotFound("Can't import the middleware %s" % middleware)
                 _clses[middleware] = cls
                 if hasattr(cls, 'process_request'):
                     ins = cls(self, config)
@@ -449,10 +461,23 @@ class Dispatcher(object):
                     response = ins.process_request(req)
                     if response is not None:
                         break
-            
             res = Response(content_type='text/html')
             if response is None:
-                response = self.call_endpoint(endpoint, req, res, **values)
+                try:
+                    response = self.call_endpoint(endpoint, req, res, **values)
+                except Exception, e:
+                    for middleware in reversed(middlewares):
+                        cls = _clses[middleware]
+                        if hasattr(cls, 'process_exception'):
+                            ins = _inss.get(middleware)
+                            if not ins:
+                                ins = cls(self, config)
+                            response = ins.process_exception(req, e)
+                            if response:
+                                break
+                    else:
+                        raise
+                    
             else:
                 response = res
                 
@@ -464,8 +489,6 @@ class Dispatcher(object):
                         ins = cls(self, config)
                     response = ins.process_response(req, response)
             
-        except RequestRedirect, e:
-            response = e
         except HTTPError, e:
             response = self.render(e.errorpage, Storage(e.errors), request=req)
         except NotFound, e:

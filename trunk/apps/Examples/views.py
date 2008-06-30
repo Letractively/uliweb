@@ -15,7 +15,7 @@ def examples_template():
 
 @expose
 def examples_redirect():
-    redirect(url_for('%s.views.examples_index' % request.appname))
+    return redirect(url_for('%s.views.examples_index' % request.appname))
 
 @expose
 def examples_response():
