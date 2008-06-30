@@ -394,7 +394,7 @@ Form代码写在一起，因为那样代码比较多，同且如果用户输入�
             if flag:
                 n = Note(**data)
                 n.put()
-                redirect(url_for('%s.views.guestbook' % request.appname))
+                return redirect(url_for('%s.views.guestbook' % request.appname))
             else:
                 message = "There is something wrong! Please fix them."
                 return {'form':form.html(request.params, data, py=False), 'message':message}
@@ -421,8 +421,8 @@ Form代码写在一起，因为那样代码比较多，同且如果用户输入�
 手工添加一个值，表示留言提交的时间。然后通过 ``n = Note(**data)`` 来生成Note记录，但这里并没有提
 交到数据库中，因此再执行一个 ``n.put()`` 来保存记录到数据库中。使用 ``n.save()`` 也可以。
 
-然后执行完毕后，调用 ``redirect`` 进行页面的跳转，跳回留言板的首页。这里又使用了url_for来反
-向生成链接。注意redirect前不需要有 ``return`` 。
+然后执行完毕后，调用 ``return redirect`` 进行页面的跳转，跳回留言板的首页。这里又使用了url_for来反
+向生成链接。
     
 当flag为False时，进行出错处理。这里我们向message中填入了出错提示，然后通过
 ``form.html(request.params, data, py=False)`` 来生成带出错信息的表单。这里data为出错
@@ -522,7 +522,7 @@ FileField, IntField, PasswordField, RadioSelectField等字段类型。目前Form
         n = Note.get(int(id))
         if n:
             n.delete()
-            redirect(url_for('%s.views.guestbook' % request.appname))
+            return redirect(url_for('%s.views.guestbook' % request.appname))
         else:
             error("No such record [%s] existed" % id)
 

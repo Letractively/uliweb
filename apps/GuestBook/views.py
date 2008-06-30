@@ -28,7 +28,9 @@ def new_comment():
         if flag:
             n = Note(**data)
             n.put()
-            redirect(url_for('%s.views.guestbook' % request.appname))
+            r = redirect(url_for('%s.views.guestbook' % request.appname))
+            print r
+            return r
         else:
             message = "There is something wrong! Please fix them."
             return {'form':form.html(request.params, data, py=False), 'message':message}
@@ -40,6 +42,6 @@ def del_comment(id):
     n = Note.get(int(id))
     if n:
         n.delete()
-        redirect(url_for('%s.views.guestbook' % request.appname))
+        return redirect(url_for('%s.views.guestbook' % request.appname))
     else:
         error("No such record [%s] existed" % id)

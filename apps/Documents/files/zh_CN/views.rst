@@ -95,8 +95,7 @@ view的环境
   的对象进行返回。目前Uliweb是缺省使用webob的Response类，你也可以使用werkzeug的Response
   类。
 * url_for 它是与expose是相反的，它用来生根据view函数生成反向的URL。详情见 `URL映射 <url_mapping>`_ 的文档。
-* redirect 用于重定义处理，后面为一个URL信息。在它的前面不需要return，因为它会抛出异常并
-  被Uliweb所处理。
+* redirect 用于重定义处理，后面为一个URL信息。
 * error 用于输出错误信息，它将自动查找出错页面。你只要在任何app下的templates中增加
   error.html，然后出错信息可以自已来定制。它也不需要前面加return，也将抛出一个异常。
 * config 是定义在所有有效的app settings.py文件中的配置项。注意，一个配置项的名称必须是

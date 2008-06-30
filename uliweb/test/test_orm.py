@@ -1,28 +1,33 @@
 #coding=utf-8
 import time, sys
+sys.path.insert(0, '..')
+sys.path.insert(0, '../../lib')
 
 from orm import *
 
 def test1():
     set_auto_bind(True)
     set_auto_migrate(True)
+#    set_debug_query(True)
 #    db = get_connection('mysql://localhost/test', user='root', passwd='limodou')
-    db = get_connection('sqlite://')
+    db = get_connection('sqlite:///database.db')
     
     class Test(Model):
         username = Field(unicode)
         year = Field(int, default=0)
         
-    print dir(Test), Test.metadata
+    db.begin()
     Test(username='limodou').save()
     Test(username='limodou1').save()
     b = Test(username=u'中文').save()
-    print list(Test.all())
-    print b, type(b.username), b.username.encode('gbk')
-    b.delete()
-    print list(Test.filter())
-    Test.remove(Test.c.username==u'limodou')
-    print list(Test.all())
+    db.rollback()
+    print 'xxxxxxxxxxxxxxxxxxxxxxxxx'
+    print list(Test.all()), Test.count()
+#    print b, type(b.username), b.username.encode('gbk')
+#    b.delete()
+#    print list(Test.filter())
+#    Test.remove(Test.c.username==u'limodou')
+#    print list(Test.all())
     
     
 def test2():
