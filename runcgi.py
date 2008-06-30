@@ -14,16 +14,22 @@ HELP_TEXT = r"""
 Run uliweb with cgi scgi fastcgi.
 flup need,http://trac.saddi.com/flup
 
-protocol=cgi,scgi,fcgi(default:cgi)
+protocol=cgi,scgi,fcgi(default:cgi)  If cgi , can't use other parameters.
 host=HOSTNAME example:127.0.0.1
 port=PORT example:3033
+
+
+==========
+
+Can use in linux only:
+
 socket=SCKET_FILE_NAME  UNIX Socet example:/tmp/uliweb.sock
 method=prefork/threaded default:threaded
 daemonize=true/false  default:false
 pidfile=FILENAME  PID file
 outfile=FILENAME  stdout
 errfile=FILENAME  stderr
-worldir=default:/
+worldir=default:  ./
 Examples:
 
 CGI:
@@ -48,8 +54,8 @@ CGI_OPTIONS = {
     'port':None,
     'socket':None,
     'method':'fork',
-    'daemoize':None,
-    'workdir':'/',
+    'daemoinze':None,
+    'workdir':'.',
     'pidfile':None,
     'outfile':None,
     'errfile':None,
@@ -78,6 +84,24 @@ def run(args=[],**kwargs):
     except:
         print 'Can not import module',modname
         return False
+
+    if os.name == 'posix' and options.get('daemonize','false') == 'true' and options['protocol'] != 'cgi':
+        if os.fork():
+            os._exit(0)
+        os.setsid()
+        os.chdir(options.get('workdir','.'))
+        if os.fork():
+            os._exit(0)
+        os.umask(077)
+        nofile = open('/dev/null',os.O_RDWR)
+        errfile = open(options.get('errfile','/dev/null'),'a+',0)
+        outfile = open(options.get('outfile','/dev/null'),'a+',0)
+        os.dup2(nofile.fileno(),sys.stdin.fileno())
+        os.dup2(errfile.fileno(),sys.stderr.fileno())
+        os.dup2(outfile.fileno(),sys.stdout.fileno())
+        sys.stdout = outfile
+        sys.stderr = errfile
+
     pidfile = options.get('pidfile',None)
     if pidfile:
         open(pidfile,'w').write('%d\n' % os.getpid())
