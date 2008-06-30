@@ -28,9 +28,7 @@ def new_comment():
         if flag:
             n = Note(**data)
             n.put()
-            r = redirect(url_for('%s.views.guestbook' % request.appname))
-            print r
-            return r
+            return redirect(url_for('%s.views.guestbook' % request.appname))
         else:
             message = "There is something wrong! Please fix them."
             return {'form':form.html(request.params, data, py=False), 'message':message}

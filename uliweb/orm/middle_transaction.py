@@ -8,8 +8,6 @@ class TransactionMiddle(object):
 
     def process_response(self, request, response):
         self.db.commit()
-        print self.db
-        print 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'aaaaaaaaa'
         return response
             
     def process_exception(self, request, exception):
