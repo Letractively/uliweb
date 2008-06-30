@@ -11,10 +11,10 @@ from werkzeug import script
 
 apps_dir = os.path.join(path, 'apps')
 
-def make_application():
+def make_application(debug=None):
     from uliweb.core import SimpleFrame
     application = SimpleFrame.Dispatcher(apps_dir=apps_dir)
-    if application.config.DEBUG:
+    if debug or (debug is None and application.config.DEBUG):
         from werkzeug.debug import DebuggedApplication
         application = DebuggedApplication(application)
     return application
@@ -158,7 +158,7 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
         sys.stderr.write("Error: outputdir should be a directory and can't be empty")
         sys.exit(0)
 
-    application = make_application()
+    application = make_application(False)
     apps = application.apps
     dirs = [os.path.join('apps', appname, 'static') for appname in apps]
     _copy_dir2(dirs, outputdir, verbose, check)
@@ -204,5 +204,17 @@ if __name__ == '__main__':
     from uliweb.i18n.i18ntool import make_extract
     action_i18n = make_extract('apps')
     action_extracturls = extracturls
+    
+    #process app's commands.py
+    app = make_application(False)
+    for f in app.apps:
+        m = 'apps.%s.commands' % f
+        try:
+            mod = __import__(m, {}, {}, [''])
+        except ImportError:
+            continue
+        for t in dir(mod):
+            if t.startswith('action_') and callable(getattr(mod, t)):
+                globals()[t] = getattr(mod, t)
 
     script.run()

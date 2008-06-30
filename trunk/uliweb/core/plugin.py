@@ -7,6 +7,7 @@ MIDDLE = 2
 LOW = 3
 
 _plugins = {}
+_called = {}
 
 def plugin(plugin_name, signal=None, kind=MIDDLE, nice=-1):
     """
@@ -80,6 +81,14 @@ def callplugin(sender, name, *args, **kwargs):
         else:
             raise Exception, "Plugin [%s] can't been invoked" % name
         
+def callplugin_once(sender, name, *args, **kwargs):
+    signal = kwargs.get('signal')
+    if (name, signal) in _called:
+        return
+    else:
+        callplugin(sender, name, *args, **kwargs)
+        _called[(name, signal)] = True
+        
 def execplugin(sender, name, *args, **kwargs):
     """
     Invoke plugin according plugin-name, it'll invoke plugin function one by one,
@@ -106,3 +115,11 @@ def execplugin(sender, name, *args, **kwargs):
         else:
             raise "Plugin [%s] can't been invoked" % name
 
+def execplugin_once(sender, name, *args, **kwargs):
+    signal = kwargs.get('signal')
+    if (name, signal) in _called:
+        return _called[(name, signal)]
+    else:
+        r = execplugin(sender, name, *args, **kwargs)
+        _called[(name, signal)] = r
+        return r

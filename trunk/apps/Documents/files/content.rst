@@ -48,7 +48,7 @@ References
 Advanced Topics
 -----------------------------
 
-* Extending Uliweb
+* `Extending Uliweb <{{= index('extending') }}>`_
 * Full Details of Configuration Files
 * Security
 * Error Handling

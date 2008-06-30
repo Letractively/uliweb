@@ -253,6 +253,13 @@ class StringProperty(Property):
     def empty(self, value):
         return not value
 
+    def _create_type(self):
+        if self.max_length:
+            f_type = self.field_class(self.max_length, convert_unicode=True)
+        else:
+            f_type = self.field_class
+        return f_type
+    
 class UnicodeProperty(StringProperty):
     data_type = unicode
     field_class = Unicode
