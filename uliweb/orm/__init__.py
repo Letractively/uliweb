@@ -48,6 +48,9 @@ def set_debug_query(flag):
     __debug_query__ = flag
 
 def get_connection(connection='', default=True, debug=None, **args):
+    """
+    default encoding is utf-8
+    """
     global __default_connection__
     if debug is None:
         debug = __debug_query__
@@ -55,7 +58,7 @@ def get_connection(connection='', default=True, debug=None, **args):
     if default and __default_connection__:
         return __default_connection__
     
-    db = create_engine(connection, strategy='threadlocal')
+    db = create_engine(connection, strategy='threadlocal', **args)
     if default:
         __default_connection__ = db
     if debug:

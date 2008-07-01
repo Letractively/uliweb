@@ -8,11 +8,11 @@ sys.path.insert(0, os.path.join(path, 'lib'))
 #sys.path.insert(0, os.path.join(path, 'uliweb'))
 
 from werkzeug import script
+from uliweb.core import SimpleFrame
 
 apps_dir = os.path.join(path, 'apps')
 
 def make_application(debug=None):
-    from uliweb.core import SimpleFrame
     application = SimpleFrame.Dispatcher(apps_dir=apps_dir)
     if debug or (debug is None and application.config.DEBUG):
         from werkzeug.debug import DebuggedApplication
@@ -92,7 +92,7 @@ def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appnam
                 fp = file(f, 'wb')
                 fp.close()
         
-        dirs = [os.path.join('apps', appname)]
+        dirs = [SimpleFrame.get_app_dir(p)]
         _copy_dir(dirs, outputdir, verbose, exact)
         
     else:
@@ -160,14 +160,13 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
 
     application = make_application(False)
     apps = application.apps
-    dirs = [os.path.join('apps', appname, 'static') for appname in apps]
+    dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in apps]
     _copy_dir2(dirs, outputdir, verbose, check)
     
 def extracturls(urlfile='urls.py'):
     """
     Extract all url mappings from view modules to a specified file.
     """
-    from uliweb.core import SimpleFrame
     application = SimpleFrame.Dispatcher(apps_dir=apps_dir, use_urls=False)
     filename = os.path.join(application.apps_dir, urlfile)
     if os.path.exists(filename):
@@ -208,7 +207,7 @@ if __name__ == '__main__':
     #process app's commands.py
     app = make_application(False)
     for f in app.apps:
-        m = 'apps.%s.commands' % f
+        m = '%s.commands' % f
         try:
             mod = __import__(m, {}, {}, [''])
         except ImportError:

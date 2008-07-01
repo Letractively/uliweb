@@ -1,4 +1,5 @@
 import os
+from uliweb.core import SimpleFrame
 
 def getfiles(path):
     files_list = []
@@ -16,7 +17,7 @@ def getfiles(path):
 
 def _get_outputfile(apps_dir, appname='', locale='en'):
     if appname:
-        output = os.path.join(apps_dir, appname, 'locale', locale, 'LC_MESSAGES', 'uliweb.pot')
+        output = os.path.join(SimpleFrame.get_app_dir(appname), 'locale', locale, 'LC_MESSAGES', 'uliweb.pot')
     else:
         output = os.path.join(apps_dir, '..', 'locale', locale, 'LC_MESSAGES', 'uliweb.pot')
     return output
@@ -30,7 +31,7 @@ def _get_apps(apps_dir):
         pass
     s = []
     for p in os.listdir(apps_dir):
-        if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
+        if os.path.isdir(SimpleFrame.get_app_dir(p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
             s.append(p)
     return s
 
@@ -44,7 +45,7 @@ def make_extract(apps_directory):
         from po_merge import merge
         path = ''
         if appname:
-            path = os.path.join(apps_dir, appname)
+            path = SimpleFrame.get_app_dir(appname)
             files = getfiles(path)
             output = _get_outputfile(apps_dir, appname, locale)
             try:
@@ -57,7 +58,7 @@ def make_extract(apps_directory):
         elif all:
             apps = _get_apps(apps_dir)
             for appname in apps:
-                path = os.path.join(apps_dir, appname)
+                path = SimpleFrame.get_app_dir(appname)
                 files = getfiles(path)
                 output = _get_outputfile(apps_dir, appname, locale=locale)
                 try:
@@ -81,5 +82,3 @@ def make_extract(apps_directory):
     
     return action
 
-def update():
-    pass

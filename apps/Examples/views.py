@@ -1,5 +1,6 @@
 from uliweb.core.SimpleFrame import expose
 from apps.Portal.modules.menu import menu
+from uliweb.core import Form
 
 def __begin__():
     response.menu=menu(request, 'Examples')
@@ -64,3 +65,9 @@ def examples_cookie():
     response.set_cookie('name', 'limodou')
     response.write('cookie name=' + c)
     return response
+
+@expose
+def examples_cache_dbm():
+    import time
+    r = request.cache.get('name', time.asctime(), expiretime=10)
+    return 'Current Time= %s<br>Cache Value=%s' % (time.asctime(), r)
