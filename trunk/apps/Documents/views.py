@@ -10,7 +10,7 @@ def documents():
     return _show(request, response, 'content.rst', env)
 
 def _show(request, response, filename, env, lang=None, render=True):
-    from uliweb.core.template import template
+    from uliweb.core.template import template, render_text
     from uliweb.utils.rst import to_html
     from uliweb.i18n import get_language, format_locale
     if not filename.endswith('.rst'):

@@ -4,13 +4,15 @@
 ####################################################################
 
 #defautl global settings
+
+__all__ = ['expose', 'Dispatcher', 'url_for', 'get_app_dir', 'redirect']
+
 import os, cgi
 from webob import Request, Response
 #from werkzeug import Request, Response
-from werkzeug import ClosingIterator
+from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
 
-from werkzeug import Local, LocalManager
 from uliweb.core.rules import Mapping, add_rule
 from uliweb.core import template
 from uliweb.core.storage import Storage
@@ -24,6 +26,7 @@ local_manager = LocalManager([local])
 url_map = Mapping()
 _urls = []
 __use_urls = False
+__app_dirs = {}
 config = None
 
 def expose(rule=None, **kw):
@@ -61,9 +64,6 @@ def expose(rule=None, **kw):
     return decorate
 
 def url_for(endpoint, _external=False, **values):
-    dir = os.path.basename(APPS_DIR)
-    if not endpoint.startswith(dir + '.'):
-        endpoint = dir + '.' + endpoint
     return local.url_adapter.build(endpoint, values, force_external=_external)
 
 def import_func(path):
@@ -99,7 +99,7 @@ def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
 def static_serve(request, filename, check=True, dir=None):
     for p in request.application.apps:
         if not dir:
-            path = os.path.normpath(os.path.join(APPS_DIR, p, 'static')).replace('\\', '/')
+            path = os.path.normpath(os.path.join(get_app_dir(p), 'static')).replace('\\', '/')
         else:
             path = dir
         f = os.path.normpath(os.path.join(path, filename)).replace('\\', '/')
@@ -110,6 +110,23 @@ def static_serve(request, filename, check=True, dir=None):
             return return_file(f)
     raise NotFound("Can't found the file %s" % filename)
 
+
+def get_app_dir(app):
+    """
+    Get an app's directory
+    """
+    path = __app_dirs.get(app)
+    if path:
+        return path
+    else:
+        try:
+            m = __import__(app, {}, {}, [''])
+            path = os.path.dirname(m.__file__)
+        except ImportError:
+            path = ''
+        __app_dirs[app] = path
+        return path
+        
 class Loader(object):
     def __init__(self, tmpfilename, vars, env, dirs, notest=False):
         self.tmpfilename = tmpfilename
@@ -218,9 +235,9 @@ class Dispatcher(object):
         if os.path.exists(filename):
             return filename
         if request:
-            dirs = [os.path.join(self.apps_dir, x, dirname) for x in [request.appname] + self.apps]
+            dirs = [os.path.join(get_app_dir(x), dirname) for x in [request.appname] + self.apps]
         else:
-            dirs = [os.path.join(self.apps_dir, x, dirname) for x in self.apps]
+            dirs = [os.path.join(get_app_dir(x), dirname) for x in self.apps]
         for d in dirs:
             path = os.path.join(d, filename)
             if os.path.exists(path):
@@ -232,7 +249,7 @@ class Dispatcher(object):
         dirs = dirs or self.template_dirs
         env = self.get_template_env(env)
         if request:
-            dirs = [os.path.join(self.apps_dir, request.appname, 'templates')] + dirs
+            dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
         if self.debug:
             def debug_template(filename, vars, env, dirs):
                 def _compile(code, filename, action):
@@ -330,7 +347,7 @@ class Dispatcher(object):
             response = self.render(tmpfile, result, env=env, request=request)
         elif isinstance(result, (str, unicode)):
             response = Response(result, content_type='text/html')
-        elif isinstance(result, Response):
+        elif isinstance(result, (Response, BaseResponse)):
             response = result
         else:
             response = Response(str(result), content_type='text/html')
@@ -338,7 +355,11 @@ class Dispatcher(object):
     
     def _call_function(self, handler, request, response=None, **values):
         response = response or Response(content_type='text/html')
-        request.appname = handler.__module__.split('.')[1]
+        for p in self.apps:
+            t = p + '.'
+            if handler.__module__.startswith(t):
+                request.appname = p
+                break
         request.function = handler.__name__
         request.application = self
 #        if not handler.func_globals.get('__bounded__', False):
@@ -387,14 +408,14 @@ class Dispatcher(object):
                         if not fnmatch.fnmatch(f, pattern):
                             continue
                     if subfolder:
-                        views.add('.'.join([os.path.basename(self.apps_dir), appname, subfolder, fname]))
+                        views.add('.'.join([appname, subfolder, fname]))
                     else:
-                        views.add('.'.join([os.path.basename(self.apps_dir), appname, fname]))
+                        views.add('.'.join([appname, fname]))
             
         for p in os.listdir(self.apps_dir):
             if p not in self.apps:
                 continue
-            path = os.path.join(self.apps_dir, p)
+            path = get_app_dir(p)
             if p.startswith('.') or p.startswith('_') or p.startswith('CVS'):
                 continue
             if os.path.isdir(path):
@@ -407,8 +428,8 @@ class Dispatcher(object):
                         enum_views(path, p, pattern='views*')
                 #deal with settings
                 if p in self.apps:
-                    settings_files = ['.'.join([os.path.basename(self.apps_dir), p, 'settings']) for x in ['.py', '.pyc', '.pyo']
-                        if os.path.exists(os.path.join(self.apps_dir, p, 'settings%s' % x))]
+                    settings_files = ['.'.join([p, 'settings']) for x in ['.py', '.pyc', '.pyo']
+                        if os.path.exists(os.path.join(get_app_dir(p), 'settings%s' % x))]
                     if settings_files:
                         settings.append(settings_files[0])
            
@@ -434,7 +455,7 @@ class Dispatcher(object):
                     config[k] = getattr(mod, k)
             
     def get_template_dirs(self):
-        template_dirs = [os.path.join(self.apps_dir, p, 'templates') for p in self.apps]
+        template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in self.apps]
         return template_dirs
     
     def __call__(self, environ, start_response):

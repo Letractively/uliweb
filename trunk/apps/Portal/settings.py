@@ -9,7 +9,13 @@ LANGUAGES = {
 MIDDLEWARE_CLASSES = (
     'uliweb.i18n.middle_i18n.I18nMiddle',
     'uliweb.orm.middle_transaction.TransactionMiddle',
+    'uliweb.builtins.cache.middle_cache.CacheMiddle',
 )
+
+CACHE_CONFIG = {
+'type':'dbm', 
+'data_dir':'./cache'
+}
 
 @plugin('prepare_template_env')
 def prepare_template_env(sender, env):
