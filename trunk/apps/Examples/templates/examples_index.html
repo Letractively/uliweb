@@ -47,8 +47,12 @@
     <td class="description">{{= _('This example can render reStructuredText, and it also demostrates i18n process.')}}</td>
   </tr>
   <tr class="{{=cycle.next()}}">
-    <td class="title"><a href="{{= url_for('%s.views.examples_cache_dbm' % request.appname) }}">{{= _('Test cache with dbm file')}}</a></td>
-    <td class="description">{{= _('This example will test the dbm type cache.')}}</td>
+    <td class="title"><a href="{{= url_for('%s.views.examples_cache' % request.appname) }}">{{= _('Test cache')}}</a></td>
+    <td class="description">{{= _('This example will test the cache.')}}</td>
+  </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('%s.views.examples_session' % request.appname) }}">{{= _('Test session')}}</a></td>
+    <td class="description">{{= _('This example will test the session.')}}</td>
   </tr>
 </tbody>
 </table>
