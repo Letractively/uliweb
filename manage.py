@@ -49,7 +49,7 @@ def _copy_dir(d, dst, verbose, exact=False):
             if verbose:
                 sys.stderr.write("Warn : %s does not exist, SKIP\n" % f)
             continue
-        dd = os.path.join(dst, f)
+        dd = os.path.join(dst, os.path.basename(f))
         if exact:
             shutil.rmtree(dd, True)
         if not os.path.exists(dd):
@@ -59,7 +59,7 @@ def _copy_dir(d, dst, verbose, exact=False):
                 continue
             fpath = os.path.join(f, r)
             if os.path.isdir(fpath):
-                _copy_dir([fpath], dst, verbose)
+                _copy_dir([fpath], dd, verbose)
             else:
                 ext = os.path.splitext(fpath)[1]
                 if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
@@ -78,7 +78,7 @@ def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appnam
     if not outputdir:
         sys.stderr.write("Error: outputdir should be a directory and can't be empty")
         sys.exit(0)
-        
+
     if not os.path.exists(outputdir):
         os.makedirs(outputdir)
         
@@ -92,12 +92,12 @@ def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appnam
                 fp = file(f, 'wb')
                 fp.close()
         
-        dirs = [SimpleFrame.get_app_dir(p)]
-        _copy_dir(dirs, outputdir, verbose, exact)
+        dirs = [SimpleFrame.get_app_dir(appname)]
+        _copy_dir(dirs, outdir, verbose, exact)
         
     else:
         #copy files
-        for f in ['app.yaml', 'gae_handler.py', 'manage.py', 'wsgi_handler.wsgi']:
+        for f in ['app.yaml', 'gae_handler.py', 'manage.py', 'wsgi_handler.wsgi', 'runcgi.py', 'COPYLEFT.txt']:
             path = os.path.join(outputdir, f)
             if f == 'app.yaml':
                 if not os.path.exists(path):
@@ -192,9 +192,34 @@ def extracturls(urlfile='urls.py'):
 #    application = make_app()
 #    return locals()
 
+def collcet_commands(apps_dir='apps'):
+    def get_apps():
+        try:
+            import settings
+            if hasattr(settings, 'INSTALLED_APPS'):
+                return getattr(settings, 'INSTALLED_APPS')
+        except ImportError:
+            pass
+        
+        s = []
+        for p in os.listdir(apps_dir):
+            if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
+                s.append(p)
+        return s
+    
+    for f in get_apps():
+        m = '%s.commands' % f
+        try:
+            mod = __import__(m, {}, {}, [''])
+        except ImportError:
+            continue
+        for t in dir(mod):
+            if t.startswith('action_') and callable(getattr(mod, t)):
+                globals()[t] = getattr(mod, t)
+    
 if __name__ == '__main__':
-    action_runserver = script.make_runserver(make_application, use_reloader=True, 
-        port=8000, use_debugger=False)
+    action_runserver = script.make_runserver(make_application, port=8000,
+                   use_reloader=True, use_debugger=True)
     action_makeapp = make_app
     action_export = export
     action_exportstatic = exportstatic
@@ -205,15 +230,6 @@ if __name__ == '__main__':
     action_extracturls = extracturls
     
     #process app's commands.py
-    app = make_application(False)
-    for f in app.apps:
-        m = '%s.commands' % f
-        try:
-            mod = __import__(m, {}, {}, [''])
-        except ImportError:
-            continue
-        for t in dir(mod):
-            if t.startswith('action_') and callable(getattr(mod, t)):
-                globals()[t] = getattr(mod, t)
+    collcet_commands()
 
     script.run()

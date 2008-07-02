@@ -7,15 +7,11 @@ LANGUAGES = {
     'zh_CN':_('Simplified Chinese'),
 }
 MIDDLEWARE_CLASSES = (
-    'uliweb.i18n.middle_i18n.I18nMiddle',
     'uliweb.orm.middle_transaction.TransactionMiddle',
+    'uliweb.i18n.middle_i18n.I18nMiddle',
     'uliweb.builtins.cache.middle_cache.CacheMiddle',
+    'uliweb.builtins.session.middle_session.SessionMiddle',
 )
-
-CACHE_CONFIG = {
-'type':'dbm', 
-'data_dir':'./cache'
-}
 
 @plugin('prepare_template_env')
 def prepare_template_env(sender, env):

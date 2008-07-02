@@ -431,7 +431,7 @@ class Dispatcher(object):
                     settings_files = ['.'.join([p, 'settings']) for x in ['.py', '.pyc', '.pyo']
                         if os.path.exists(os.path.join(get_app_dir(p), 'settings%s' % x))]
                     if settings_files:
-                        settings.append(settings_files[0])
+                        settings.insert(0, settings_files[0])
            
         modules['views'] = list(views)
         modules['settings'] = settings
@@ -449,7 +449,8 @@ class Dispatcher(object):
         for v in s:
             mod = __import__(v, {}, {}, [''])
             for k in dir(mod):
-                if k.startswith('_') or not k.isupper():
+                #if k is already exists in config, then skip it
+                if k.startswith('_') or not k.isupper() or k in config:
                     pass
                 else:
                     config[k] = getattr(mod, k)

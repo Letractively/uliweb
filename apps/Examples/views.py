@@ -67,7 +67,19 @@ def examples_cookie():
     return response
 
 @expose
-def examples_cache_dbm():
+def examples_cache():
     import time
     r = request.cache.get('name', time.asctime(), expiretime=10)
     return 'Current Time= %s<br>Cache Value=%s' % (time.asctime(), r)
+
+@expose
+def examples_session():
+    import time
+    name = request.session.get('username')
+    if not name:
+        s = "You have not registered, now you'll be registered automatically"
+        request.session['username'] = 'limodou'
+        request.session.save()
+    else:
+        s = "Welcome %s" % name
+    return s
