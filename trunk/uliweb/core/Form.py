@@ -320,7 +320,7 @@ class TextField(Field):
         Field.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
 
 class PasswordField(TextField):
-    build = PasswordInput
+    default_build = PasswordInput
     field_css_class = 'password_field'
 
 class HiddenField(TextField):
@@ -587,6 +587,7 @@ if __name__ == '__main__':
     class F(Form):
         title = TextField(label='Title:', required=True, help_string='Title help string')
         content = TextAreaField(label='Content:')
+        password = PasswordField(label='Password:')
         age = IntField(label='Age:')
         id = HiddenField()
         tag = TextListField(label='Tag:')
@@ -595,13 +596,14 @@ if __name__ == '__main__':
         radio = RadioSelectField(label='Radio:', choices=[('rst', 'reStructureText'), ('text', 'Plain Text')], default='rst')
         file = FileField(label='file')
         
-    print F.fields
+#    print F.fields
     f = F()
-    d = {'title':'title', 'age':'12', 'tag':''}
-    print f.validate(d)
-    d = {'title':u'中国', 'id':333, 'tag':'python', 'public':True, 'format':'text'}
-    flag, data = f.validate(d)
-    print flag, data
+    print f.html()
+#    d = {'title':'title', 'age':'12', 'tag':''}
+#    print f.validate(d)
+#    d = {'title':u'中国', 'id':333, 'tag':'python', 'public':True, 'format':'text'}
+#    flag, data = f.validate(d)
+#    print flag, data
 #    print str(TextAreaInput())
 
-    print f.html(d, layout=CSSLayout(), py=False)
+#    print f.html(d, layout=CSSLayout(), py=False)

@@ -93,7 +93,7 @@ def redirect(location, code=302):
 def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
     kwargs.setdefault('message', message)
     if request:
-        kwargs.setdefault('link', request.path_info)
+        kwargs.setdefault('link', request.url)
     raise HTTPError(errorpage, **kwargs)
 
 def static_serve(request, filename, check=True, dir=None):
@@ -319,12 +319,7 @@ class Dispatcher(object):
             e.update(env)
         return e
     
-    def call_endpoint(self, endpoint, request, response=None, **values):
-        #get handler
-        module, func = endpoint.rsplit('.', 1)
-        mod = __import__(module, {}, {}, [''])
-        handler = getattr(mod, func)
-        
+    def call_endpoint(self, mod, handler, request, response=None, **values):
         #if there is __begin__ then invoke it, if __begin__ return None, it'll
         #continue running
         if hasattr(mod, '__begin__'):
@@ -355,17 +350,6 @@ class Dispatcher(object):
     
     def _call_function(self, handler, request, response=None, **values):
         response = response or Response(content_type='text/html')
-        for p in self.apps:
-            t = p + '.'
-            if handler.__module__.startswith(t):
-                request.appname = p
-                break
-        request.function = handler.__name__
-        request.application = self
-#        if not handler.func_globals.get('__bounded__', False):
-#            for k, v in self.env.iteritems():
-#                handler.func_globals[k] = v
-#            handler.func_globals['__bounded__'] = True
         
         #prepare local env
         local_env = {}
@@ -412,9 +396,7 @@ class Dispatcher(object):
                     else:
                         views.add('.'.join([appname, fname]))
             
-        for p in os.listdir(self.apps_dir):
-            if p not in self.apps:
-                continue
+        for p in self.apps:
             path = get_app_dir(p)
             if p.startswith('.') or p.startswith('_') or p.startswith('CVS'):
                 continue
@@ -439,7 +421,6 @@ class Dispatcher(object):
     
     def install_views(self, views):
         for v in views:
-            appname = v.rsplit('.')[-2]
             __import__(v, {}, {}, [''])
             
     def install_settings(self, s):
@@ -462,10 +443,27 @@ class Dispatcher(object):
     def __call__(self, environ, start_response):
         local.application = self
         req = Request(environ)
+        
         local.url_adapter = adapter = url_map.bind_to_environ(environ)
         try:
             endpoint, values = adapter.match()
 
+            #binding some variable to request
+            req.config = config
+            req.application = application
+            
+            #get handler
+            module, func = endpoint.rsplit('.', 1)
+            mod = __import__(module, {}, {}, [''])
+            handler = getattr(mod, func)
+            
+            for p in self.apps:
+                t = p + '.'
+                if handler.__module__.startswith(t):
+                    req.appname = p
+                    break
+            req.function = handler.__name__
+            
             #middleware process request
             middlewares = config.get('MIDDLEWARE_CLASSES', [])
             response = None
@@ -475,7 +473,7 @@ class Dispatcher(object):
                 try:
                     cls = import_func(middleware)
                 except ImportError:
-                    raise NotFound("Can't import the middleware %s" % middleware)
+                    errorpage("Can't import the middleware %s" % middleware)
                 _clses[middleware] = cls
                 if hasattr(cls, 'process_request'):
                     ins = cls(self, config)
@@ -483,10 +481,11 @@ class Dispatcher(object):
                     response = ins.process_request(req)
                     if response is not None:
                         break
+                    
             res = Response(content_type='text/html')
             if response is None:
                 try:
-                    response = self.call_endpoint(endpoint, req, res, **values)
+                    response = self.call_endpoint(mod, handler, req, res, **values)
                 except Exception, e:
                     for middleware in reversed(middlewares):
                         cls = _clses[middleware]

@@ -1,6 +1,7 @@
 import re
 
 from uliweb.i18n import set_language, format_locale
+from uliweb.middlewares import Middleware
 
 accept_language_re = re.compile(r'''
         ([A-Za-z]{1,8}(?:-[A-Za-z]{1,8})*|\*)   # "en", "en-au", "x-y-z", "*"
@@ -56,10 +57,7 @@ def parse_accept_lang_header(lang_string):
     result.sort(lambda x, y: -cmp(x[1], y[1]))
     return result
 
-class I18nMiddle(object):
-    def __init__(self, application, config):
-        self.config = config
-        
+class I18nMiddle(Middleware):
     def process_request(self, request):
         lang = get_language_from_request(request, self.config)
         if lang:

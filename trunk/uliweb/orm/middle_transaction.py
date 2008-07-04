@@ -11,5 +11,6 @@ class TransactionMiddle(object):
         return response
             
     def process_exception(self, request, exception):
+        print 'xxxxxxxxxxxxxxxxxxxxxx'
         self.db.rollback()
     
