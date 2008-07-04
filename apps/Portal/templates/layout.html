@@ -24,7 +24,12 @@
           <!-- start: skip link navigation -->
           <a class="skip" title="skip link" href="#navigation">Skip to the navigation</a><span class="hideme">.</span>
           <a class="skip" title="skip link" href="#content">Skip to the content</a><span class="hideme">.</span>
-          <!-- end: skip link navigation --><a href="#">Login</a> | <a href="#">Contact</a> | <a href="#">Imprint</a>
+          <!-- end: skip link navigation -->
+          {{if not request.user:}}
+            <a href="{{= url_for('uliweb.builtins.auth.views.login')}}">Login</a> | <a href="/register">{{=_('Register')}}</a>
+          {{else:}}
+            Welcome, {{=request.user.username}} | <a href="/logout">{{=_('Logout')}}</a>
+          {{pass}}
         </div>
 		<h1><a href="{{= url_for('Portal.views.index')}}">Uliweb Project</a></h1>  
 		<span>Simple, easy Python web framework</span>
@@ -32,6 +37,7 @@
       <div id="nav">
         <!-- skiplink anchor: navigation -->
           <!-- main navigation: #nav_main -->
+          {{if hasattr(response, 'menu'):}}
           <ul id="minitabs">
            {{for f, c, a in Get(response.menu, []):}}
               {{if f:}}<li><a href="{{=a}}" id="current">{{=c}}</a></li>
@@ -39,6 +45,7 @@
               {{pass}}
             {{pass}}
           </ul>
+          {{pass}}
       </div>
       <div id="main">
         {{include}}

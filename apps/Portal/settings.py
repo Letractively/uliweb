@@ -11,6 +11,7 @@ MIDDLEWARE_CLASSES = (
     'uliweb.i18n.middle_i18n.I18nMiddle',
     'uliweb.builtins.cache.middle_cache.CacheMiddle',
     'uliweb.builtins.session.middle_session.SessionMiddle',
+    'uliweb.builtins.auth.middle_auth.AuthMiddle',
 )
 
 @plugin('prepare_template_env')

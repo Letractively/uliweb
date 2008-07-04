@@ -1,6 +1,6 @@
 from uliweb.core.plugin import plugin
 
-connection = {'connection':'sqlite:///database.db'}
+connection = {'connection':'sqlite:///database1.db'}
 #connection = {'connection':'mysql://root:limodou@localhost/test'}
 
 DEBUG = True

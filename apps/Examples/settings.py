@@ -27,9 +27,9 @@ SESSION_CONFIG = {
 'url':'sqlite:///database.db',
 'data_dir':'./tmp/session', 
 'table_name':'uliweb_session',
-'timeout':30, 
+'timeout':300, 
 'encrypt_key':'uliweb', 
 'key':'uliweb.session.id',
-'cookie_expires':30,
+'cookie_expires':300,
 }
 

@@ -1,4 +1,6 @@
-class CacheMiddle(object):
+from uliweb.middlewares import Middleware
+
+class CacheMiddle(Middleware):
     def __init__(self, application, config):
         from beaker.cache import CacheManager
         from beaker.util import coerce_cache_params

@@ -1,4 +1,6 @@
-class SessionMiddle(object):
+from uliweb.middlewares import Middleware
+
+class SessionMiddle(Middleware):
     def __init__(self, application, config):
         from beaker.util import coerce_session_params
         from datetime import timedelta
@@ -24,11 +26,11 @@ class SessionMiddle(object):
 
     def process_response(self, request, response):
         session = request.session
+        session.save()
         if session.__dict__['_sess'] is not None:
             if session.__dict__['_headers']['set_cookie']:
                 cookie = session.__dict__['_headers']['cookie_out']
                 if cookie:
                     response.headers['Set-cookie'] = cookie
         return response
-#        session.save()
         
