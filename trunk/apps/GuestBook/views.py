@@ -2,7 +2,7 @@
 from uliweb.core.SimpleFrame import expose
 
 from uliweb.core.SimpleFrame import static_serve
-@expose('/static/<path:filename>')
+@expose('/static/<path:filename>', static=True)
 def static(filename):
     return static_serve(request, filename)
 

@@ -116,7 +116,10 @@ class Session(UserDict.DictMixin):
         else:
             self.dict = {}
         
+        self.dirty = False
+        
     def _create_id(self):
+        self.dirty = True
         if hasattr(os, 'getpid'):
             pid = os.getpid()
         else:
@@ -157,13 +160,16 @@ class Session(UserDict.DictMixin):
             self.namespace.remove()
         finally:
             self.namespace.release_write_lock()
+        self.dirty = False
     
     def __getitem__(self, key):
         return self.dict.__getitem__(key)
     def __setitem__(self, key, value):
         self.dict.__setitem__(key, value)
+        self.dirty = True
     def __delitem__(self, key):
         del self.dict[key]
+        self.dirty = True
     def keys(self):
         return self.dict.keys()
     def __contains__(self, key):
@@ -187,11 +193,10 @@ class Session(UserDict.DictMixin):
         self.was_invalidated = True
         self._create_id()
         self.load()
-
+        self.dirty = True
                     
     def load(self):
         "loads the data from this session from persistent storage"
-
         self.namespace = self.namespace_class(self.id, data_dir=self.data_dir,
                                               digest_filenames=False, **self.kwargs)
         
@@ -224,6 +229,10 @@ class Session(UserDict.DictMixin):
     
     def save(self):
         "saves the data for this session to persistent storage"
+        
+        if not self.dirty:
+            return
+        
         if not hasattr(self, 'namespace'):
             curdict = self.dict
             self.load()
@@ -251,6 +260,8 @@ class Session(UserDict.DictMixin):
             self.namespace.release_write_lock()
         if self.is_new:
             self.request['set_cookie'] = True
+            
+        self.dirty = False
     
     def lock(self):
         """locks this session against other processes/threads.  this is 
@@ -320,6 +331,7 @@ class CookieSession(Session):
         self.validate_key = validate_key
         self.request['set_cookie'] = False
         self.secure = secure
+        self.dirty = False
         
         try:
             cookieheader = request['cookie']

@@ -25,6 +25,7 @@ local_manager = LocalManager([local])
 
 url_map = Mapping()
 _urls = []
+_static_views = []
 __use_urls = False
 __app_dirs = {}
 config = None
@@ -39,6 +40,7 @@ def expose(rule=None, **kw):
             
         will be url_map.add('index', index)
     """
+    static = kw.get('static', None)
     if callable(rule):
         if __use_urls:
             return rule
@@ -50,16 +52,31 @@ def expose(rule=None, **kw):
         appname = f.__module__.split('.')[1]
         rule = '/' + '/'.join([appname, f.__name__] + args)
         kw['endpoint'] = f.__module__ + '.' + f.__name__
-        add_rule(url_map, rule, **kw)
         _urls.append((rule, kw))
+        if static:
+            _static_views.append(kw['endpoint'])
+        if 'static' in kw:
+            kw.pop('static')
+        add_rule(url_map, rule, **kw)
         return f
         
-    def decorate(f):
+    def decorate(f, rule=rule):
         if __use_urls:
             return f
         kw['endpoint'] = f.__module__ + '.' + f.__name__
-        add_rule(url_map, rule, **kw)
+        if callable(rule):
+            import inspect
+            args = inspect.getargspec(f)[0]
+            if args :
+                args = ['<%s>' % x for x in args]
+            appname = f.__module__.split('.')[1]
+            rule = '/' + '/'.join([appname, f.__name__] + args)
         _urls.append((rule, kw))
+        if static:
+            _static_views.append(kw['endpoint'])
+        if 'static' in kw:
+            kw.pop('static')
+        add_rule(url_map, rule, **kw)
         return f
     return decorate
 
@@ -149,7 +166,8 @@ class Loader(object):
         if self.notest:
             return True
         return filename.endswith('.html')
-        
+
+import time        
 class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir=APPS_DIR, use_urls=None):
@@ -159,10 +177,11 @@ class Dispatcher(object):
         if not Dispatcher.installed:
             self.init(apps_dir)
             callplugin(self, 'startup_installed')
+            
         callplugin(self, 'startup')
         
     def init(self, apps_dir):
-        global APPS_DIR, url_map
+        global APPS_DIR, url_map, _static_urls
         import __builtin__
         setattr(__builtin__, 'expose', expose)
         setattr(__builtin__, 'plugin', plugin)
@@ -176,7 +195,9 @@ class Dispatcher(object):
         if self.use_urls is None or self.use_urls is True:
             try:
                 import urls
+                from uliweb.core import rules
                 url_map = urls.url_map
+                _static_views = rules._static_views
                 flag = False
             except ImportError:
                 pass
@@ -447,7 +468,7 @@ class Dispatcher(object):
         local.url_adapter = adapter = url_map.bind_to_environ(environ)
         try:
             endpoint, values = adapter.match()
-
+            
             #binding some variable to request
             req.config = config
             req.application = application
@@ -464,51 +485,59 @@ class Dispatcher(object):
                     break
             req.function = handler.__name__
             
-            #middleware process request
-            middlewares = config.get('MIDDLEWARE_CLASSES', [])
-            response = None
-            _clses = {}
-            _inss = {}
-            for middleware in middlewares:
-                try:
-                    cls = import_func(middleware)
-                except ImportError:
-                    errorpage("Can't import the middleware %s" % middleware)
-                _clses[middleware] = cls
-                if hasattr(cls, 'process_request'):
-                    ins = cls(self, config)
-                    _inss[middleware] = ins
-                    response = ins.process_request(req)
-                    if response is not None:
-                        break
-                    
-            res = Response(content_type='text/html')
-            if response is None:
-                try:
-                    response = self.call_endpoint(mod, handler, req, res, **values)
-                except Exception, e:
-                    for middleware in reversed(middlewares):
-                        cls = _clses[middleware]
-                        if hasattr(cls, 'process_exception'):
-                            ins = _inss.get(middleware)
-                            if not ins:
-                                ins = cls(self, config)
-                            response = ins.process_exception(req, e)
-                            if response:
-                                break
-                    else:
-                        raise
-                    
+            #process static
+            if endpoint in _static_views:
+                res = Response(content_type='text/html')
+                response = self.call_endpoint(mod, handler, req, res, **values)
             else:
-                response = res
-                
-            for middleware in reversed(middlewares):
-                cls = _clses[middleware]
-                if hasattr(cls, 'process_response'):
-                    ins = _inss.get(middleware)
-                    if not ins:
+                #middleware process request
+                middlewares = config.get('MIDDLEWARE_CLASSES', [])
+                response = None
+                _clses = {}
+                _inss = {}
+                for middleware in middlewares:
+                    try:
+                        cls = import_func(middleware)
+                    except ImportError:
+                        errorpage("Can't import the middleware %s" % middleware)
+                    _clses[middleware] = cls
+                    if hasattr(cls, 'process_request'):
                         ins = cls(self, config)
-                    response = ins.process_response(req, response)
+                        _inss[middleware] = ins
+                        response = ins.process_request(req)
+                        if response is not None:
+                            break
+                
+                res = Response(content_type='text/html')
+                if response is None:
+                    try:
+                        response = self.call_endpoint(mod, handler, req, res, **values)
+                        
+                    except Exception, e:
+                        for middleware in reversed(middlewares):
+                            cls = _clses[middleware]
+                            if hasattr(cls, 'process_exception'):
+                                ins = _inss.get(middleware)
+                                if not ins:
+                                    ins = cls(self, config)
+                                response = ins.process_exception(req, e)
+                                if response:
+                                    break
+                        else:
+                            raise
+                        
+                else:
+                    response = res
+                    
+                for middleware in reversed(middlewares):
+                    cls = _clses[middleware]
+                    if hasattr(cls, 'process_response'):
+                        ins = _inss.get(middleware)
+                        if not ins:
+                            ins = cls(self, config)
+                        response = ins.process_response(req, response)
+
+            #endif
             
         except HTTPError, e:
             response = self.render(e.errorpage, Storage(e.errors), request=req)

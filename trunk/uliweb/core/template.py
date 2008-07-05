@@ -8,7 +8,11 @@
 import re
 import os
 
-__all__=['template']
+__all__=['template', 'get_templatefile', 'render_text', 'render_file', 
+    'template_file']
+
+__templates_temp_dir = 'tmp/templates_temp'
+__use_temp = False
 
 re_write=re.compile('\{\{=(?P<value>.*?)\}\}',re.DOTALL)
 re_html=re.compile('\}\}.*?\{\{',re.DOTALL)
@@ -25,6 +29,23 @@ re_include_nameless=re.compile('\{\{\s*include\s*\}\}')
 re_include=re.compile('\{\{\s*include\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
 re_extend=re.compile('\s*\{\{\s*extend\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
 
+def use_tempdir(dir=None):
+    global __use_temp, __templates_temp_dir
+    
+    __use_temp = True
+    if dir:
+        __templates_temp_dir = dir
+    if not os.path.exists(__templates_temp_dir):
+        os.makedirs(__templates_temp_dir)
+        
+def get_temp_template(filename):
+    if __use_temp:
+        f, filename = os.path.splitdrive(filename)
+        filename = filename.replace('\\', '_')
+        filename = filename.replace('/', '_')
+        return os.path.normcase(os.path.join(__templates_temp_dir, filename))
+    return filename
+        
 def reindent(text):
     lines=text.split('\n')
     new_lines=[]
@@ -118,16 +139,30 @@ def render_text(text, vars=None, env=None, dirs=None, default_template=None):
 
     return code
 
-def render_file(filename, vars=None, env=None, dirs=None, default_template=None):
+def render_file(filename, vars=None, env=None, dirs=None, default_template=None, use_temp=False):
     fname = get_templatefile(filename, dirs, default_template)
     if not fname:
         raise Exception, "Can't find the template %s" % filename
-    return fname, render_text(file(fname).read(), vars, env, dirs, default_template)
+    if use_temp:
+        f = get_temp_template(fname)
+        if os.path.exists(f):
+            #todo add var judgement to test exclude variables
+            if os.path.getmtime(f) >= os.path.getmtime(fname):
+                return fname, file(f, 'rb').read()
+    text = render_text(file(fname).read(), vars, env, dirs, default_template)
+    f = get_temp_template(fname)
+    try:
+        fo = file(f, 'wb')
+        fo.write(text)
+        fo.close()
+    except:
+        pass
+    return fname, text
     
 def template_file(filename, vars=None, env=None, dirs=None, default_template=None):
     vars = vars or {}
     env = env or {}
-    fname, code = render_file(filename, vars, env, dirs, default_template)
+    fname, code = render_file(filename, vars, env, dirs, default_template, use_temp=__use_temp)
     return _run(code, vars, env, fname)
 
 def template(text, vars=None, env=None, dirs=None, default_template=None):

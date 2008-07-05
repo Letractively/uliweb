@@ -86,3 +86,5 @@ ul#minitabs a{text-decoration: none;padding: 0 0 3px;
   border-bottom: 4px solid #FFF;color: #999}
 ul#minitabs a#current{border-color: #F60;color: #06F}
 ul#minitabs a:hover{border-color: #F60;color: #666}
+div.error {width:100%; text-align:center;}
+div.error span {width:80%; padding:6px;border:1px solid #cccccc;}
