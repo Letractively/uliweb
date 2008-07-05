@@ -41,6 +41,11 @@ def startup(sender):
         d[format_locale(k)] = v
     sender.config['LANGUAGES'] = d
     
+@plugin('startup_installed')
+def startup(sender):
+    from uliweb.core import template
+    template.use_tempdir()
+
 @plugin('prepare_template_env')
 def prepare_template_env(sender, env):
     from uliweb.i18n import ugettext_lazy

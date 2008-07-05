@@ -9,12 +9,30 @@ sys.path.insert(0, os.path.join(path, 'lib'))
 
 from werkzeug import script
 from uliweb.core import SimpleFrame
-
-apps_dir = os.path.join(path, 'apps')
+try:
+    import config
+except:
+    config = None
+    
+if config:
+    apps_dir = config.APPS_DIR
+else:
+    apps_dir = 'apps'
+    
+apps_dir = os.path.join(path, apps_dir)
 
 def make_application(debug=None):
-    application = SimpleFrame.Dispatcher(apps_dir=apps_dir)
-    if debug or (debug is None and application.config.DEBUG):
+    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir)
+    debug_flag = app.config.DEBUG
+    if hasattr(config, 'WSGI'):
+        for p in config.WSGI:
+            modname, clsname = p.rsplit('.', 1)
+            mod = __import__(modname, {}, {}, [''])
+            c = getattr(mod, clsname)
+            application = c(application)
+#    from uliweb.wsgi.profile import ProfileApplication
+#    application = ProfileApplication(app)
+    if debug or (debug is None and debug_flag):
         from werkzeug.debug import DebuggedApplication
         application = DebuggedApplication(application)
     return application

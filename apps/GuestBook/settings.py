@@ -4,7 +4,7 @@ connection = {'connection':'sqlite:///database1.db'}
 #connection = {'connection':'mysql://root:limodou@localhost/test'}
 
 DEBUG = True
-DEBUG_LOG = True
+DEBUG_LOG = False
 
 @plugin('prepare_template_env')
 def prepare_template_env(sender, env):
