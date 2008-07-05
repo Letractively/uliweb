@@ -1,6 +1,8 @@
 from uliweb.core.plugin import plugin
 from uliweb.i18n import ugettext_lazy as _
 
+DEBUG = True
+
 LANGUAGE_CODE = 'zh'
 LANGUAGES = {
     'en_US':_('English'), 
@@ -50,3 +52,19 @@ def startup(sender):
 def prepare_template_env(sender, env):
     from uliweb.i18n import ugettext_lazy
     env['_'] = ugettext_lazy
+
+
+##################################################
+# database settingss
+##################################################
+DEBUG_LOG = False
+connection = {'connection':'sqlite:///database1.db'}
+#connection = {'connection':'mysql://root:limodou@localhost/test'}
+
+@plugin('startup')
+def startup(sender):
+    from uliweb import orm
+    orm.set_debug_query(DEBUG_LOG)
+    orm.set_auto_bind(True)
+    orm.set_auto_migrate(True)
+    orm.get_connection(**connection)
