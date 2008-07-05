@@ -12,13 +12,12 @@ def login():
     if request.method == 'POST':
         flag, data = form.validate(request.params)
         if flag:
-            user = authenticate(request, username=data['username'], password=data['password'])
-            if user:
-                login(request, user)
+            f, d = authenticate(request, username=data['username'], password=data['password'])
+            if f:
+                login(request, d)
                 return redirect('/')
-#            else:
-#                return 'Login failed!'
-#        else:
+            else:
+                data = d
         message = "Login failed!"
         return {'form':form.html(request.params, data, py=False), 'message':message}
 
@@ -34,15 +33,15 @@ def register():
     if request.method == 'POST':
         flag, data = form.validate(request.params)
         if flag:
-            user = create_user(request, username=data['username'], password=data['password'])
-            if user:
-                logined(request, user)
+            f, d = create_user(request, username=data['username'], password=data['password'])
+            if f:
+                logined(request, d)
                 return redirect('/')
             else:
-                return 'Create user error!'
-        else:
-            message = "There was something wrong! Please fix them."
-            return {'form':form.html(request.params, data, py=False), 'message':message}
+                data = d
+                
+        message = "There was something wrong! Please fix them."
+        return {'form':form.html(request.params, data, py=False), 'message':message}
         
 @expose('/logout')
 def logout():

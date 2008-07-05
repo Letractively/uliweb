@@ -7,12 +7,20 @@ def authenticate(username, password):
     user = User.get(User.c.username==username)
     if user:
         if user.check_password(password):
-            return user
+            return True, user
+        else:
+            return False, {'password': "Password isn't correct!"}
+    else:
+        return False, {'username': 'Username is not existed!'}
     
-def create_user(**kwargs):
-    password = kwargs.pop('password', '')
-    user = User(**kwargs)
-    user.set_password(password)
-    user.save()
-    return user
-    
+def create_user(username, password):
+    try:
+        user = User.get(User.c.username==username)
+        if user:
+            return False, {'username':"Username is already existed!"}
+        user = User(username=username, password=password)
+        user.set_password(password)
+        user.save()
+        return True, user
+    except:
+        return False, {'_': "Creating user failed!"}
