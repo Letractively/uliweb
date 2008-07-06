@@ -98,7 +98,7 @@ view的环境
 * redirect 用于重定义处理，后面为一个URL信息。
 * error 用于输出错误信息，它将自动查找出错页面。你只要在任何app下的templates中增加
   error.html，然后出错信息可以自已来定制。它也不需要前面加return，也将抛出一个异常。
-* config 是定义在所有有效的app settings.py文件中的配置项。注意，一个配置项的名称必须是
+* settings 是定义在所有有效的app settings.py文件中的配置项。注意，一个配置项的名称必须是
   大写的。
 * env 这是可扩展的环境，它只保存公共的对象，目前缺省为：
 
@@ -109,7 +109,7 @@ view的环境
     * render 功能同template，但是缺省设置了env的环境，因此env中的对象都可以在模板中直接
       使用。同时它将返回一个Response对象，而不是渲染后的结果。
     * template 同上。也是包含了evn的环境，只是不返回Response对象，而是渲染后的结果。
-    * config 同上
+    * settings 同上
     * html 它是werkzeug提供的生成HTML代码的库
     * xhtml 它是werkzeug提供的生成XHTML代码的库
     * Form 用于对数据校验和生成相应的HTML代码的库

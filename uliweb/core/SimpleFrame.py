@@ -28,7 +28,7 @@ _urls = []
 _static_views = []
 __use_urls = False
 __app_dirs = {}
-config = None
+settings = None
 
 def expose(rule=None, **kw):
     """
@@ -90,7 +90,7 @@ def import_func(path):
 
 class HTTPError(Exception):
     def __init__(self, errorpage=None, **kwargs):
-        self.errorpage = errorpage or config.ERROR_PAGE
+        self.errorpage = errorpage or settings.ERROR_PAGE
         self.errors = kwargs
 
     def __str__(self):
@@ -211,8 +211,8 @@ class Dispatcher(object):
         self.install_settings(self.modules['settings'])
         Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.env = self._prepare_env()
-        Dispatcher.config = config
-        self.debug = config.get('DEBUG', False)
+        Dispatcher.settings = settings
+        self.debug = settings.get('DEBUG', False)
         Dispatcher.template_env = Storage(Dispatcher.env.copy())
         callplugin(self, 'prepare_default_env', Dispatcher.env)
         callplugin(self, 'prepare_template_env', Dispatcher.template_env)
@@ -226,7 +226,7 @@ class Dispatcher(object):
         env['url_map'] = url_map
         env['render'] = self.render
         env['template'] = self.template
-        env['config'] = config
+        env['settings'] = settings
         from werkzeug import html, xhtml
         env['html'] = html
         env['xhtml'] = xhtml
@@ -317,7 +317,7 @@ class Dispatcher(object):
                 urls.append((r.rule, r.endpoint))
             urls.sort()
             return self._page_not_found(description=e.description, url=request.path, urls=urls)
-        tmp_file = template.get_templatefile('404'+config.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('404'+settings.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
             response.status = '404'
@@ -326,7 +326,7 @@ class Dispatcher(object):
         return response
     
     def internal_error(self, request, e):
-        tmp_file = template.get_templatefile('500'+config.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('500'+settings.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
             response.status = '500'
@@ -359,7 +359,7 @@ class Dispatcher(object):
             if hasattr(response, 'template') and response.template:
                 tmpfile = response.template
             else:
-                tmpfile = request.function + config.TEMPLATE_SUFFIX
+                tmpfile = request.function + settings.TEMPLATE_SUFFIX
             response = self.render(tmpfile, result, env=env, request=request)
         elif isinstance(result, (str, unicode)):
             response = Response(result, content_type='text/html')
@@ -380,7 +380,7 @@ class Dispatcher(object):
         local_env['url_for'] = url_for
         local_env['redirect'] = redirect
         local_env['error'] = errorpage
-        local_env['config'] = config
+        local_env['settings'] = settings
         
         for k, v in local_env.iteritems():
             handler.func_globals[k] = v
@@ -445,17 +445,17 @@ class Dispatcher(object):
             __import__(v, {}, {}, [''])
             
     def install_settings(self, s):
-        global config
+        global settings
         s.insert(0, 'uliweb.core.default_config')
-        config = Storage({})
+        settings = Storage({})
         for v in s:
             mod = __import__(v, {}, {}, [''])
             for k in dir(mod):
-                #if k is already exists in config, then skip it
-                if k.startswith('_') or not k.isupper() or k in config:
+                #if k is already exists in settings, then skip it
+                if k.startswith('_') or not k.isupper() or k in settings:
                     pass
                 else:
-                    config[k] = getattr(mod, k)
+                    settings[k] = getattr(mod, k)
             
     def get_template_dirs(self):
         template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in self.apps]
@@ -470,7 +470,7 @@ class Dispatcher(object):
             endpoint, values = adapter.match()
             
             #binding some variable to request
-            req.config = config
+            req.settings = settings
             req.application = self
             
             #get handler
@@ -491,7 +491,7 @@ class Dispatcher(object):
                 response = self.call_endpoint(mod, handler, req, res, **values)
             else:
                 #middleware process request
-                middlewares = config.get('MIDDLEWARE_CLASSES', [])
+                middlewares = settings.get('MIDDLEWARE_CLASSES', [])
                 response = None
                 _clses = {}
                 _inss = {}
@@ -502,7 +502,7 @@ class Dispatcher(object):
                         errorpage("Can't import the middleware %s" % middleware)
                     _clses[middleware] = cls
                     if hasattr(cls, 'process_request'):
-                        ins = cls(self, config)
+                        ins = cls(self, settings)
                         _inss[middleware] = ins
                         response = ins.process_request(req)
                         if response is not None:
@@ -519,7 +519,7 @@ class Dispatcher(object):
                             if hasattr(cls, 'process_exception'):
                                 ins = _inss.get(middleware)
                                 if not ins:
-                                    ins = cls(self, config)
+                                    ins = cls(self, settings)
                                 response = ins.process_exception(req, e)
                                 if response:
                                     break
@@ -534,7 +534,7 @@ class Dispatcher(object):
                     if hasattr(cls, 'process_response'):
                         ins = _inss.get(middleware)
                         if not ins:
-                            ins = cls(self, config)
+                            ins = cls(self, settings)
                         response = ins.process_response(req, response)
 
             #endif

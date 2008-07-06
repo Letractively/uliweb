@@ -23,7 +23,7 @@ apps_dir = os.path.join(path, apps_dir)
 
 def make_application(debug=None):
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir)
-    debug_flag = app.config.DEBUG
+    debug_flag = app.settings.DEBUG
     if hasattr(config, 'WSGI'):
         for p in config.WSGI:
             modname, clsname = p.rsplit('.', 1)
