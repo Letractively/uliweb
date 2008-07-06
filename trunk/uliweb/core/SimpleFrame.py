@@ -471,7 +471,7 @@ class Dispatcher(object):
             
             #binding some variable to request
             req.config = config
-            req.application = application
+            req.application = self
             
             #get handler
             module, func = endpoint.rsplit('.', 1)

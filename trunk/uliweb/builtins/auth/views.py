@@ -19,7 +19,7 @@ def login():
             else:
                 data = d
         message = "Login failed!"
-        return {'form':form.html(request.params, data, py=False), 'message':message}
+        return {'form':form.html(request.params, data, py=False), 'message':message, 'message_type':'error'}
 
 @expose('/register')
 def register():
