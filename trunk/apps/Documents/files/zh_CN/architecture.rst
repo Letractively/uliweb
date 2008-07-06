@@ -85,7 +85,7 @@ Uliweb在启动时对于apps下的App有两种处理策略：
 #. 根据apps/settings.py中的配置项INSTALLED_APPS来决定哪些App要生效
 
 Uliweb在启动时会根据生效的App来导入它们的settings.py文件，并将其中配置项进行合并最终
-形成一个完整的config变量供App来使用。同时在处理生效的App的同时，会自动查找所有views开头
+形成一个完整的 ``settings`` 变量供App来使用。同时在处理生效的App的同时，会自动查找所有views开头
 的文件和views子目录并进行导入，这块工作主要是为了收集所有定义在views文件中的URL。
 
 这样当Uliweb启动完毕，所有App下的settings.py和views文件将被导入。因此，你可以在settings.py

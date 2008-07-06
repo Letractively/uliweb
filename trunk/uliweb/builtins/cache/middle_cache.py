@@ -1,7 +1,7 @@
 from uliweb.middlewares import Middleware
 
 class CacheMiddle(Middleware):
-    def __init__(self, application, config):
+    def __init__(self, application, settings):
         from beaker.cache import CacheManager
         from beaker.util import coerce_cache_params
         default = {
@@ -11,7 +11,7 @@ class CacheMiddle(Middleware):
             'table_name':'uliweb_cache'
         }
 
-        options = config.get('CACHE_CONFIG', default)
+        options = settings.get('CACHE_CONFIG', default)
         default.update(options)
         options = default
         coerce_cache_params(options)

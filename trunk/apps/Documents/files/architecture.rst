@@ -97,7 +97,7 @@ for example:
 So only ``Hello`` and ``Documents`` are available apps.
 
 At Uliweb startup, it'll automatically import settings.py from **available** apps.
-And it'll combine all configure options into a dict variable named ``config`` at the
+And it'll combine all configure options into a dict variable named ``settings`` at the
 end. And you should notice that option variable name should be written in upper 
 case. Because settings.py will automatically imported at startup time, so you can
 also write some initialization code in there, for example: database initialization,

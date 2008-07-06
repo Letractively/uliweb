@@ -36,12 +36,12 @@ def startup(sender):
     localedir = ([os.path.join(sender.apps_dir, '..', 'locale')] + 
         [os.path.join(sender.apps_dir, appname) for appname in sender.apps])
     install('uliweb', localedir)
-    set_default_language(sender.config.get('LANGUAGE_CODE'))
+    set_default_language(sender.settings.get('LANGUAGE_CODE'))
     
     d = {}
-    for k, v in sender.config.get('LANGUAGES', {}).items():
+    for k, v in sender.settings.get('LANGUAGES', {}).items():
         d[format_locale(k)] = v
-    sender.config['LANGUAGES'] = d
+    sender.settings['LANGUAGES'] = d
     
 @plugin('startup_installed')
 def startup(sender):

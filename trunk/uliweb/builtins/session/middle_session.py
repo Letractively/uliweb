@@ -1,7 +1,7 @@
 from uliweb.middlewares import Middleware
 
 class SessionMiddle(Middleware):
-    def __init__(self, application, config):
+    def __init__(self, application, settings):
         from beaker.util import coerce_session_params
         from datetime import timedelta
         default = {
@@ -12,7 +12,7 @@ class SessionMiddle(Middleware):
             'key':'uliweb.session.id',
             'table_name':'uliweb_table'
         }
-        self.options = config.get('SESSION_CONFIG', default)
+        self.options = settings.get('SESSION_CONFIG', default)
         default.update(self.options)
         self.options = default
         if isinstance(default['cookie_expires'], int):

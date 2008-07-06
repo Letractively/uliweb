@@ -21,7 +21,7 @@ def _show(request, response, filename, env, lang=None, render=True):
         if not lang:
             lang = get_language()
         else:
-            response.set_cookie(env.config.get('LANGUAGE_COOKIE_NAME'), lang)
+            response.set_cookie(env.settings.get('LANGUAGE_COOKIE_NAME'), lang)
     if lang:
         lang = format_locale(lang)
         f = env.get_file(os.path.join(lang, filename))

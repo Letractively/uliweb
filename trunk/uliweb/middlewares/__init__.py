@@ -1,7 +1,7 @@
 class Middleware(object):
-    def __init__(self, application, config):
+    def __init__(self, application, settings):
         self.application = application
-        self.config = config
+        self.settings = settings
         
 #    def process_request(self, request):
 #        pass

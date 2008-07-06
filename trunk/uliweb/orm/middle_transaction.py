@@ -1,5 +1,5 @@
 class TransactionMiddle(object):
-    def __init__(self, application, config):
+    def __init__(self, application, settings):
         from uliweb.orm import get_connection
         self.db = get_connection()
         
@@ -11,6 +11,5 @@ class TransactionMiddle(object):
         return response
             
     def process_exception(self, request, exception):
-        print 'xxxxxxxxxxxxxxxxxxxxxx'
         self.db.rollback()
     

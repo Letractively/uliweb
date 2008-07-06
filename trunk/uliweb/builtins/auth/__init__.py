@@ -13,10 +13,10 @@ def _import_backend(type):
     return mod
 
 def _get_auth_key(request):
-    return request.config.get('AUTH_KEY', '__uliweb_session_user_id__')
+    return request.settings.get('AUTH_KEY', '__uliweb_session_user_id__')
 
 def _get_backend_key(request):
-    return request.config.get('BACKEND_KEY', '__uliweb_session_backend_id__')
+    return request.settings.get('BACKEND_KEY', '__uliweb_session_backend_id__')
 
 def get_user(request):
     session_key = _get_auth_key(request)

@@ -15,6 +15,6 @@ def post():
             form = form.html(data)
         else:
             form = form.html(request.params, data, py=False)
-    change_languages = make_select_languages(config.get('LANGUAGES', []))
+    change_languages = make_select_languages(settings.get('LANGUAGES', []))
     return locals()
 

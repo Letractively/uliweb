@@ -9,21 +9,21 @@ accept_language_re = re.compile(r'''
         (?:\s*,\s*|$)                            # Multiple accepts per header.
         ''', re.VERBOSE)
 
-def get_language_from_request(request, config):
+def get_language_from_request(request, settings):
     #check session first
     if hasattr(request, 'session'):
         lang = request.session.get('uliweb_language')
         if lang:
             return lang
 
-    lang = request.cookies.get(config.LANGUAGE_COOKIE_NAME)
+    lang = request.cookies.get(settings.LANGUAGE_COOKIE_NAME)
     if lang:
         return lang
 
     accept = request.environ.get('HTTP_ACCEPT_LANGUAGE', None)
     if not accept:
-        return config.get('LANGUAGE_CODE')
-    languages = config.get('LANGUAGES', {})
+        return settings.get('LANGUAGE_CODE')
+    languages = settings.get('LANGUAGES', {})
     for accept_lang, unused in parse_accept_lang_header(accept):
         if accept_lang == '*':
             break
@@ -35,7 +35,7 @@ def get_language_from_request(request, config):
         if normalized in languages:
             return normalized
 
-    return config.get('LANGUAGE_CODE')
+    return settings.get('LANGUAGE_CODE')
 
 def parse_accept_lang_header(lang_string):
     """
@@ -59,6 +59,6 @@ def parse_accept_lang_header(lang_string):
 
 class I18nMiddle(Middleware):
     def process_request(self, request):
-        lang = get_language_from_request(request, self.config)
+        lang = get_language_from_request(request, self.settings)
         if lang:
             set_language(lang)

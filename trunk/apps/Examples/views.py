@@ -56,8 +56,8 @@ def examples_error():
     error(message='This is error test!')
     
 @expose
-def examples_print_config():
-    return '<br/>'.join(["%s = %r" % (k,v) for k, v in config.iteritems()])
+def examples_print_settings():
+    return '<br/>'.join(["%s = %r" % (k,v) for k, v in settings.iteritems()])
 
 @expose
 def examples_cookie():
