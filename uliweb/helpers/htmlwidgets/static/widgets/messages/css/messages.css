@@ -1,0 +1,36 @@
+/*  clean style  */
+.message-container{margin:0 auto;margin-top:40px;margin-bottom:30px;width:80%;}
+
+.message {text-align:center;}
+.message.clean.gray{border:solid 1px #DEDEDE;background:#EFEFEF;color:#222222; padding:4px;}
+.message.clean.yellow{border:solid 1px #DEDEDE;background:#FFFFCC;color:#222222;padding:4px;}
+.message.clean.ok{border:solid 1px #349534;background:#C9FFCA;color:#008000;font-weight:bold;padding:4px;}
+.message.clean.error{border:solid 1px #CC0000;background:#F7CBCA;color:#CC0000;font-weight:bold;padding:4px;}
+
+/*  iconized style  */
+.message.icon.gray{border:solid 1px #DEDEDE;background:#EFEFEF;color:#222222;padding:4px;}
+.message.icon.yellow{border:solid 1px #DEDEDE;background:#FFFFCC url(../images/icon-yellow.png) 8px 6px no-repeat;color:#222222;padding:4px;}
+.message.icon.ok{border:solid 1px #90ac13;background:#eef4d3 url(../images/icon-green.png) 8px 6px no-repeat;color:#6b800d;font-weight:bold;padding:4px;}
+.message.icon.error{border:solid 1px #CC0000;background:#F7CBCA url(../images/icon-red.png) 8px 6px no-repeat;color:#CC0000;font-weight:bold;padding:4px;}
+	
+/*  solid style */
+.message.solid.gray{background:#444444;color:#FFFFFF;padding:4px;}
+.message.solid.yellow{background:#FFFFCC;color:#222222;padding:4px;}
+.message.solid.ok{background:#008000;color:#FFFFFF;font-weight:bold;padding:4px;}
+.message.solid.error{background:#CC0000;color:#FFFFFF;font-weight:bold;padding:4px;}
+	
+/*  round corner style  */
+.message.round.gray{background:#444444 url(../images/round_gray-left.png) left top no-repeat;color:#FFFFFF;}
+.message.round.gray div{background:url(../images/round_gray-right.png) right bottom no-repeat;padding:4px;}
+.message.round.ok{background:#008000 url(../images/round_green-left.png) left top no-repeat;color:#FFFFFF;}
+.message.round.ok div{background:url(../images/round_green-right.png) right bottom no-repeat;padding:4px;}
+.message.round.error{background:#CC0000 url(../images/round_red-left.png) left top no-repeat;color:#FFFFFF;}
+.message.round.error div{background:url(../images/round_red-right.png) right bottom no-repeat;padding:4px;}
+
+/*  tooltip style  */
+.message.tooltips.gray{background:#444444;color:#FFFFFF;padding-top:4px;}
+.message.tooltips.gray div{background:url(../images/tips_gray.png) left bottom no-repeat;padding-top:4px;height:18px;}
+.message.tooltips.ok{background:#008000;color:#FFFFFF;padding-top:4px;}
+.message.tooltips.ok div{background:url(../images/tips_green.png) left bottom no-repeat;padding-top:4px;height:18px;}
+.message.tooltips.error{background:#CC0000;color:#FFFFFF;padding-top:4px;}
+.message.tooltips.error div{background:url(../images/tips_red.png) left bottom no-repeat;margin-top:4px;height:18px;}

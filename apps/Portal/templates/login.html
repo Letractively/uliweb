@@ -1,7 +1,8 @@
 {{extend "layout.html"}}
-<div class="error">
-  <span>{{=message}}aaaaaaa</span>
-</div>
+{{from uliweb.helpers import htmlwidgets}}
+{{ if message:
+Xml(htmlwidgets.message(message, message_type))
+pass}}
 <div id="login-form">
 {{Xml(form)}}
 </div>
