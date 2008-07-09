@@ -3,14 +3,22 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <title>Untitled Document</title>
-<link href="css/boxes.css" rel="stylesheet" type="text/css" />
+<link href="boxes.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="jq.boxes.js"></script>
+<script>
+$(function(){
+	$('.boxes').boxes();
+});
+</script>
 </head>
 
 <body>
 <h1>This is a test</h1>
 <div class="cssbox" style="width:400px;">
-  <div class="cssbox_head"><h2>This is a header</h2></div>
-  <div class="cssbox_body">
+  <div class="c1"><div class="c2"></div></div>
+  <div class="c3">
+  <h2>This is a header</h2>
     <p>This is for your content. This is for your content. This is for your content. This is for your content.</p>
   <p>This is for your content.</p>
   <p>This is for your content.</p>
@@ -18,5 +26,14 @@
   <p>This is for your content.</p>
   </div>
 </div> 
+
+<div class="cssbox">
+  <div class="c1"><div class="c2"></div></div>
+  <div class="c3">
+  <p>This is for your content.</p>
+  </div>
+</div> 
+
+<div class="boxes"><p>Hello</p></div>
 </body>
 </html>

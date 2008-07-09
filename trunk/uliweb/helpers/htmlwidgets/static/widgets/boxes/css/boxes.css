@@ -1,30 +1,5 @@
-/* set the image to use and establish the lower-right position */ 
-.cssbox, .cssbox_body, .cssbox_head, .cssbox_head h2 { 
-/*background: transparent url(../images/pic_grey_border_1800x1800.gif) no-repeat bottom right; }*/
-background: transparent url(../images/pic_grey_border_1800x1800.gif) no-repeat bottom right; }
-
-.cssbox { 
-/*width: 375px !important; 
-width: 360px;*/ /* IE Win = width - padding */ 
-padding-right: 15px; /* the gap on the right edge of the image (not content padding) */ 
-margin: 10px auto; /* use to position the box */ 
-} 
-
-/* set the top-right image */ 
-.cssbox_head { background-position: top right; margin-right: -15px; 
-/* pull the right image over on top of border */ 
-padding-right: 10px; /* right-image-gap + right-inside padding */ 
-} 
-
-/* set the top-left image */ 
-.cssbox_head h2 { background-position: top left; margin: 0; 
-/* reset main site styles*/ 
-border: 0; /* ditto */ 
-padding: 10px 0 5px 15px; /* padding-left = image gap + interior padding ... no padding-right */ 
-height: auto !important; height: 1%; /* IE Holly Hack */ 
-} 
-
-/* set the lower-left corner image */ 
-.cssbox_body { background-position: bottom left; margin-right: 25px; /* interior-padding right */ 
-padding: 5px 0 5px 15px; /* mirror .cssbox_head right/left */ 
-} 
+.cssbox, .cssbox .c3, .cssbox .c2, .cssbox .c1 {background: transparent url(pic_grey_border_1800x1800.gif) no-repeat bottom right; }
+.cssbox {padding-right: 0px;margin: 10px auto;} 
+.cssbox .c1 {background-position: top right; margin-right: 0px;padding-right: 10px;} 
+.cssbox .c2 {background-position: top left; margin: 0; padding: 5px 10px 4px 10px;} 
+.cssbox .c3 {background-position: bottom left; margin-right: 5px;padding: 5px 10px 5px 10px;} 
