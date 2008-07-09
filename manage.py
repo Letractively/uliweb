@@ -220,8 +220,13 @@ def collcet_commands(apps_dir='apps'):
             pass
         
         s = []
+        if not os.path.exists(apps_dir):
+            return s
         for p in os.listdir(apps_dir):
-            if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
+            path = os.path.join(apps_dir, p)
+            if not os.path.exists(path):
+                continue
+            if os.path.isdir(path) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
                 s.append(p)
         return s
     
