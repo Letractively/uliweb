@@ -150,13 +150,14 @@ def render_file(filename, vars=None, env=None, dirs=None, default_template=None,
             if os.path.getmtime(f) >= os.path.getmtime(fname):
                 return fname, file(f, 'rb').read()
     text = render_text(file(fname).read(), vars, env, dirs, default_template)
-    f = get_temp_template(fname)
-    try:
-        fo = file(f, 'wb')
-        fo.write(text)
-        fo.close()
-    except:
-        pass
+    if use_temp:
+        f = get_temp_template(fname)
+        try:
+            fo = file(f, 'wb')
+            fo.write(text)
+            fo.close()
+        except:
+            pass
     return fname, text
     
 def template_file(filename, vars=None, env=None, dirs=None, default_template=None):
