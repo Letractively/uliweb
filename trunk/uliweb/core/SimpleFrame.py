@@ -167,7 +167,6 @@ class Loader(object):
             return True
         return filename.endswith('.html')
 
-import time        
 class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir=APPS_DIR, use_urls=None):
@@ -266,31 +265,41 @@ class Dispatcher(object):
         return None
 #        errorpage("Can't find the file %s" % filename)
 
-    def template(self, templatefile, vars, env=None, dirs=None, request=None):
+    def template(self, filename, vars, env=None, dirs=None, request=None):
+        vars = vars or {}
         dirs = dirs or self.template_dirs
         env = self.get_template_env(env)
         if request:
             dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
         if self.debug:
-            def debug_template(filename, vars, env, dirs):
-                def _compile(code, filename, action):
-                    __loader__ = Loader(filename, vars, env, dirs, notest=True)
-                    return compile(code, filename, 'exec')
-                vars = vars or {}
-                env = env or {}
-                fname, code = template.render_file(filename, vars, env, dirs)
-                out = template.Out()
-                template._prepare_run(vars, env, out)
-                
-                if isinstance(code, (str, unicode)):
-                    code = _compile(code, fname, 'exec')
-                __loader__ = Loader(fname, vars, env, dirs)
-                exec code in env, vars
-                return out.getvalue()
+            def _compile(code, filename, action):
+                __loader__ = Loader(filename, vars, env, dirs, notest=True)
+                return compile(code, filename, 'exec')
+            fname, code = template.render_file(filename, vars, env, dirs)
+            out = template.Out()
+            template._prepare_run(vars, env, out)
+            #user can insert new local environment variables to env variable
+            callplugin(self, 'before_render_template', env, out)
             
-            return debug_template(templatefile, vars, env, dirs)
+            if isinstance(code, (str, unicode)):
+                code = _compile(code, fname, 'exec')
+            __loader__ = Loader(fname, vars, env, dirs)
+            exec code in env, vars
+            text = out.getvalue()
+            output = execplugin(self, 'after_render_template', text, vars, env)
+            return output or text
         else:
-            return template.template_file(templatefile, vars, env, dirs)
+            fname, code = template.render_file(filename, vars, env, dirs)
+            out = template.Out()
+            template._prepare_run(vars, env, out)
+            callplugin(self, 'before_render_template', env, out)
+            
+            if isinstance(code, (str, unicode)):
+                code = compile(code, fname, 'exec')
+            exec code in env, vars
+            text = out.getvalue()
+            output = execplugin(self, 'after_render_template', text, vars, env)
+            return output or text
     
     def render(self, templatefile, vars, env=None, dirs=None, request=None):
         return Response(self.template(templatefile, vars, env, dirs, request), content_type='text/html')
@@ -335,7 +344,7 @@ class Dispatcher(object):
         return response
     
     def get_template_env(self, env=None):
-        e = self.template_env
+        e = self.template_env.copy()
         if env:
             e.update(env)
         return e

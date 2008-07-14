@@ -9,10 +9,10 @@ import re
 import os
 
 __all__=['template', 'get_templatefile', 'render_text', 'render_file', 
-    'template_file']
+    'template_file', 'set_options']
 
 __templates_temp_dir = 'tmp/templates_temp'
-__use_temp = False
+__options = {'strip_line':True, 'use_temp_dir':False}
 
 re_write=re.compile('\{\{=(?P<value>.*?)\}\}',re.DOTALL)
 re_html=re.compile('\}\}.*?\{\{',re.DOTALL)
@@ -30,16 +30,22 @@ re_include=re.compile('\{\{\s*include\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
 re_extend=re.compile('\s*\{\{\s*extend\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
 
 def use_tempdir(dir=None):
-    global __use_temp, __templates_temp_dir
+    global __options, __templates_temp_dir
     
-    __use_temp = True
+    __options['use_temp_dir'] = True
     if dir:
         __templates_temp_dir = dir
     if not os.path.exists(__templates_temp_dir):
         os.makedirs(__templates_temp_dir)
         
+def set_options(**options):
+    """
+    default use_temp_dir=False, strip_line=True
+    """
+    __options.update(options)
+        
 def get_temp_template(filename):
-    if __use_temp:
+    if __options['use_temp_dir']:
         f, filename = os.path.splitdrive(filename)
         filename = filename.replace('\\', '_')
         filename = filename.replace('/', '_')
@@ -163,7 +169,7 @@ def render_file(filename, vars=None, env=None, dirs=None, default_template=None,
 def template_file(filename, vars=None, env=None, dirs=None, default_template=None):
     vars = vars or {}
     env = env or {}
-    fname, code = render_file(filename, vars, env, dirs, default_template, use_temp=__use_temp)
+    fname, code = render_file(filename, vars, env, dirs, default_template, use_temp=__options['use_temp_dir'])
     return _run(code, vars, env, fname)
 
 def template(text, vars=None, env=None, dirs=None, default_template=None):

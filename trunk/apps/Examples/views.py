@@ -83,3 +83,7 @@ def examples_session():
     else:
         s = "Welcome %s" % name
     return s
+
+@expose
+def examples_htmlhelper():
+    return {}
