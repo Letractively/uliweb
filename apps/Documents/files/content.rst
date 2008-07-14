@@ -4,7 +4,6 @@ Basic Info
 ---------------------
 {{ 
 def index(filename):
-    print 'cccccccccccc', request.appname
     return url_for('%s.views.show_document' % request.appname, filename=filename)
 pass
 }}

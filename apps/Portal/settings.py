@@ -16,6 +16,9 @@ MIDDLEWARE_CLASSES = (
     'uliweb.builtins.auth.middle_auth.AuthMiddle',
 )
 
+##################################################
+# insert rst2html function to template environment
+##################################################
 @plugin('prepare_template_env')
 def prepare_template_env(sender, env):
     from uliweb.utils.rst import to_html
@@ -28,6 +31,9 @@ def prepare_template_env(sender, env):
             errorpage("Can't find the file %s" % filename)
     env['rst2html'] = rst2html
     
+##################################################
+# i18n initialization
+##################################################
 @plugin('startup_installed')
 def startup(sender):
     import os
@@ -43,19 +49,21 @@ def startup(sender):
         d[format_locale(k)] = v
     sender.settings['LANGUAGES'] = d
     
-@plugin('startup_installed')
-def startup(sender):
-    from uliweb.core import template
-    template.use_tempdir()
-
 @plugin('prepare_template_env')
 def prepare_template_env(sender, env):
     from uliweb.i18n import ugettext_lazy
     env['_'] = ugettext_lazy
 
+##################################################
+# set template temporarily directory
+##################################################
+@plugin('startup_installed')
+def startup(sender):
+    from uliweb.core import template
+    template.use_tempdir()
 
 ##################################################
-# database settingss
+# database settings
 ##################################################
 DEBUG_LOG = False
 connection = {'connection':'sqlite:///database1.db'}
@@ -68,3 +76,31 @@ def startup(sender):
     orm.set_auto_bind(True)
     orm.set_auto_migrate(True)
     orm.get_connection(**connection)
+
+##################################################
+# html helper initialization
+##################################################
+@plugin('before_render_template')
+def before_render_template(sender, env, out):
+    from uliweb.core import js
+    from uliweb.core.SimpleFrame import url_for
+    from uliweb.helpers import htmlwidgets
+    
+    htmlbuf = js.HtmlBuf(write=out.noescape, static_suffix=url_for('Portal.views.static', filename=''))
+    env['htmlbuf'] = htmlbuf
+    env['htmlwidgets'] = htmlwidgets
+    
+@plugin('after_render_template')
+def after_render_template(sender, text, vars, env):
+    import re
+    if 'htmlbuf' in env:
+        htmlbuf = env['htmlbuf']
+        t = htmlbuf.render()
+        if t:
+            b = re.search('(?i)</head>', text)
+            if b:
+                pos = b.start()
+                return ''.join([text[:pos], t, text[pos:]])
+            else:
+                return t+text
+    return text

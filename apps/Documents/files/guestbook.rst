@@ -667,7 +667,7 @@ Wow, we've learnt so much things for now:
 #. View usage, including: redirect usage, error usage, static files serving.
 #. URL mapping usage, including: expose usage, arguments definition.
 #. manage.py usage, including: export and makeapp usage.
-#. Architecture knowledge, inclueing: the organization of Uliweb, settings process.
+#. Architecture knowledge, including: the organization of Uliweb, settings process.
    flow mechanism, the mapping between view function and template file.
 
 Yes, there are too much things. However these are not the whole stuff of Uliewb yet.
