@@ -2,11 +2,17 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <title>HTML Helper</title>
+<script type="text/javascript" src="/static/js/jquery.js"></script>
 </head>
 <body>
 {{
 htmlbuf << htmlwidgets.Message('This is a test')
-htmlbuf << htmlwidgets.RoundBox('<p>This is a test</p>')
+htmlbuf << htmlwidgets.RoundBox()
 }}
+<div style="width:400px;">
+  <div class="boxes">
+    <p>This is a test</p>
+  </div>
+</div>
 </body>
 </html>

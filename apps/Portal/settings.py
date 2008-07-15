@@ -93,14 +93,19 @@ def before_render_template(sender, env, out):
 @plugin('after_render_template')
 def after_render_template(sender, text, vars, env):
     import re
+    r_links = re.compile('<link\s.*?\shref\s*=\s*"?(.*?)["\s>]|<script\s.*?\ssrc\s*=\s*"?(.*?)["\s>]', re.I)
     if 'htmlbuf' in env:
         htmlbuf = env['htmlbuf']
-        t = htmlbuf.render()
-        if t:
+        if not htmlbuf.empty:
             b = re.search('(?i)</head>', text)
             if b:
                 pos = b.start()
-                return ''.join([text[:pos], t, text[pos:]])
+                #find links
+                links = [x or y for x, y in r_links.findall(text[:pos])]
+                htmlbuf.remove_links(links)
+                t = htmlbuf.render()
+                if t:
+                    return ''.join([text[:pos], t, text[pos:]])
             else:
                 return t+text
     return text
