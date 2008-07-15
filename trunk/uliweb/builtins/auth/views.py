@@ -41,7 +41,7 @@ def register():
                 data = d
                 
         message = "There was something wrong! Please fix them."
-        return {'form':form.html(request.params, data, py=False), 'message':message}
+        return {'form':form.html(request.params, data, py=False), 'message':message, 'message_type':'error'}
         
 @expose('/logout')
 def logout():

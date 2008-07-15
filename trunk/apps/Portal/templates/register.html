@@ -1,3 +1,5 @@
 {{extend "layout.html"}}
-<p class="error">{{=message}}</p>
+{{ if message:
+    htmlbuf << htmlwidgets.Message(message, message_type)
+pass}}
 {{Xml(form)}}

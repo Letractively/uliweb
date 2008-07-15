@@ -1,7 +1,6 @@
 {{extend "layout.html"}}
-{{from uliweb.helpers import htmlwidgets}}
 {{ if message:
-Xml(htmlwidgets.message(message, message_type))
+    htmlbuf << htmlwidgets.Message(message, message_type)
 pass}}
 <div id="login-form">
 {{Xml(form)}}

@@ -34,12 +34,3 @@ class RoundBox(Snippet):
 	$('.boxes').boxes();
 });"""
     
-    def __init__(self, content):
-        self.content = content
-        
-    def render(self):
-        return """<div class="boxes">
-%s
-</div> 
-""" % self.content
-        
