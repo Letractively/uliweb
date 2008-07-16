@@ -14,5 +14,12 @@ htmlbuf << htmlwidgets.RoundBox()
     <p>This is a test</p>
   </div>
 </div>
+{{
+htmlbuf << htmlwidgets.NiceEditor(id='area1')
+}}
+<div>
+<h4>First Textarea</h4>
+<textarea id="area1" cols="60" rows="10"></textarea>
+</div>
 </body>
 </html>

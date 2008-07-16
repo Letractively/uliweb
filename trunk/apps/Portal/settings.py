@@ -96,7 +96,7 @@ def after_render_template(sender, text, vars, env):
     r_links = re.compile('<link\s.*?\shref\s*=\s*"?(.*?)["\s>]|<script\s.*?\ssrc\s*=\s*"?(.*?)["\s>]', re.I)
     if 'htmlbuf' in env:
         htmlbuf = env['htmlbuf']
-        if not htmlbuf.empty:
+        if htmlbuf.modified:
             b = re.search('(?i)</head>', text)
             if b:
                 pos = b.start()
