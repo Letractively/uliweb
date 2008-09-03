@@ -20,7 +20,7 @@ You should test your project code under GAE SDK development environment first.
 
    ::
 
-        python uliweb.py export -n "C:\Program Files\Google\google_appengine\myproject"
+        python manage.py export -n "C:\Program Files\Google\google_appengine\myproject"
         
    I used ``-n`` option above, because you can't use Uliorm(Uliweb ORM module) 
    on GAE now, so let's don't export it. You should notice that the target
