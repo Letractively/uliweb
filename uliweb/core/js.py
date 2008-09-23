@@ -1,6 +1,6 @@
 __all__ = ['dumps', 'C', 'U', 'Buf', 'S', 'Call', 'Function', 'HtmlBuf', 'Line',
     'LinkBuf', 'ScriptLink', 'CssLink', 'Script', 'Style', 'New', 'OnReady', 
-    'Quote', 'Var', 'Snipet']
+    'Quote', 'Var', 'Snippet']
 
 import os
 import simplejson as sj
