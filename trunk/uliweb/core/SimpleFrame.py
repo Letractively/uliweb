@@ -344,10 +344,17 @@ class Dispatcher(object):
         return response
     
     def get_template_env(self, env=None):
-        e = self.template_env.copy()
+        e = Storage(self.template_env.copy())
         if env:
             e.update(env)
         return e
+    
+    def get_execute_env(self, env=None):
+        e = Storage(self.env.copy())
+        if env:
+            e.update(env)
+        return e
+    
     
     def call_endpoint(self, mod, handler, request, response=None, **values):
         #if there is __begin__ then invoke it, if __begin__ return None, it'll
@@ -394,7 +401,7 @@ class Dispatcher(object):
         for k, v in local_env.iteritems():
             handler.func_globals[k] = v
         
-        env = self.get_template_env(local_env)
+        env = self.get_execute_env(local_env)
         handler.func_globals['env'] = env
         
         result = handler(**values)
