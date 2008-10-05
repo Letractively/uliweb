@@ -308,6 +308,7 @@ Open ``views.py`` in ``GuestBook`` directory, and add displaying comments code:
 
 .. code:: python
 
+    @expose('/guestbook')
     def guestbook():
         from models import Note
         from sqlalchemy import desc

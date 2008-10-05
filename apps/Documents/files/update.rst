@@ -10,7 +10,7 @@ working directory, you can do it by running manage.py command tool, for example:
 
 ::
 
-    python manage.py export [-e] [-n] outputdir
+    python manage.py export [-e] outputdir
     
     -e
         Completely sync operation. It'll delete the old version of Uliweb in 
