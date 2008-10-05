@@ -22,8 +22,7 @@ GAE是Google提供的一个web运行环境，因此你首先要申请到一个�
 
         python manage.py export "C:\Program Files\Google\google_appengine\myproject"
         
-   上面使用了-n是因为目前还无法直接在GAE上使用Uliweb自带的ORM，因此不进行导入。注意目标
-   目录名使用了双引号，因为目录中有空格。这样完整的Uliweb开发环境就安装好了。
+   注意目标目录名使用了双引号，因为目录中有空格。这样完整的Uliweb开发环境就安装好了。
 
 #. 修改app.yaml文件，其中application对应的名字应该与你申请的名字相同，如myproject。
 #. 进行你的开发。可以先使用Uliweb的开发服务器，然后再最后切换到GAE的开发服务器下进行测试。
@@ -143,7 +142,6 @@ FastCGI
 ~~~~~~~~~
 
 #. 安装python, 参考http://wiki.dreamhost.com/Python
-#. 安装ulipad
 #. 新建dispatch.fcgi,内容：
    ::
    

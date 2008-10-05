@@ -22,10 +22,9 @@ You should test your project code under GAE SDK development environment first.
 
         python manage.py export "C:\Program Files\Google\google_appengine\myproject"
         
-   I used ``-n`` option above, because you can't use Uliorm(Uliweb ORM module) 
-   on GAE now, so let's don't export it. You should notice that the target
-   directory is quoted by double-quotors, that's because there is space character
-   in the directory. So when you finish it, the development directory is ready.
+   You should notice that the target directory is quoted by double-quotors,
+   that's because there is space character in the directory. So when you
+   finish it, the development directory is ready.
 
 #. Modify ``app.yaml`` file, change the value of ``application`` to your project name, 
    for example: ``myproject``.

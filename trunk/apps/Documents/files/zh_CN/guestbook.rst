@@ -278,6 +278,7 @@ Uliweb已经提供了静态文件的支持，因此一种方式你直接使用Ul
 
 .. code:: python
 
+    @expose('/guestbook')
     def guestbook():
         from models import Note
         from sqlalchemy import desc

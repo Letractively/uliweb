@@ -11,7 +11,7 @@
 
 ::
 
-    python manage.py export [-e] [-n] outputdir
+    python manage.py export [-e] outputdir
     
     -e
         完全同步操作。使用它将删除目标目录下原有的版本，然后再进行拷贝。
