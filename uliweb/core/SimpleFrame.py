@@ -140,6 +140,8 @@ def get_app_dir(app):
             m = __import__(app, {}, {}, [''])
             path = os.path.dirname(m.__file__)
         except ImportError:
+            import traceback
+            traceback.print_exc()
             path = ''
         __app_dirs[app] = path
         return path

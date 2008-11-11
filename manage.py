@@ -1,31 +1,22 @@
 #!/usr/bin/env python
 import sys, os
 
-path = os.path.dirname(__file__)
-sys.path.insert(0, path)
-sys.path.insert(0, os.path.join(path, 'apps'))
-sys.path.insert(0, os.path.join(path, 'lib'))
+config = None
+apps_dir = 'apps'
+
+workpath = os.path.dirname(__file__)
+sys.path.insert(0, workpath)
+sys.path.insert(0, os.path.join(workpath, 'lib'))
 #sys.path.insert(0, os.path.join(path, 'uliweb'))
 
 from werkzeug import script
 from uliweb.core import SimpleFrame
-try:
-    import config
-except:
-    config = None
-    
-if config:
-    apps_dir = config.APPS_DIR
-else:
-    apps_dir = 'apps'
-    
-apps_dir = os.path.join(path, apps_dir)
 
-def make_application(debug=None):
+def make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir)
     debug_flag = app.settings.DEBUG
-    if hasattr(config, 'WSGI'):
-        for p in config.WSGI:
+    if wrap_wsgi:
+        for p in wrap_wsgi:
             modname, clsname = p.rsplit('.', 1)
             mod = __import__(modname, {}, {}, [''])
             c = getattr(mod, clsname)
@@ -33,9 +24,15 @@ def make_application(debug=None):
 #    from uliweb.wsgi.profile import ProfileApplication
 #    application = ProfileApplication(app)
     if debug or (debug is None and debug_flag):
+        print ' * Loading DebuggedApplication...'
         from werkzeug.debug import DebuggedApplication
         application = DebuggedApplication(application)
     return application
+
+def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
+    def action():
+        return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi)
+    return action
 
 def make_app(appname=''):
     """create a new app according the appname parameter"""
@@ -176,7 +173,7 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
         sys.stderr.write("Error: outputdir should be a directory and can't be empty")
         sys.exit(0)
 
-    application = make_application(False)
+    application = make_application(False, apps_dir)
     apps = application.apps
     dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in apps]
     _copy_dir2(dirs, outputdir, verbose, check)
@@ -210,7 +207,7 @@ def extracturls(urlfile='urls.py'):
 #    application = make_app()
 #    return locals()
 
-def collcet_commands(apps_dir='apps'):
+def collcet_commands():
     def get_apps():
         try:
             import settings
@@ -241,8 +238,47 @@ def collcet_commands(apps_dir='apps'):
                 globals()[t] = getattr(mod, t)
     
 if __name__ == '__main__':
-    action_runserver = script.make_runserver(make_application, port=8000,
-                   use_reloader=True, use_debugger=True)
+    #process global parameters: -c configfile
+    config_file = None
+    s = os.path.basename(sys.argv[0])
+    prompt = """usage: %s [-c config_file] <action> [<options>]
+       %s --help""" % (s, s)
+
+    args = None
+    if sys.argv[1] == '-c':
+        args = sys.argv[3:]
+        try:
+            config_file = sys.argv[2]
+            try:
+                config = __import__(config_file)
+                if hasattr(config, 'APPS_DIR'):
+                    apps_dir = config.APPS_DIR
+                else:
+                    apps_dir = 'apps'
+                apps_dir = os.path.join(workpath, apps_dir)
+                sys.path.insert(0, os.path.join(workpath, apps_dir))
+                
+            except:
+                import traceback
+                traceback.print_exc()
+                config = None
+                
+        except:
+            import traceback
+            traceback.print_exc()
+            args = ['-h']
+    else:
+        sys.path.insert(0, os.path.join(workpath, apps_dir))
+        
+    print ' * APPS_DIR =',  apps_dir
+    
+    if hasattr(config, 'WSGI'):
+        wsgi = config.WSGI
+    else:
+        wsgi = None
+    
+    action_runserver = script.make_runserver(_make_application(None, apps_dir, wsgi), 
+        port=8000, use_reloader=True, use_debugger=True)
     action_makeapp = make_app
     action_export = export
     action_exportstatic = exportstatic
@@ -255,4 +291,4 @@ if __name__ == '__main__':
     #process app's commands.py
     collcet_commands()
 
-    script.run()
+    script.run(args=args, prompt=prompt)

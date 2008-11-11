@@ -1,1 +1,1 @@
-WSGI = ['uliweb.wsgi.profile.ProfileApplication']
+#WSGI = ['uliweb.wsgi.profile.ProfileApplication']
