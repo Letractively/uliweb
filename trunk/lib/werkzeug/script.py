@@ -90,7 +90,7 @@ converters = {
 }
 
 
-def run(namespace=None, action_prefix='action_', args=None):
+def run(namespace=None, action_prefix='action_', args=None, prompt=None):
     """Run the script.  Participating actions are looked up in the callers
     namespace if no namespace is given, otherwise in the dict provided.
     Only items that start with action_prefix are processed as actions.  If
@@ -103,7 +103,7 @@ def run(namespace=None, action_prefix='action_', args=None):
     if args is None:
         args = sys.argv[1:]
     if not args or args[0] in ('-h', '--help'):
-        return print_usage(actions)
+        return print_usage(actions, prompt=prompt)
     elif args[0] not in actions:
         fail('Unknown action \'%s\'' % args[0])
 
@@ -179,12 +179,15 @@ def find_actions(namespace, action_prefix):
     return actions
 
 
-def print_usage(actions):
+def print_usage(actions, prompt=None):
     """Print the usage information.  (Help screen)"""
     actions = actions.items()
     actions.sort()
-    print 'usage: %s <action> [<options>]' % basename(sys.argv[0])
-    print '       %s --help' % basename(sys.argv[0])
+    if not prompt:
+        print 'usage: %s <action> [<options>]' % basename(sys.argv[0])
+        print '       %s --help' % basename(sys.argv[0])
+    else:
+        print prompt
     print
     print 'actions:'
     for name, (func, doc, arguments) in actions:
