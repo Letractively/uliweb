@@ -58,5 +58,9 @@
     <td class="title"><a href="{{= url_for('%s.views.examples_htmlhelper' % request.appname) }}">{{= _('Test html helper')}}</a></td>
     <td class="description">{{= _('This example will test the htmlhelper.')}}</td>
   </tr>
+  <tr class="{{=cycle.next()}}">
+    <td class="title"><a href="{{= url_for('%s.views.examples_jxlib' % request.appname) }}">{{= _('Test jxlib - a ui lib of mootools')}}</a></td>
+    <td class="description">{{= _('This example will test the jxlib.')}}</td>
+  </tr>
 </tbody>
 </table>
