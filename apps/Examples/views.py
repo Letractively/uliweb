@@ -87,3 +87,7 @@ def examples_session():
 @expose
 def examples_htmlhelper():
     return {}
+
+@expose
+def examples_jxlib():
+    return {}
