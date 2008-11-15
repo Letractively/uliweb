@@ -84,7 +84,7 @@ def startup(sender):
 def before_render_template(sender, env, out):
     from uliweb.core import js
     from uliweb.core.SimpleFrame import url_for
-    from uliweb.helpers import htmlwidgets
+    from helpers import htmlwidgets
     
     htmlbuf = js.HtmlBuf(write=out.noescape, static_suffix=url_for('Portal.views.static', filename=''))
     env['htmlbuf'] = htmlbuf
