@@ -1,8 +1,11 @@
 import uliweb.core.js as js
 
+class Mootools(js.Snippet):
+    jslink = ['mootools/mootools.js']
+    
 class JxLib(js.Snippet):
-    jslink = ['jxlib/jxlib.js']
-    _csslink = 'jxlib/themes/%s/jxtheme.css'
+    jslink = ['mootools/mootools.js', 'mootools/jxlib/jxlib.standalone.js']
+    _csslink = 'mootools/jxlib/themes/%s/jxtheme.css'
     
     def __init__(self, theme='crispin'):
         if theme not in ['crispin', 'delicious']:
