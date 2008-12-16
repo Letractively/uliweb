@@ -6,6 +6,8 @@
 </head>
 <body>
 {{
+from contrib.helpers import htmlwidgets
+
 htmlbuf << htmlwidgets.Message('This is a test')
 htmlbuf << htmlwidgets.RoundBox()
 }}
