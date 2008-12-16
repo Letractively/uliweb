@@ -147,7 +147,7 @@ Features
 Goals
 ----------
 
-* Developing a simple and easy use framework.
+* Developing a simple and easy to use framework.
 * Flexiable enought and easy to extend.
 * Including enough example code.
 * Writing clear and easy understand documents.
