@@ -98,17 +98,16 @@ def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appnam
         os.makedirs(outputdir)
         
     if appname:
-        outdir = os.path.join(outputdir, 'apps')
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
+        if not os.path.exists(outputdir):
+            os.makedirs(outputdir)
             
-        for f in (os.path.join(outdir, x) for x in ['settings.py', '__init__.py']):
+        for f in (os.path.join(outputdir, x) for x in ['settings.py', '__init__.py']):
             if not os.path.exists(f):
                 fp = file(f, 'wb')
                 fp.close()
         
         dirs = [SimpleFrame.get_app_dir(appname)]
-        _copy_dir(dirs, outdir, verbose, exact)
+        _copy_dir(dirs, outputdir, verbose, exact)
         
     else:
         #copy files
@@ -241,11 +240,11 @@ if __name__ == '__main__':
     #process global parameters: -c configfile
     config_file = None
     s = os.path.basename(sys.argv[0])
-    prompt = """usage: %s [-c config_file] <action> [<options>]
+    prompt = """usage: %s [-c config_file] [-d project_directory] <action> [<options>]
        %s --help""" % (s, s)
 
     args = None
-    if sys.argv[1] == '-c':
+    if len(sys.argv) > 2 and sys.argv[1] == '-c':
         args = sys.argv[3:]
         try:
             config_file = sys.argv[2]
@@ -256,6 +255,9 @@ if __name__ == '__main__':
                 else:
                     apps_dir = 'apps'
                 apps_dir = os.path.join(workpath, apps_dir)
+                if not os.path.exists(apps_dir):
+                    print ' Error: the project directory [%s] is not existed' % apps_dir
+                    sys.exit(1)
                 sys.path.insert(0, os.path.join(workpath, apps_dir))
                 
             except:
@@ -267,7 +269,23 @@ if __name__ == '__main__':
             import traceback
             traceback.print_exc()
             args = ['-h']
+    elif len(sys.argv) > 2 and sys.argv[1] == '-d':
+        args = sys.argv[3:]
+        try:
+            apps_dir = sys.argv[2]
+            if not os.path.exists(apps_dir):
+                print ' Error: the project directory [%s] is not existed' % apps_dir
+                sys.exit(1)
+            sys.path.insert(0, os.path.join(workpath, apps_dir))
+        except:
+            import traceback
+            traceback.print_exc()
+            args = ['-h']
+            
     else:
+        if not os.path.exists(apps_dir):
+            print ' Error: the project directory [%s] is not existed' % apps_dir
+            sys.exit(1)
         sys.path.insert(0, os.path.join(workpath, apps_dir))
         
     print ' * APPS_DIR =',  apps_dir
