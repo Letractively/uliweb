@@ -1,14 +1,14 @@
-def before_render_template(env, writer, static_suffix, **widgets):
+from uliweb.core.plugin import plugin
+
+@plugin('before_render_template')
+def before_render_template(sender, env, out):
     from uliweb.core import js
-    from uliweb.core.SimpleFrame import url_for
-    import htmlwidgets
-
-    htmlbuf = js.HtmlBuf(write=writer, static_suffix=static_suffix)
+    
+    htmlbuf = js.HtmlBuf(write=out.noescape, static_suffix=sender.settings.get('STATIC_SUFFIX', '/static/'))
     env['htmlbuf'] = htmlbuf
-    for k, v in widgets.items():
-        env[k] = v
-
-def after_render_template(text, vars, env):
+    
+@plugin('after_render_template')
+def after_render_template(sender, text, vars, env):
     import re
     r_links = re.compile('<link\s.*?\shref\s*=\s*"?(.*?)["\s>]|<script\s.*?\ssrc\s*=\s*"?(.*?)["\s>]', re.I)
     if 'htmlbuf' in env:
