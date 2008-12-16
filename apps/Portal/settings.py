@@ -82,15 +82,15 @@ def startup(sender):
 ##################################################
 @plugin('before_render_template')
 def before_render_template(sender, env, out):
-    import helpers
+    import contrib.helpers as helpers
     from uliweb.core.SimpleFrame import url_for
-    from helpers import htmlwidgets
+    from contrib.helpers import htmlwidgets
     
     helpers.before_render_template(env, out.noescape, url_for('Portal.views.static', filename=''), 
         htmlwidgets=htmlwidgets)
     
 @plugin('after_render_template')
 def after_render_template(sender, text, vars, env):
-    import helpers
+    import contrib.helpers as helpers
     
     return helpers.after_render_template(text, vars, env)

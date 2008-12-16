@@ -1,7 +1,7 @@
 def before_render_template(env, writer, static_suffix, **widgets):
     from uliweb.core import js
     from uliweb.core.SimpleFrame import url_for
-    from helpers import htmlwidgets
+    import htmlwidgets
 
     htmlbuf = js.HtmlBuf(write=writer, static_suffix=static_suffix)
     env['htmlbuf'] = htmlbuf

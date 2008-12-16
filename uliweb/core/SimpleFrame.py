@@ -417,7 +417,7 @@ class Dispatcher(object):
         modules = {}
         views = set()
         settings = []
-        settings_files = ['.'.join([os.path.basename(self.apps_dir), 'settings']) for x in ['.py', '.pyc', '.pyo']
+        settings_files = ['settings' for x in ['.py', '.pyc', '.pyo']
             if os.path.exists(os.path.join(self.apps_dir, 'settings%s' % x))]
         if settings_files:
             settings.append(settings_files[0])
