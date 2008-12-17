@@ -13,10 +13,10 @@ from webob import Request, Response
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
 
-from uliweb.core.rules import Mapping, add_rule
-from uliweb.core import template
-from uliweb.core.storage import Storage
-from uliweb.core.plugin import *
+from rules import Mapping, add_rule
+import template
+from storage import Storage
+from plugin import *
 
 APPS_DIR = 'apps'
 
@@ -558,6 +558,8 @@ class Dispatcher(object):
             #endif
             
         except HTTPError, e:
+            import traceback
+            traceback.print_exc()
             response = self.render(e.errorpage, Storage(e.errors), request=req)
         except NotFound, e:
             response = self.not_found(req, e)

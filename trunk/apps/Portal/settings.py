@@ -12,9 +12,9 @@ LANGUAGES = {
 MIDDLEWARE_CLASSES = (
     'uliweb.orm.middle_transaction.TransactionMiddle',
     'uliweb.i18n.middle_i18n.I18nMiddle',
-    'uliweb.builtins.cache.middle_cache.CacheMiddle',
-    'uliweb.builtins.session.middle_session.SessionMiddle',
-    'uliweb.builtins.auth.middle_auth.AuthMiddle',
+    'uliweb.contrib.cache.middle_cache.CacheMiddle',
+    'uliweb.contrib.session.middle_session.SessionMiddle',
+    'uliweb.contrib.auth.middle_auth.AuthMiddle',
 )
 
 USE_TEMPLATE_TEMP_DIR = True

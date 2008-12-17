@@ -5,9 +5,7 @@ config = None
 apps_dir = 'apps'
 
 workpath = os.path.dirname(__file__)
-sys.path.insert(0, workpath)
 sys.path.insert(0, os.path.join(workpath, 'lib'))
-#sys.path.insert(0, os.path.join(path, 'uliweb'))
 
 from werkzeug import script
 from uliweb.core import SimpleFrame
@@ -245,39 +243,14 @@ def main():
        %s --help""" % (s, s)
 
     args = None
-    if len(sys.argv) > 2 and sys.argv[1] == '-c':
-        args = sys.argv[3:]
-        try:
-            config_file = sys.argv[2]
-            try:
-                config = __import__(config_file)
-                if hasattr(config, 'APPS_DIR'):
-                    apps_dir = config.APPS_DIR
-                else:
-                    apps_dir = 'apps'
-                apps_dir = os.path.join(workpath, apps_dir)
-                if not os.path.exists(apps_dir):
-                    print ' Error: the project directory [%s] is not existed' % apps_dir
-                    sys.exit(1)
-                sys.path.insert(0, os.path.join(workpath, apps_dir))
-                
-            except:
-                import traceback
-                traceback.print_exc()
-                config = None
-                
-        except:
-            import traceback
-            traceback.print_exc()
-            args = ['-h']
-    elif len(sys.argv) > 2 and sys.argv[1] == '-d':
+    if len(sys.argv) > 2 and sys.argv[1] == '-d':
         args = sys.argv[3:]
         try:
             apps_dir = sys.argv[2]
             if not os.path.exists(apps_dir):
                 print ' Error: the project directory [%s] is not existed' % apps_dir
                 sys.exit(1)
-            sys.path.insert(0, os.path.join(workpath, apps_dir))
+            sys.path.insert(0, os.path.join(apps_dir))
         except:
             import traceback
             traceback.print_exc()
@@ -287,7 +260,7 @@ def main():
         if not os.path.exists(apps_dir):
             print ' Error: the project directory [%s] is not existed' % apps_dir
             sys.exit(1)
-        sys.path.insert(0, os.path.join(workpath, apps_dir))
+        sys.path.insert(0, os.path.join(apps_dir))
         
     print ' * APPS_DIR =',  apps_dir
     

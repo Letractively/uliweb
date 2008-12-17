@@ -2,7 +2,7 @@ from uliweb.core.SimpleFrame import expose
 
 @expose('/login')
 def login():
-    from uliweb.builtins.auth import authenticate, login
+    from uliweb.contrib.auth import authenticate, login
     from forms import LoginForm
     
     form = LoginForm()
@@ -23,7 +23,7 @@ def login():
 
 @expose('/register')
 def register():
-    from uliweb.builtins.auth import create_user, logined
+    from uliweb.contrib.auth import create_user, logined
     from forms import RegisterForm
     
     form = RegisterForm()
@@ -45,7 +45,7 @@ def register():
         
 @expose('/logout')
 def logout():
-    from uliweb.builtins.auth import logout
+    from uliweb.contrib.auth import logout
     logout(request)
     return redirect('/')
     
