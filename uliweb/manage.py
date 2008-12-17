@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import sys, os
 
-config = None
 apps_dir = 'apps'
 
 workpath = os.path.dirname(__file__)
@@ -235,12 +234,10 @@ def collcet_commands():
                 globals()[t] = getattr(mod, t)
 
 def main():
-    global config, apps_dir
-    #process global parameters: -c configfile
-    config_file = None
+    global apps_dir
     s = os.path.basename(sys.argv[0])
-    prompt = """usage: %s [-c config_file] [-d project_directory] <action> [<options>]
-       %s --help""" % (s, s)
+    prompt = """usage: %s [-d project_directory] <action> [<options>]
+       %s --help""" % ('uliweb', 'uliweb')
 
     args = None
     if len(sys.argv) > 2 and sys.argv[1] == '-d':
@@ -264,18 +261,11 @@ def main():
         
     print ' * APPS_DIR =',  apps_dir
     
-    if hasattr(config, 'WSGI'):
-        wsgi = config.WSGI
-    else:
-        wsgi = None
-    
-    action_runserver = script.make_runserver(_make_application(None, apps_dir, wsgi), 
+    action_runserver = script.make_runserver(_make_application(None, apps_dir), 
         port=8000, use_reloader=True, use_debugger=True)
     action_makeapp = make_app
     action_export = export
     action_exportstatic = exportstatic
-    #action_shell = script.make_shell(make_shell)
-    #action_initdb = lambda: make_app().init_database()
     from uliweb.i18n.i18ntool import make_extract
     action_i18n = make_extract('apps')
     action_extracturls = extracturls

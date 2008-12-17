@@ -1,7 +1,5 @@
 import uliweb
 from setuptools import setup, find_packages
-import sys, os
-from distutils import log
 
 setup(name='uliweb',
       version=uliweb.version,
