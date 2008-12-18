@@ -5,7 +5,7 @@
 
 #defautl global settings
 
-__all__ = ['expose', 'Dispatcher', 'url_for', 'get_app_dir', 'redirect']
+__all__ = ['expose', 'Dispatcher', 'url_for', 'get_app_dir', 'redirect', 'static_serve']
 
 import os, cgi
 from webob import Request, Response
@@ -17,6 +17,7 @@ from rules import Mapping, add_rule
 import template
 from storage import Storage
 from plugin import *
+import pkg_resources as pkg
 
 APPS_DIR = 'apps'
 
@@ -114,19 +115,28 @@ def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
     raise HTTPError(errorpage, **kwargs)
 
 def static_serve(request, filename, check=True, dir=None):
-    for p in request.application.apps:
-        if not dir:
-            path = os.path.normpath(os.path.join(get_app_dir(p), 'static')).replace('\\', '/')
-        else:
-            path = dir
-        f = os.path.normpath(os.path.join(path, filename)).replace('\\', '/')
-        if check and not f.startswith(path):
+    f = None
+    if dir:
+        fname = os.path.normpath(os.path.join(dir, filename)).replace('\\', '/')
+        if check and not fname.startswith(dir):
             errorpage("You can only visit the files under static directory.")
-        if os.path.exists(f):
-            from uliweb.core.FileApp import return_file
-            return return_file(f)
+        if os.path.exists(fname):
+            f = fname
+    else:
+        for p in request.application.apps:
+            fname = os.path.normpath(os.path.join('static', filename)).replace('\\', '/')
+            if check and not fname.startswith('static/'):
+                errorpage("You can only visit the files under static directory.")
+            
+            ff = pkg.resource_filename(p, fname)
+            if os.path.exists(ff):
+                f = ff
+                break
+    if f:
+        from uliweb.core.FileApp import return_file
+        return return_file(f)
+    
     raise NotFound("Can't found the file %s" % filename)
-
 
 def get_app_dir(app):
     """
@@ -137,8 +147,7 @@ def get_app_dir(app):
         return path
     else:
         try:
-            m = __import__(app, {}, {}, [''])
-            path = os.path.dirname(m.__file__)
+            path = pkg.resource_filename(app, '')
         except ImportError:
             import traceback
             traceback.print_exc()
@@ -257,11 +266,12 @@ class Dispatcher(object):
         if os.path.exists(filename):
             return filename
         if request:
-            dirs = [os.path.join(get_app_dir(x), dirname) for x in [request.appname] + self.apps]
+            dirs = [request.appname] + self.apps
         else:
-            dirs = [os.path.join(get_app_dir(x), dirname) for x in self.apps]
+            dirs = self.apps
+        fname = os.path.join(dirname, filename)
         for d in dirs:
-            path = os.path.join(d, filename)
+            path = pkg.resource_filename(d, fname)
             if os.path.exists(path):
                 return path
         return None
