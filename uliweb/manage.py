@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys, os
-
+        
 apps_dir = 'apps'
 
 workpath = os.path.dirname(__file__)
@@ -39,7 +39,7 @@ def make_app(appname=''):
         if not os.path.exists(d):
             os.makedirs(d)
 
-    for f in (os.path.join(path, x) for x in ['../settings.py', '../__init__.py', '__init__.py', 'settings.py', 'views.py']):
+    for f in (os.path.join(path, x) for x in ['../settings.py', '../__init__.py', '__init__.py', 'views.py']):
         if not os.path.exists(f):
             fp = file(f, 'wb')
             if f.endswith('views.py'):
@@ -52,40 +52,25 @@ def make_app(appname=''):
                 print >>fp, "DEBUG = True"
             fp.close()
 
-#copy dirs
-def _copy_dir(d, dst, verbose, exact=False):
-    import shutil
-
-    for f in d:
-        if not os.path.exists(f):
-            if verbose:
-                sys.stderr.write("Warn : %s does not exist, SKIP\n" % f)
-            continue
-        dd = os.path.join(dst, os.path.basename(f))
-        if exact:
-            shutil.rmtree(dd, True)
-        if not os.path.exists(dd):
-            os.makedirs(dd)
-        for r in os.listdir(f):
-            if r in ['.svn', '_svn']:
-                continue
-            fpath = os.path.join(f, r)
-            if os.path.isdir(fpath):
-                _copy_dir([fpath], dd, verbose)
-            else:
-                ext = os.path.splitext(fpath)[1]
-                if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
-                    continue
-                if verbose:
-                    sys.stdout.write("Info : Copying %s to %s...\n" % (fpath, dd))
-                shutil.copy2(fpath, dd)
-            
-            
+def make_project(project_name='', verbose=('v', False)):
+    """create a new project directory according the project name"""
+    from uliweb.utils.common import extract_dirs
+    
+    if os.path.exists(project_name):
+        ans = '-1'
+        while ans not in ('y', 'n'):
+            ans = raw_input('The project directory has been existed, do you want to overwrite it?(y/n)[n]')
+            if not ans:
+                ans = 'n'
+    if ans == 'y':
+        extract_dirs('uliweb', 'project', project_name)
+    
 def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appname=('a', '')):
     """
     Export Uliweb to a directory.
     """
     import shutil
+    from uliweb.utils.common import copy_dir
     
     if not outputdir:
         sys.stderr.write("Error: outputdir should be a directory and can't be empty")
@@ -104,11 +89,11 @@ def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appnam
                 fp.close()
         
         dirs = [SimpleFrame.get_app_dir(appname)]
-        _copy_dir(dirs, outputdir, verbose, exact)
+        copy_dir(dirs, outputdir, verbose, exact)
         
     else:
         #copy files
-        for f in ['app.yaml', 'gae_handler.py', 'manage.py', 'wsgi_handler.wsgi', 'runcgi.py', 'COPYLEFT.txt']:
+        for f in ['app.yaml', 'gae_handler.py', 'wsgi_handler.wsgi', 'runcgi.py']:
             path = os.path.join(outputdir, f)
             if f == 'app.yaml':
                 if not os.path.exists(path):
@@ -116,55 +101,15 @@ def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appnam
             else:
                 shutil.copy2(f, path)
             
-        dirs = ['uliweb', 'lib']
-        _copy_dir(dirs, outputdir, verbose, exact)
+        dirs = ['uliweb']
+        copy_dir(dirs, outputdir, verbose, exact)
         
-def _copy_dir2(d, dst, verbose=False, check=True):
-    import shutil
-    
-    def _md5(filename):
-        import md5
-        a = md5.new()
-        a.update(file(filename, 'rb').read())
-        return a.digest()
-
-    for f in d:
-        if not os.path.exists(f):
-            if verbose:
-                sys.stderr.write("Warn : %s does not exist, SKIP\n" % f)
-            continue
-        if verbose:
-            sys.stdout.write("Info : Processing %s...\n" % f)
-        for r in os.listdir(f):
-            if r in ['.svn', '_svn']:
-                continue
-            fpath = os.path.join(f, r)
-            if os.path.isdir(fpath):
-                dd = os.path.join(dst, r)
-                if not os.path.exists(dd):
-                    os.makedirs(dd)
-                _copy_dir([fpath], dd, verbose, check)
-            else:
-                ext = os.path.splitext(fpath)[1]
-                if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
-                    continue
-                if check:
-                    df = os.path.join(dst, r)
-                    if os.path.exists(df):
-                        a = _md5(fpath)
-                        b = _md5(df)
-                        if a != b:
-                            sys.stderr.write("Error: Target file [%s] is already existed, and "
-                                "it not same as source one [%s], so copy failed" % (fpath, dst))
-                    else:
-                        shutil.copy2(fpath, dst)
-                else:
-                    shutil.copy2(fpath, dst)
-
 def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     """
     Export all installed apps' static directory to outputdir directory.
     """
+    from uliweb.utils.common import copy_dir_with_check
+
     if not outputdir:
         sys.stderr.write("Error: outputdir should be a directory and can't be empty")
         sys.exit(0)
@@ -172,7 +117,7 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     application = make_application(False, apps_dir)
     apps = application.apps
     dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in apps]
-    _copy_dir2(dirs, outputdir, verbose, check)
+    copy_dir_with_check(dirs, outputdir, verbose, check)
     
 def extracturls(urlfile='urls.py'):
     """
@@ -244,31 +189,28 @@ def main():
         args = sys.argv[3:]
         try:
             apps_dir = sys.argv[2]
-            if not os.path.exists(apps_dir):
-                print ' Error: the project directory [%s] is not existed' % apps_dir
-                sys.exit(1)
-            sys.path.insert(0, os.path.join(apps_dir))
+            if os.path.exists(apps_dir):
+                sys.path.insert(0, os.path.join(apps_dir))
         except:
             import traceback
             traceback.print_exc()
             args = ['-h']
             
     else:
-        if not os.path.exists(apps_dir):
-            print ' Error: the project directory [%s] is not existed' % apps_dir
-            sys.exit(1)
-        sys.path.insert(0, os.path.join(apps_dir))
+        if os.path.exists(apps_dir):
+            sys.path.insert(0, os.path.join(apps_dir))
         
     print ' * APPS_DIR =',  apps_dir
     
     action_runserver = script.make_runserver(_make_application(None, apps_dir), 
         port=8000, use_reloader=True, use_debugger=True)
     action_makeapp = make_app
-    action_export = export
+#    action_export = export
     action_exportstatic = exportstatic
     from uliweb.i18n.i18ntool import make_extract
     action_i18n = make_extract('apps')
     action_extracturls = extracturls
+    action_makeproject = make_project
     
     #process app's commands.py
     collcet_commands()

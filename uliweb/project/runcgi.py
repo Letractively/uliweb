@@ -7,7 +7,7 @@ Run uliweb with cgi / scgi / fastcgi!
 
 import os
 import sys
-import manage
+from uliweb import manage
 
 
 HELP_TEXT = r"""
