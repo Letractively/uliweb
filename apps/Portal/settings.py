@@ -10,14 +10,14 @@ LANGUAGES = {
 }
 
 MIDDLEWARE_CLASSES = (
-    'uliweb.orm.middle_transaction.TransactionMiddle',
+#    'uliweb.orm.middle_transaction.TransactionMiddle',
     'uliweb.i18n.middle_i18n.I18nMiddle',
-    'uliweb.contrib.cache.middle_cache.CacheMiddle',
-    'uliweb.contrib.session.middle_session.SessionMiddle',
-    'uliweb.contrib.auth.middle_auth.AuthMiddle',
+#    'uliweb.contrib.cache.middle_cache.CacheMiddle',
+#    'uliweb.contrib.session.middle_session.SessionMiddle',
+#    'uliweb.contrib.auth.middle_auth.AuthMiddle',
 )
 
-USE_TEMPLATE_TEMP_DIR = True
+USE_TEMPLATE_TEMP_DIR = False
 
 ##################################################
 # insert rst2html function to template environment

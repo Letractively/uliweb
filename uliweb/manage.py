@@ -10,6 +10,9 @@ from werkzeug import script
 from uliweb.core import SimpleFrame
 
 def make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
+    if apps_dir not in sys.path:
+        sys.path.insert(0, apps_dir)
+        
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir)
     debug_flag = app.settings.DEBUG
     if wrap_wsgi:
