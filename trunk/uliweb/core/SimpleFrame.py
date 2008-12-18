@@ -17,7 +17,7 @@ from rules import Mapping, add_rule
 import template
 from storage import Storage
 from plugin import *
-import pkg_resources as pkg
+from uliweb.utils.common import pkg
 
 APPS_DIR = 'apps'
 
@@ -527,6 +527,8 @@ class Dispatcher(object):
                     try:
                         cls = import_func(middleware)
                     except ImportError:
+                        import traceback
+                        traceback.print_exc()
                         errorpage("Can't import the middleware %s" % middleware)
                     _clses[middleware] = cls
                     if hasattr(cls, 'process_request'):

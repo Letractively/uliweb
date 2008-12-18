@@ -1,7 +1,7 @@
 import uliweb
 from setuptools import setup
 
-setup(name='uliweb',
+setup(name='Uliweb',
       version=uliweb.version,
       description="Easy python web framework",
       long_description=uliweb.__doc__,
@@ -15,7 +15,7 @@ setup(name='uliweb',
         "Operating System :: OS Independent",
       ],
       packages = ['uliweb'],
-      install_requires = ['WebOb', 'simplejson', 'SQLAlchemy', 'docutils', 'pygments', 'Beaker'],
+      install_requires = ['WebOb', 'simplejson', 'SQLAlchemy', 'docutils', 'pygments'],
       platforms = 'any',
       keywords='wsgi web framework',
       author=uliweb.author,

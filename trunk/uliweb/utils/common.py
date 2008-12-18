@@ -1,22 +1,46 @@
 import os
-import pkg_resources as pkg
+
+class MyPkg(object):
+    @staticmethod
+    def resource_filename(module, path):
+        mod = __import__(module)
+        p = os.path.dirname(mod.__file__)
+        if path:
+            return os.path.join(p, path)
+        else:
+            return p
+    
+    @staticmethod
+    def resource_listdir(module, path):
+        d = MyPkg.resource_filename(module, path)
+        return os.listdir(d)
+    
+    @staticmethod
+    def resource_isdir(module, path):
+        d = MyPkg.resource_filename(module, path)
+        return os.path.isdir(d)
+
+try:
+    import pkg_resources as pkg
+except:
+    pkg = MyPkg
 
 def extract_file(module, path, dist, verbose=False):
     outf = os.path.join(dist, os.path.basename(path))
-    d = pkg.get_distribution(module)
-    if d.has_metadata('zip-safe'):
-        f = open(outf, 'wb')
-        f.write(pkg.resource_string(module, path))
-        f.close()
-        if verbose:
-            print 'Info : Extract %s/%s to %s' % (module, path, outf)
-    else:
-        import shutil
+#    d = pkg.get_distribution(module)
+#    if d.has_metadata('zip-safe'):
+#        f = open(outf, 'wb')
+#        f.write(pkg.resource_string(module, path))
+#        f.close()
+#        if verbose:
+#            print 'Info : Extract %s/%s to %s' % (module, path, outf)
+#    else:
+    import shutil
 
-        inf = pkg.resource_filename(module, path)
-        shutil.copy2(inf, dist)
-        if verbose:
-            print 'Info : Copy [%s] to [%s]' % (inf, dist)
+    inf = pkg.resource_filename(module, path)
+    shutil.copy2(inf, dist)
+    if verbose:
+        print 'Info : Copy [%s] to [%s]' % (inf, dist)
   
 def extract_dirs(mod, path, dst, verbose=False):
     if not os.path.exists(dst):
