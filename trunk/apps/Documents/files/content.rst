@@ -17,7 +17,6 @@ pass
 Installation
 -------------------------
 
-* `Requirements <{{= index('requirements') }}>`_
 * `Install Uliweb <{{= index('installation') }}>`_
 * `How to update Uliweb to new version <{{= index('update') }}>`_
 * How to config Uliweb
