@@ -12,7 +12,7 @@ class SessionMiddle(Middleware):
             'key':'uliweb.session.id',
             'table_name':'uliweb_table'
         }
-        self.options = settings.get('SESSION_CONFIG', default)
+        self.options = settings.get('SESSION', default)
         default.update(self.options)
         self.options = default
         if isinstance(default['cookie_expires'], int):

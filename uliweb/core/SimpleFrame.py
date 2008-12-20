@@ -18,6 +18,7 @@ import template
 from storage import Storage
 from plugin import *
 from uliweb.utils.common import pkg
+from uliweb.utils.pyini import Ini
 
 APPS_DIR = 'apps'
 
@@ -91,7 +92,7 @@ def import_func(path):
 
 class HTTPError(Exception):
     def __init__(self, errorpage=None, **kwargs):
-        self.errorpage = errorpage or settings.ERROR_PAGE
+        self.errorpage = errorpage or settings.GLOBAL.ERROR_PAGE
         self.errors = kwargs
 
     def __str__(self):
@@ -222,7 +223,7 @@ class Dispatcher(object):
         Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.env = self._prepare_env()
         Dispatcher.settings = settings
-        self.debug = settings.get('DEBUG', False)
+        self.debug = settings.GLOBAL.get('DEBUG', False)
         Dispatcher.template_env = Storage(Dispatcher.env.copy())
         callplugin(self, 'prepare_default_env', Dispatcher.env)
         callplugin(self, 'prepare_template_env', Dispatcher.template_env)
@@ -247,9 +248,10 @@ class Dispatcher(object):
     
     def get_apps(self):
         try:
-            import settings
-            if hasattr(settings, 'INSTALLED_APPS'):
-                return getattr(settings, 'INSTALLED_APPS')
+            inifile = os.path.join(self.apps_dir, 'settings.ini')
+            x = Ini(inifile)
+            if x.GLOBAL.INSTALLED_APPS:
+                return x.GLOBAL.INSTALLED_APPS
         except ImportError:
             pass
         
@@ -338,7 +340,7 @@ class Dispatcher(object):
                 urls.append((r.rule, r.endpoint))
             urls.sort()
             return self._page_not_found(description=e.description, url=request.path, urls=urls)
-        tmp_file = template.get_templatefile('404'+settings.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('404'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
             response.status = '404'
@@ -347,7 +349,7 @@ class Dispatcher(object):
         return response
     
     def internal_error(self, request, e):
-        tmp_file = template.get_templatefile('500'+settings.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('500'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
             response.status = '500'
@@ -387,7 +389,7 @@ class Dispatcher(object):
             if hasattr(response, 'template') and response.template:
                 tmpfile = response.template
             else:
-                tmpfile = request.function + settings.TEMPLATE_SUFFIX
+                tmpfile = request.function + settings.GLOBAL.TEMPLATE_SUFFIX
             response = self.render(tmpfile, result, env=env, request=request)
         elif isinstance(result, (str, unicode)):
             response = Response(result, content_type='text/html')
@@ -427,10 +429,9 @@ class Dispatcher(object):
         modules = {}
         views = set()
         settings = []
-        settings_files = ['settings' for x in ['.py', '.pyc', '.pyo']
-            if os.path.exists(os.path.join(self.apps_dir, 'settings%s' % x))]
-        if settings_files:
-            settings.append(settings_files[0])
+        set_ini = os.path.join(self.apps_dir, 'settings.ini')
+        if os.path.exists(set_ini):
+            settings.append(set_ini)
         
         def enum_views(views_path, appname, subfolder=None, pattern=None):
             for f in os.listdir(views_path):
@@ -459,10 +460,9 @@ class Dispatcher(object):
                         enum_views(path, p, pattern='views*')
                 #deal with settings
                 if p in self.apps:
-                    settings_files = ['.'.join([p, 'settings']) for x in ['.py', '.pyc', '.pyo']
-                        if os.path.exists(os.path.join(get_app_dir(p), 'settings%s' % x))]
-                    if settings_files:
-                        settings.insert(0, settings_files[0])
+                    inifile =os.path.join(get_app_dir(p), 'settings.ini')
+                    if os.path.exists(inifile):
+                        settings.insert(0, inifile)
            
         modules['views'] = list(views)
         modules['settings'] = settings
@@ -474,16 +474,11 @@ class Dispatcher(object):
             
     def install_settings(self, s):
         global settings
-        s.insert(0, 'uliweb.core.default_config')
-        settings = Storage({})
+        inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
+        s.insert(0, inifile)
+        settings = Ini()
         for v in s:
-            mod = __import__(v, {}, {}, [''])
-            for k in dir(mod):
-                #if k is already exists in settings, then skip it
-                if k.startswith('_') or not k.isupper() or k in settings:
-                    pass
-                else:
-                    settings[k] = getattr(mod, k)
+            settings.read(v)
             
     def get_template_dirs(self):
         template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in self.apps]
@@ -519,7 +514,7 @@ class Dispatcher(object):
                 response = self.call_endpoint(mod, handler, req, res, **values)
             else:
                 #middleware process request
-                middlewares = settings.get('MIDDLEWARE_CLASSES', [])
+                middlewares = settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
                 response = None
                 _clses = {}
                 _inss = {}
