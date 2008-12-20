@@ -57,7 +57,7 @@ def examples_error():
     
 @expose
 def examples_print_settings():
-    return '<br/>'.join(["%s = %r" % (k,v) for k, v in settings.iteritems()])
+    return '<pre>' + str(settings) + '</pre>'
 
 @expose
 def examples_cookie():

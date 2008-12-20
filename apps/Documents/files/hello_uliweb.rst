@@ -52,7 +52,7 @@ you can find the following things in ``apps`` directory::
 
     apps/
       __init__.py
-      settings.py
+      settings.ini
       Hello/
         __init__.py
         views.py
