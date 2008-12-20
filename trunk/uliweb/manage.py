@@ -31,6 +31,8 @@ def make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
 
 def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
     def action():
+        print ' * APPS_DIR =',  apps_dir
+        
         return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi)
     return action
 
@@ -42,7 +44,7 @@ def make_app(appname=''):
         if not os.path.exists(d):
             os.makedirs(d)
 
-    for f in (os.path.join(path, x) for x in ['../settings.py', '../__init__.py', '__init__.py', 'views.py']):
+    for f in (os.path.join(path, x) for x in ['../settings.ini', '../__init__.py', '__init__.py', 'views.py']):
         if not os.path.exists(f):
             fp = file(f, 'wb')
             if f.endswith('views.py'):
@@ -51,7 +53,8 @@ def make_app(appname=''):
                 print >>fp, "@expose('/')"
                 print >>fp, """def index():
     return '<h1>Hello, Uliweb</h1>'"""
-            elif f.endswith('../settings.py'):
+            elif f.endswith('../settings.ini'):
+                print >>fp, "[GLOBAL]"
                 print >>fp, "DEBUG = True"
             fp.close()
 
@@ -59,12 +62,14 @@ def make_project(project_name='', verbose=('v', False)):
     """create a new project directory according the project name"""
     from uliweb.utils.common import extract_dirs
     
+    ans = '-1'
     if os.path.exists(project_name):
-        ans = '-1'
         while ans not in ('y', 'n'):
             ans = raw_input('The project directory has been existed, do you want to overwrite it?(y/n)[n]')
             if not ans:
                 ans = 'n'
+    else:
+        ans = 'y'
     if ans == 'y':
         extract_dirs('uliweb', 'project', project_name)
     
@@ -203,8 +208,6 @@ def main():
         if os.path.exists(apps_dir):
             sys.path.insert(0, os.path.join(apps_dir))
         
-    print ' * APPS_DIR =',  apps_dir
-    
     action_runserver = script.make_runserver(_make_application(None, apps_dir), 
         port=8000, use_reloader=True, use_debugger=True)
     action_makeapp = make_app

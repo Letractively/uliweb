@@ -4,7 +4,7 @@ from uliweb.core.plugin import plugin
 def before_render_template(sender, env, out):
     from uliweb.core import js
     
-    htmlbuf = js.HtmlBuf(write=out.noescape, static_suffix=sender.settings.get('STATIC_SUFFIX', '/static/'))
+    htmlbuf = js.HtmlBuf(write=out.noescape, static_suffix=sender.settings.HTML_HELPER.get('STATIC_SUFFIX', '/static/'))
     env['htmlbuf'] = htmlbuf
     
 @plugin('after_render_template')
