@@ -9,14 +9,10 @@ Uliweb Introduction
 What's it?
 ------------
 
-Uliweb is a new brand Python Web Framework. Before creating this framework,
-I've learned and used many frameworks, Karrigell, Cherrypy, Django, web2py,
-but more or less they are not fully satisfy me. So I decide to create myself
-web framework, I hope I can merge their advantages into Uliweb, and I'll
-try to make it simple and easy to use.
+Uliweb is a new Python Web Framework. Before started to create this framework,
+I had learned and used a few other frameworks such as Karrigell, Cherrypy, Django and web2py, but more or less they do not fully satisfy me. So I decided to create a web framework myself. By combining the strength of these frameworks, I hope to make Uliweb simple, easy to use yet powerful.
 
-This project is created and leaded by Limodou <limodou@gmail.com>. And it has
-received many helps from many kind people.
+This project is created and leaded by Limodou <limodou@gmail.com>. However it has received a lot of help from kind folks around the world.
 
 License
 ------------
@@ -26,30 +22,30 @@ Uliweb is released under GPL v2 license.
 Infrastructure
 ----------------
 
-It's not a totally created from scratch, I've used some modules, for example:
+Uliweb was not created totally from scratch. It uses some modules created by others, for example:
 
-* `Werkzeug <http://werkzeug.pocoo.org/>`_ Used in core process of framework, 
-  for example: command line, URL Mapping, Debug, etc.
+* `Werkzeug <http://werkzeug.pocoo.org/>`_ Used in core process of framework. 
+  For example: command line, URL Mapping, Debug, etc.
 * `webob <http://pythonpaste.org/webob/>`_  Used to create Request, Response
   object, and static file process.
-* `SqlAlchemy <http://www.sqlalchemy.org>`_ I wrapped an ORM based on it,
-  so you can use ORM to access database, and you can also use this module directly.
+* `SqlAlchemy <http://www.sqlalchemy.org>`_ I wrapped an ORM based on it.
+  So Uliweb user can use ORM to access a database, or use this module directly.
 
-I also reference some code from other frames, for example:
+I also referenced some code from other web frameworks, for example:
 
-* template Borrow from `web2py <http://mdp.cti.depaul.edu/>`_ and I made some 
-  improvement.
-* Some code referenced from `Django <http://www.djangoproject.com/>`_ project.
+* Template was borrowed from `web2py <http://mdp.cti.depaul.edu/>`_ and I made some 
+  improvements.
+* Some codes were referenced from `Django <http://www.djangoproject.com/>`_ project.
 
-And I also made some new "wheels" myself, for example:
+And I also made some new "wheels" myself. For example:
 
-* Form process, you can use it to create HTML code, validate submitted data and 
+* Form process, user can use it to create HTML code, validate submitted data and 
   convert submitted data to Python data type.
 * I18n process, including template support, language lazy process.
-* Uliorm, it an ORM module, built on SqlAlchemy now, and I also referenced from 
-  GAE datastore modeul.
+* Uliorm, which is an ORM module, was built on top of SqlAlchemy. I also referenced from 
+  GAE datastore module.
 * Framework runtime process.
-* Plugin mechanism, I borrowed from `UliPad <http://code.google.com/p/ulipad>`_ project.
+* Plugin mechanism, borrowed from `UliPad <http://code.google.com/p/ulipad>`_ project.
 
 Features
 -----------
@@ -57,50 +53,50 @@ Features
 * Organization
 
   * MVT(Model View Template) development model.
-  * Distributed development but unified management. Uliweb organizes project with
-    small apps. Each app can has it own configure file(settings.py), templates 
-    directory, static directory. So you can easily reuse app. But when you run 
-    the project, you can treat all apps as a whole app, and you can also reference
-    each other static files and templates. If you don't config INSTALLED_APPS in
-    configure file, all apps will available by default. And all configure files
-    of all available apps will be automatically processed at project startup,
-    and finally you can get a complete configure view.
+  * Distributed development but unified management. Uliweb organizes a project with
+    small apps. Each app can has its own configuration file(settings.py), templates 
+    directory, and static directory. Previouly created app can be easily reused. But 
+    when user runs the project, all apps can be treated as a whole app. User can also 
+    reference other static files and templates. If INSTALLED_APPS is not configured in
+    the configuration file, all apps will be available by default. And all configuration
+    files for all available apps will be automatically processed at project startup, 
+    which gives the user a complete configuration view.
 
 * URL Mapping
 
-  * Flexiable and powerful URL mapping. It uses werkzeug's routing module, 
-    you can define URL easily, and you can bind URL with view function easily too.
-    You can also create URL reversed according view function name. It supports
-    arguments definition in URL. And it also support default URL mapping to a 
+  * Flexiable and powerful URL mapping. Uliweb uses werkzeug's routing module. 
+    User can easily define a URL, which in turn can be easily binded with a view function.
+    URL can also be created reversely according to the view function name. It supports
+    arguments definition in URL. And it also supports default URL mapping to a 
     view function.
     
 * View and Template
 
   * View template can be automatically applied. If you return a dict variable from
     view function, Uliweb will automatically find a default applied template according
-    the view function name.
+    to the view function name.
   * Environment execution mode. Each view function will be run in an environment,
-    so you don't need to write many import statements, and there are already many
-    objects can be used directly, for example: request, response, etc. It can reduce
-    many code.
-  * You can directly use Python code in template, and you don't need to consider
-    indent in code, just remember add pass statement at the end of a block. It also
-    supports include child template and inherit from parent template.
+     which eliminates the need to write many import statements. Plus there are already many
+    objects that can be used directly, for example: request, response, etc. When used, 
+    these objectsIt can save many lines of code.
+  * User can directly use Python code in a template, and user does not need to indent
+    his code, as long as he remembers to add a pass statement at the end of each block. 
+    Uliweb also supports including of child template and inheriting from parent template.
     
 * ORM
 
-  * Uliorm is default ORM module but not default configured, you can use any 
-    ORM module you like.
-  * Uliorm supports models and database automatically migirate, including
-    table creation and table structure modification.
+  * Uliorm is the default ORM module but not configured by default, user can use any 
+    ORM module as he prefers.
+  * Uliorm supports models and automatic database migiration, including table creation 
+    and table structure modification.
 
 * I18n
 
   * Supports python file and template file.
-  * Supports browser language setting and cookie setting, automatically language switch.
-  * Provide command line tool, you can use it to extract .po files. It can support
-    app level or project level process. It can automatically merge .pot to existed
-    .po file.
+  * Supports browser language setting and cookie setting, and automatic language switch.
+  * Provides command line tool. User can use it to extract .po files. It can support
+    app level or project level process. It can automatically merge .pot files to existing
+    .po files.
     
 * Extension
 
@@ -138,17 +134,18 @@ Features
 
 * Others
 
-  * Uliweb is a project with demos. It includes all core code and also all 
-    source code of `uliwebproject <http://uliwebproject.appspot.com>`_ , and some
-    other demos code, so you can directly use these code.
+  * Various demos are available for anyone interested in learning more about Uliweb. 
+    It includes all core codes and also all source code of `uliwebproject <http://uliwebproject.appspot.com>`_ , 
+    and some other demo codes, which can be used directly/freely as you wish.
   * Uliweb supports static file access directly, and it can also process
     HTTP_IF_MODIFIED_SINCE and return static file content in trunk.
     
 Goals
 ----------
 
-* Developing a simple and easy to use framework.
-* Flexiable enought and easy to extend.
-* Including enough example code.
-* Writing clear and easy understand documents.
-* Can be deployed in many platforms.
+* Developing a simple and easy to use web framework.
+* The web framework should be flexiable and easy to extend.
+* The web framework should be able to be deployed in different platforms.
+* Providing enough sample codes for using this framework.
+* Providing concise and easy to understand documentation for this framework.
+
