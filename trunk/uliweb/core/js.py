@@ -143,6 +143,14 @@ class CssLink(B):
     def __str__(self):
         return '<link rel="stylesheet" type="text/css" href="%s"/>' % self.link
     
+class CssHeaderCodeSnippet(B):
+    def __init__(self, value=None, static_suffix=''):
+        B.__init__(self, value)
+        self.static_suffix = static_suffix
+    
+    def __str__(self):
+        return self.value % {'static_suffix': self.static_suffix}
+    
 class ScriptLink(B):
     def __init__(self, value=None, static_suffix=''):
         B.__init__(self, value)
@@ -233,6 +241,7 @@ class Style(Script):
 class Snippet(object):
     css = ''
     csslink = ''
+    css_header_code_snippets = ''
     jslink = ''
     html = ''
     js = ''
@@ -255,6 +264,7 @@ class HtmlBuf(object):
         self.html = Buf()
         self.js = Script()
         self.csslink = LinkBuf()
+        self.css_header_code_snippets = Buf()
         self.jslink = LinkBuf()
         self.links = []
         self.modified = False
@@ -279,6 +289,13 @@ class HtmlBuf(object):
                         csslink = obj.csslink
                     for link in csslink:
                         self.csslink << CssLink(link, static_suffix=self.static_suffix)
+                if obj.css_header_code_snippets:
+                    if not isinstance(obj.css_header_code_snippets, (tuple, list)):
+                        css_headers = [obj.css_header_code_snippets]
+                    else:
+                        css_headers = obj.css_header_code_snippets
+                    for code in css_headers:
+                        self.css_header_code_snippets << CssHeaderCodeSnippet(code, static_suffix=self.static_suffix)
                 if obj.jslink:
                     if not isinstance(obj.jslink, (tuple, list)):
                         jslink = [obj.jslink]
@@ -309,9 +326,14 @@ class HtmlBuf(object):
         for i in range(len(self.jslink.buf)-1, -1, -1):
             if self.jslink.buf[i].link in links:
                 del self.jslink.buf[i]
+                
+    def remove_css_header_snippets(self, text):
+        for i, code in enumerate(self.css_header_code_snippets.buf[::-1]):
+            if str(code) in text:
+                del self.css_header_code_snippets[i]
         
     def render(self):
-        return '\n'.join(filter(None, [str(o) for o in [self.csslink, self.jslink, self.css, self.js]]))
+        return '\n'.join(filter(None, [str(o) for o in [self.csslink, self.css_header_code_snippets, self.jslink, self.css, self.js]]))
         
 if __name__ == '__main__':
     from StringIO import StringIO

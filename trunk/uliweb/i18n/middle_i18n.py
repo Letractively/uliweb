@@ -16,14 +16,14 @@ def get_language_from_request(request, settings):
         if lang:
             return lang
 
-    lang = request.cookies.get(settings.LANGUAGE_COOKIE_NAME)
+    lang = request.cookies.get(settings.I18N.LANGUAGE_COOKIE_NAME)
     if lang:
         return lang
 
     accept = request.environ.get('HTTP_ACCEPT_LANGUAGE', None)
     if not accept:
-        return settings.get('LANGUAGE_CODE')
-    languages = settings.get('LANGUAGES', {})
+        return settings.I18N.get('LANGUAGE_CODE')
+    languages = settings.I18N.get('SUPPORT_LANGUAGES', [])
     for accept_lang, unused in parse_accept_lang_header(accept):
         if accept_lang == '*':
             break
@@ -35,7 +35,7 @@ def get_language_from_request(request, settings):
         if normalized in languages:
             return normalized
 
-    return settings.get('LANGUAGE_CODE')
+    return settings.I18N.get('LANGUAGE_CODE')
 
 def parse_accept_lang_header(lang_string):
     """

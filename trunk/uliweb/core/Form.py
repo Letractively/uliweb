@@ -232,11 +232,12 @@ class CheckboxInput(Build):
 class Field(object):
     default_build = TextInput
     default_validators = []
-    field_css_class = 'text_field'
+    default_datatype = None
+    field_css_class = 'field_text'
 
     creation_counter = 0
 
-    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
+    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, datatype=None, multiple=False, **kwargs):
         self.label = label
         self.default = default
         self.validators = validators or []
@@ -244,6 +245,8 @@ class Field(object):
         self.required = required
         self.kwargs = kwargs
         self.html_attrs = html_attrs or {}
+        self.datatype = datatype or self.default_datatype
+        self.multiple = multiple
         if '_class' in self.html_attrs:
             self.html_attrs['_class'] = ' '.join([self.html_attrs['_class'], self.field_css_class])
         else:
@@ -255,14 +258,26 @@ class Field(object):
         Field.creation_counter += 1
 
     def to_python(self, data):
-        return data
+        """
+        Convert a data to python format. 
+        """
+        if data is None:
+            return data
+        if self.datatype:
+            return self.datatype(data)
+        else:
+            return data
 
+    #todo: if py=True is needed
     def html(self, data='', py=True):
+        """
+        Convert data to html value format.
+        """
         if py:
             value = self.to_html(data)
         else:
             value = data
-        return str(self.build(name=self.name, value=value, id='form_'+self.name, **self.html_attrs))
+        return str(self.build(name=self.name, value=value, id='field_'+self.name, **self.html_attrs))
 
     def get_label(self, **kwargs):
         if not self.label:
@@ -270,8 +285,8 @@ class Field(object):
         else:
             label = self.label
         if self.required:
-            label += str(Tag('span', '(required)', _class='small'))
-        return str(Tag('label', label, _for='form_'+self.name, **kwargs))
+            label += str(Tag('span', '(required)', _class='field_required'))
+        return str(Tag('label', label, _for='field_'+self.name, **kwargs))
 
     def get_data(self, all_data):
         return all_data.get(self.name, None)
@@ -280,7 +295,7 @@ class Field(object):
         return _str(data)
 
     def validate(self, data, all_data=None):
-        #todo process file input, this one only support cgi.FieldStorage now
+        #todo process file input, this one only supports cgi.FieldStorage now
         if isinstance(data, cgi.FieldStorage):
             if data.file:
                 v = data.filename
@@ -297,11 +312,6 @@ class Field(object):
             else:
                 return False, 'This field is required.'
         try:
-            for v in self.default_validators + self.validators:
-                v(data, all_data)
-        except ValidationError, e:
-            return False, e.message
-        try:
             if isinstance(data, list):
                 v = []
                 for i in data:
@@ -309,10 +319,13 @@ class Field(object):
                 data = v
             else:
                 data = self.to_python(data)
+        except:
+            return False, "Can't convert %r to %s." % (data, self.__class__.__name__)
+        try:
+            for v in self.default_validators + self.validators:
+                v(data, all_data)
         except ValidationError, e:
             return False, e.message
-        except:
-            return False, 'Convert data error.'
         return True, data
 
 class TextField(Field):
@@ -321,7 +334,7 @@ class TextField(Field):
 
 class PasswordField(TextField):
     default_build = PasswordInput
-    field_css_class = 'password_field'
+    field_css_class = 'field_password'
 
 class HiddenField(TextField):
     default_build = HiddenInput
@@ -339,7 +352,7 @@ class TextListField(TextField):
         return self.delimeter.join([_str(x) for x in data])
 
 class BooleanField(Field):
-    field_css_class = 'check_box'
+    field_css_class = 'field_checkbox'
     default_build = CheckboxInput
 
     def __init__(self, label='', default=False, name='', html_attrs=None, help_string='', build=None, **kwargs):
@@ -354,9 +367,9 @@ class BooleanField(Field):
 
     def html(self, data, py=True):
         if data:
-            return str(self.build(checked=None, id='form_'+self.name, name=self.name, **self.html_attrs))
+            return str(self.build(checked=None, id='field_'+self.name, name=self.name, **self.html_attrs))
         else:
-            return str(self.build(id='form_'+self.name, name=self.name, **self.html_attrs))
+            return str(self.build(id='field_'+self.name, name=self.name, **self.html_attrs))
 
     def to_html(self, data):
         if data is True:
@@ -366,7 +379,7 @@ class BooleanField(Field):
 
 class TextAreaField(Field):
     default_build = TextAreaInput
-    field_css_class = 'text_area'
+    field_css_class = 'field_textarea'
 
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
         Field.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
@@ -374,7 +387,7 @@ class TextAreaField(Field):
     def html(self, data='', py=True):
         self.html_attrs.setdefault('rows', 5)
         self.html_attrs.setdefault('cols', 40)
-        return str(self.build(self.to_html(data), id='form_'+self.name, name=self.name, **self.html_attrs))
+        return str(self.build(self.to_html(data), id='field_'+self.name, name=self.name, **self.html_attrs))
 
 class IntField(Field):
     default_validators = [IS_NUMBER()]
@@ -388,7 +401,7 @@ class IntField(Field):
         return str(data)
 
 class SelectField(Field):
-    field_css_class = 'select'
+    field_css_class = 'field_select'
     default_build = SelectInput
 
     def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
@@ -399,15 +412,15 @@ class SelectField(Field):
         self.validators.append(IS_IN_SET(self.choices))
 
     def html(self, data, py=True):
-        return str(self.build(self.choices, data, id='form_'+self.name, name=self.name, **self.html_attrs))
+        return str(self.build(self.choices, data, id='field_'+self.name, name=self.name, **self.html_attrs))
 
 class RadioSelectField(SelectField):
-    field_css_class = 'radio_select'
+    field_css_class = 'field_radio'
     default_build = RadioSelectInput
     
 class FileField(TextField):
     default_build = FileInput
-    field_css_class = 'file'
+    field_css_class = 'field_file'
     
     def to_python(self, data):
         d = {}
@@ -417,6 +430,18 @@ class FileField(TextField):
         d['length'] = data.file.tell()
         data.file.seek(0, os.SEEK_SET)
         return d
+    
+class DateField(TextField):
+    field_css_class = 'field_date'
+    
+    def to_python(self, data):
+        return int(data)
+    
+    def to_html(self, data):
+        return str(data)
+    
+class TimeField(TextField):
+    field_css_class = 'field_time'
     
 class FormMetaclass(type):
     def __new__(cls, name, bases, attrs):

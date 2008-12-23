@@ -1,4 +1,6 @@
 class Middleware(object):
+    ORDER = 500
+    
     def __init__(self, application, settings):
         self.application = application
         self.settings = settings

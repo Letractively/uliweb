@@ -10,9 +10,13 @@ What's it?
 ------------
 
 Uliweb is a new Python Web Framework. Before started to create this framework,
-I had learned and used a few other frameworks such as Karrigell, Cherrypy, Django and web2py, but more or less they do not fully satisfy me. So I decided to create a web framework myself. By combining the strength of these frameworks, I hope to make Uliweb simple, easy to use yet powerful.
+I had learned and used a few other frameworks such as Karrigell, Cherrypy, 
+Django and web2py, but more or less they do not fully satisfy me. So I decided 
+to create a web framework myself. By combining the strength of these frameworks, 
+I hope to make Uliweb simple, easy to use yet powerful.
 
-This project is created and leaded by Limodou <limodou@gmail.com>. However it has received a lot of help from kind folks around the world.
+This project is created and leaded by Limodou <limodou@gmail.com>. However it 
+has received a lot of help from kind folks around the world.
 
 License
 ------------
@@ -22,7 +26,8 @@ Uliweb is released under GPL v2 license.
 Infrastructure
 ----------------
 
-Uliweb was not created totally from scratch. It uses some modules created by others, for example:
+Uliweb was not created totally from scratch. It uses some modules created by 
+others, for example:
 
 * `Werkzeug <http://werkzeug.pocoo.org/>`_ Used in core process of framework. 
   For example: command line, URL Mapping, Debug, etc.
@@ -54,7 +59,7 @@ Features
 
   * MVT(Model View Template) development model.
   * Distributed development but unified management. Uliweb organizes a project with
-    small apps. Each app can has its own configuration file(settings.py), templates 
+    small apps. Each app can has its own configuration file(settings.ini), templates 
     directory, and static directory. Previouly created app can be easily reused. But 
     when user runs the project, all apps can be treated as a whole app. User can also 
     reference other static files and templates. If INSTALLED_APPS is not configured in

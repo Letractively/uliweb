@@ -22,6 +22,10 @@ import locale
 import copy
 import tokenize
 import token
+try:
+    import set
+except:
+    from sets import Set as set
 
 try:
     defaultencoding = locale.getdefaultlocale()[1]
@@ -128,8 +132,22 @@ class Section(Storage):
         self.encoding = encoding
             
     def add(self, name, value, comments=None):
+        if name.endswith('+'):
+            name = name[:-1]
+            addflag = True
+        else:
+            addflag = False
         if not name in self:
             self.__fields.append(name)
+        v = self.get(name, None)
+        if isinstance(v, (tuple, list, dict)) and addflag:
+            if isinstance(v, tuple):
+                value = tuple(set(v + value))
+            elif isinstance(v, list):
+                value = list(set(v + value))
+            else:
+                value = v.update(value)
+            
         self[name] = value
         if not comments:
             comments = []
@@ -247,9 +265,11 @@ class Ini(Storage):
                     if section is None:
                         raise Exception, "No section found, please define it first in %s file" % self.filename
 
-                    f.seek(lastpos)
+                    pos = line.find('=')
+                    keyname = line[:pos].strip()
+                    f.seek(lastpos+pos+1)
                     try:
-                        keyname, value = self.__read_line(f)
+                        value = self.__read_line(f)
                     except Exception, e:
                         import traceback
                         traceback.print_exc()
@@ -288,21 +308,17 @@ class Ini(Storage):
     def __read_line(self, f):
         g = tokenize.generate_tokens(f.readline)
         
-        key = None
         buf = []
         time = 0
         while 1:
             v = g.next()
             tokentype, t, start, end, line = v
-            if tokentype == token.NAME and not key:
-                key = t
-                continue
             if tokentype == 54:
                 continue
             if tokentype in (token.INDENT, token.DEDENT, tokenize.COMMENT):
                 continue
             if tokentype == token.NEWLINE:
-                return key, ''.join(buf)
+                return ''.join(buf)
             else:
                 if t == '=' and time == 0:
                     time += 1
@@ -335,7 +351,7 @@ key2 = 1
 #key3 comment
 key3 = (1,2,3)
 
-key4 = (
+key4+ = (
 'a', 'b', 'c'
 )
 key5 = {

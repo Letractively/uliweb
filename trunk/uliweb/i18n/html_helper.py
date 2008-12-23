@@ -1,12 +1,7 @@
 def make_select_languages(languages):
-    if not isinstance(languages, (tuple, list, dict)):
-        raise Exception, 'langages should be 2-element tuple or list or a dict'
-    
     from uliweb.i18n import get_language, format_locale
+    from uliweb.contrib.i18n import LANGUAGES
     
-    if isinstance(languages, (tuple, list)):
-        languages = dict(languages)
-        
     lang = get_language()
     
     s = []
@@ -33,8 +28,11 @@ window.location.reload();
     s.append('''<form class="lang_dropdown" action="javascript:SetCookie('uliweb_language',this.document.changelang.lang.value)" name="changelang" method="post">
 <label for="lang">Change Language:</label>
 <select onchange="this.form.submit()" id="lang" name="lang">''')
-    for k, v in sorted(languages.items()):
+    for k in languages:
         k = format_locale(k)
+        v = LANGUAGES.get(k, '')
+        if not v:
+            continue
         if k == lang:
             select = 'selected="selected" '
         else:

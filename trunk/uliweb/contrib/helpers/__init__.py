@@ -20,6 +20,8 @@ def after_render_template(sender, text, vars, env):
                 #find links
                 links = [x or y for x, y in r_links.findall(text[:pos])]
                 htmlbuf.remove_links(links)
+                #process css_header_code_snippets
+                htmlbuf.remove_css_header_snippets(text[:pos])
                 t = htmlbuf.render()
                 if t:
                     return ''.join([text[:pos], t, text[pos:]])
