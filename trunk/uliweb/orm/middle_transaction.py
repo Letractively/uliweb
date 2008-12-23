@@ -1,4 +1,6 @@
 class TransactionMiddle(object):
+    ORDER = 100
+    
     def __init__(self, application, settings):
         from uliweb.orm import get_connection
         self.db = get_connection()

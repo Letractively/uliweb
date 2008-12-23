@@ -132,18 +132,11 @@ class Section(Storage):
         self.encoding = encoding
             
     def add(self, name, value, comments=None):
-        if name.endswith('+'):
-            name = name[:-1]
-            addflag = True
-        else:
-            addflag = False
         if not name in self:
             self.__fields.append(name)
         v = self.get(name, None)
-        if isinstance(v, (tuple, list, dict)) and addflag:
-            if isinstance(v, tuple):
-                value = tuple(set(v + value))
-            elif isinstance(v, list):
+        if isinstance(v, (list, dict)):
+            if isinstance(v, list):
                 value = list(set(v + value))
             else:
                 value = v.update(value)
