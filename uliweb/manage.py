@@ -31,7 +31,7 @@ def make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
 
 def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
     def action():
-        print ' * APPS_DIR =',  apps_dir
+        print ' * APPS_DIR =',  os.path.abspath(apps_dir)
         
         return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi)
     return action
@@ -157,26 +157,8 @@ def extracturls(urlfile='urls.py'):
 #    return locals()
 
 def collcet_commands():
-    def get_apps():
-        try:
-            import settings
-            if hasattr(settings, 'INSTALLED_APPS'):
-                return getattr(settings, 'INSTALLED_APPS')
-        except ImportError:
-            pass
-        
-        s = []
-        if not os.path.exists(apps_dir):
-            return s
-        for p in os.listdir(apps_dir):
-            path = os.path.join(apps_dir, p)
-            if not os.path.exists(path):
-                continue
-            if os.path.isdir(path) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
-                s.append(p)
-        return s
-    
-    for f in get_apps():
+    from uliweb.core.SimpleFrame import get_apps
+    for f in get_apps(apps_dir):
         m = '%s.commands' % f
         try:
             mod = __import__(m, {}, {}, [''])
@@ -185,7 +167,36 @@ def collcet_commands():
         for t in dir(mod):
             if t.startswith('action_') and callable(getattr(mod, t)):
                 globals()[t] = getattr(mod, t)
+                
+def collect_ini():
+    from uliweb.core.SimpleFrame import get_apps, get_app_dir
+    files = []
+    f = os.path.join(apps_dir, 'settings.ini')
+    if os.path.exists(f):
+        files.append(f)
+    for p in get_apps(apps_dir):
+        for ff in ['settings.ini', 'config.ini']:
+            f = os.path.join(get_app_dir(p), 'settings.ini')
+            if os.path.exists(f):
+                files.append(f)
+    return files
 
+def runserver(app_factory, hostname='localhost', port=5000,
+                   use_reloader=False, use_debugger=False, use_evalex=True,
+                   threaded=False, processes=1):
+    """Returns an action callback that spawns a new wsgiref server."""
+    def action(hostname=('h', hostname), port=('p', port),
+               reloader=use_reloader, debugger=use_debugger,
+               evalex=use_evalex, threaded=threaded, processes=processes):
+        """Start a new development server."""
+        from werkzeug.serving import run_simple
+        app = app_factory()
+        extra_files = collect_ini()
+        run_simple(hostname, port, app, reloader, debugger, evalex,
+                   extra_files, 1, threaded, processes)
+    return action
+
+    
 def main():
     global apps_dir
     s = os.path.basename(sys.argv[0])
@@ -207,8 +218,8 @@ def main():
     else:
         if os.path.exists(apps_dir):
             sys.path.insert(0, os.path.join(apps_dir))
-        
-    action_runserver = script.make_runserver(_make_application(None, apps_dir), 
+            
+    action_runserver = runserver(_make_application(None, apps_dir), 
         port=8000, use_reloader=True, use_debugger=True)
     action_makeapp = make_app
 #    action_export = export

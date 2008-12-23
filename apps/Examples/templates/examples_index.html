@@ -2,7 +2,7 @@
 <h1>Uliweb Framework Testing Page</h1>
 <p>{{= _("This is Uliweb's testing page, you can find many examples here") }}</p>
 <h2>Views</h2>
-{{ cycle = Cycle('odd', 'even') }}
+{{ cycle = cycle('odd', 'even') }}
 <table class="examplesTable">
 <tbody>
   <tr class="{{=cycle.next()}}">

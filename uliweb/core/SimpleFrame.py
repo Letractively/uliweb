@@ -155,6 +155,27 @@ def get_app_dir(app):
             path = ''
         __app_dirs[app] = path
         return path
+
+def get_apps(apps_dir, include_apps=None):
+    include_apps = include_apps or []
+    inifile = os.path.join(apps_dir, 'settings.ini')
+    x = Ini(inifile)
+    apps = x.GLOBAL.get('INSTALLED_APPS', [])
+    if not apps:
+        for p in os.listdir(apps_dir):
+            if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
+                apps.append(p)
+    
+    apps.extend(include_apps)
+    #process dependencies
+    for p in apps:
+        configfile = os.path.join(get_app_dir(p), 'config.ini')
+        if os.path.exists(configfile):
+            x = Ini(configfile)
+            for i in x.DEFAULT.get('REQUIRED_APPS', []):
+                if i not in apps:
+                    apps.append(i)
+    return apps
         
 class Loader(object):
     def __init__(self, tmpfilename, vars, env, dirs, notest=False):
@@ -181,10 +202,11 @@ class Loader(object):
 
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir=APPS_DIR, use_urls=None):
+    def __init__(self, apps_dir=APPS_DIR, use_urls=None, include_apps=None):
         global __use_urls
         self.debug = False
         self.use_urls = __use_urls = use_urls
+        self.include_apps = include_apps or []
         if not Dispatcher.installed:
             self.init(apps_dir)
             callplugin(self, 'startup_installed')
@@ -200,7 +222,7 @@ class Dispatcher(object):
         
         APPS_DIR = apps_dir
         Dispatcher.apps_dir = apps_dir
-        Dispatcher.apps = self.get_apps()
+        Dispatcher.apps = get_apps(self.apps_dir, self.include_apps)
         #add urls.py judgement
         flag = True
         if self.use_urls is None or self.use_urls is True:
@@ -246,21 +268,6 @@ class Dispatcher(object):
         env['get_file'] = self.get_file
         return env
     
-    def get_apps(self):
-        try:
-            inifile = os.path.join(self.apps_dir, 'settings.ini')
-            x = Ini(inifile)
-            if x.GLOBAL.INSTALLED_APPS:
-                return x.GLOBAL.INSTALLED_APPS
-        except ImportError:
-            pass
-        
-        s = []
-        for p in os.listdir(self.apps_dir):
-            if os.path.isdir(os.path.join(self.apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
-                s.append(p)
-        return s
-        
     def get_file(self, filename, request=None, dirname='files'):
         """
         get_file will search from apps directory
@@ -291,28 +298,28 @@ class Dispatcher(object):
                 return compile(code, filename, 'exec')
             fname, code = template.render_file(filename, vars, env, dirs)
             out = template.Out()
-            template._prepare_run(vars, env, out)
+            e = template._prepare_run(vars, env, out)
             #user can insert new local environment variables to env variable
-            callplugin(self, 'before_render_template', env, out)
+            callplugin(self, 'before_render_template', e, out)
             
             if isinstance(code, (str, unicode)):
                 code = _compile(code, fname, 'exec')
             __loader__ = Loader(fname, vars, env, dirs)
-            exec code in env, vars
+            exec code in e
             text = out.getvalue()
-            output = execplugin(self, 'after_render_template', text, vars, env)
+            output = execplugin(self, 'after_render_template', text, vars, e)
             return output or text
         else:
             fname, code = template.render_file(filename, vars, env, dirs)
             out = template.Out()
-            template._prepare_run(vars, env, out)
-            callplugin(self, 'before_render_template', env, out)
+            e = template._prepare_run(vars, env, out)
+            callplugin(self, 'before_render_template', e, out)
             
             if isinstance(code, (str, unicode)):
                 code = compile(code, fname, 'exec')
-            exec code in env, vars
+            exec code in e
             text = out.getvalue()
-            output = execplugin(self, 'after_render_template', text, vars, env)
+            output = execplugin(self, 'after_render_template', text, vars, e)
             return output or text
     
     def render(self, templatefile, vars, env=None, dirs=None, request=None):
@@ -513,19 +520,26 @@ class Dispatcher(object):
                 res = Response(content_type='text/html')
                 response = self.call_endpoint(mod, handler, req, res, **values)
             else:
-                #middleware process request
-                middlewares = settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
                 response = None
                 _clses = {}
                 _inss = {}
+
+                #middleware process request
+                middlewares = settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
+                s = []
                 for middleware in middlewares:
                     try:
                         cls = import_func(middleware)
+                        s.append((getattr(cls, 'ORDER', 500), middleware))
                     except ImportError:
                         import traceback
                         traceback.print_exc()
                         errorpage("Can't import the middleware %s" % middleware)
                     _clses[middleware] = cls
+                middlewares = [v for k, v in sorted(s)]
+                
+                for middleware in middlewares:
+                    cls = _clses[middleware]
                     if hasattr(cls, 'process_request'):
                         ins = cls(self, settings)
                         _inss[middleware] = ins

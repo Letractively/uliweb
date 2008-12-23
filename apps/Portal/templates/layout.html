@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>{{=Get('title') or 'Uliweb Project Site'}}</title>
+<title>Uliweb Project Site</title>
 <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
 <!-- add your meta tags here -->
 
@@ -35,7 +35,7 @@
           <!-- main navigation: #nav_main -->
           {{if hasattr(response, 'menu'):}}
           <ul id="minitabs">
-           {{for f, c, a in Get(response.menu, []):}}
+           {{for f, c, a in response.menu:}}
               {{if f:}}<li><a href="{{=a}}" id="current">{{=c}}</a></li>
               {{else:}}<li><a href="{{=a}}">{{=c}}</a></li>
               {{pass}}

@@ -220,46 +220,21 @@ class Out(object):
     def getvalue(self):
         return self.buf.getvalue()
 
-def cycle(*elements):
-    while 1:
-        for j in elements:
-            yield j
-         
 def _prepare_run(locals, env, out):
-    locals['out'] = out
-    locals['Xml'] = out.noescape
-    
-    def Get(name, default='', vars=locals):
-        """
-        name should be a variable name or function call, for example:
-            
-            {{=Get('title')}}
-            {{=Get('get_title()')}}
-            
-        and name can also be a real variable object, for example:
-            
-            {{=Get(title)}}
-        """
-        if isinstance(name, (str, unicode)):
-            try:
-                return eval(name, env, vars)
-            except NameError:
-                return default
-            return default
-        if name:
-            return name
-        else:
-            return default
-    locals['Get'] = Get
-    locals['Cycle'] = cycle
+    e = {}
+    e.update(env)
+    e.update(locals)
+    e['out'] = out
+    e['xml'] = out.noescape
+    return e
     
 def _run(code, locals={}, env={}, filename='template'):
     out = Out()
-    _prepare_run(locals, env, out)
+    e = _prepare_run(locals, env, out)
     
     if isinstance(code, (str, unicode)):
         code = compile(code, filename, 'exec')
-    exec code in env, locals
+    exec code in e
     return out.getvalue()
 
 def test():
