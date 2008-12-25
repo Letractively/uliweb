@@ -1,3 +1,5 @@
 {{extend "layout.html"}}
+{{block main}}
 {{ from uliweb.utils.rst import to_html }}
-{{ Xml(to_html(file(get_file('about.rst')).read())) }}
+{{ xml(to_html(file(get_file('about.rst')).read())) }}
+{{end}}

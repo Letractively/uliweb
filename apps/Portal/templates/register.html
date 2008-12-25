@@ -1,5 +1,7 @@
 {{extend "layout.html"}}
+{{block main}}
 {{ if message:
     htmlbuf << htmlwidgets.Message(message, message_type)
 pass}}
-{{Xml(form)}}
+{{xml(form)}}
+{{end}}

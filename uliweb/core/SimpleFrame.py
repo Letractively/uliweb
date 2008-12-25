@@ -223,6 +223,7 @@ class Dispatcher(object):
         APPS_DIR = apps_dir
         Dispatcher.apps_dir = apps_dir
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps)
+        self.install_apps()
         #add urls.py judgement
         flag = True
         if self.use_urls is None or self.use_urls is True:
@@ -478,6 +479,10 @@ class Dispatcher(object):
     def install_views(self, views):
         for v in views:
             __import__(v, {}, {}, [''])
+            
+    def install_apps(self):
+        for p in self.apps:
+            __import__(p)
             
     def install_settings(self, s):
         global settings

@@ -1,33 +1,11 @@
-##################################################################################
-#  Author: limodou
-#  This file modified from web2py tmplate.py(which is part of web2py Web Framework,
-#  and the author is Massimo Di Pierro <mdipierro@cs.depaul.edu>)
-#  License: GPL v2
-##################################################################################
+#! /usr/bin/env python
+#coding=utf-8
 
 import re
 import os
 
-__all__=['template', 'get_templatefile', 'render_text', 'render_file', 
-    'template_file', 'set_options']
-
 __templates_temp_dir = 'tmp/templates_temp'
-__options = {'strip_line':True, 'use_temp_dir':False}
-
-re_write=re.compile('\{\{=(?P<value>.*?)\}\}',re.DOTALL)
-re_html=re.compile('\}\}.*?\{\{',re.DOTALL)
-#re_strings=re.compile('((?:""").*?(?:"""))|'+"((?:''').*?(?:'''))"+'((?:""").*?(?:"""))|'+"((?:''').*?(?:'''))"
-
-PY_STRING_LITERAL_RE= r'(?P<name>'+ \
-  r"[uU]?[rR]?(?:'''(?:[^']|'{1,2}(?!'))*''')|" +\
-              r"(?:'(?:[^'\\]|\\.)*')|" +\
-            r'(?:"""(?:[^"]|"{1,2}(?!"))*""")|'+ \
-              r'(?:"(?:[^"\\]|\\.)*"))'
-re_strings=re.compile(PY_STRING_LITERAL_RE,re.DOTALL)
-
-re_include_nameless=re.compile('\{\{\s*include\s*\}\}')
-re_include=re.compile('\{\{\s*include\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
-re_extend=re.compile('\s*\{\{\s*extend\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
+__options = {'use_temp_dir':False}
 
 def use_tempdir(dir=None):
     global __options, __templates_temp_dir
@@ -37,13 +15,13 @@ def use_tempdir(dir=None):
         __templates_temp_dir = dir
     if not os.path.exists(__templates_temp_dir):
         os.makedirs(__templates_temp_dir)
-        
+
 def set_options(**options):
     """
-    default use_temp_dir=False, strip_line=True
+    default use_temp_dir=False
     """
     __options.update(options)
-        
+
 def get_temp_template(filename):
     if __options['use_temp_dir']:
         f, filename = os.path.splitdrive(filename)
@@ -51,7 +29,7 @@ def get_temp_template(filename):
         filename = filename.replace('/', '_')
         return os.path.normcase(os.path.join(__templates_temp_dir, filename))
     return filename
-        
+
 def reindent(text):
     lines=text.split('\n')
     new_lines=[]
@@ -78,16 +56,6 @@ def reindent(text):
     text='\n'.join(new_lines)
     return text
 
-def replace(regex,text,f):
-    i=0
-    output=[]
-    for item in regex.finditer(text):
-        output.append(text[i:item.start()])
-        output.append(f(item.group()))
-        i=item.end()
-    output.append(text[i:len(text)])
-    return ''.join(output)
-
 def get_templatefile(filename, dirs, default_template=None):
     if os.path.exists(filename):
         return filename
@@ -100,50 +68,138 @@ def get_templatefile(filename, dirs, default_template=None):
         if default_template:
             return default_template
 
+r_tag = re.compile(r'(\{\{.*?\}\})', re.DOTALL|re.M)
+
+class Node(object):
+    block = 0
+    var = False
+    def __init__(self, value=None):
+        self.value = value
+        
+    def __str__(self):
+        if self.value:
+            return self.value
+        else:
+            return ''
+    
+class BlockNode(Node):
+    def __init__(self, name=''):
+        self.nodes = []
+        self.vars = {}
+        self.name = name
+        
+    def add(self, node):
+        self.nodes.append(node)
+        if isinstance(node, BlockNode):
+            self.vars[node.name] = node
+        
+    def merge(self, content):
+        self.nodes.extend(content.nodes)
+        self.vars.update(content.vars)
+        
+    def clear_content(self):
+        self.nodes = []
+    
+    def __str__(self):
+        s = []
+        for x in self.nodes:
+            if isinstance(x, BlockNode) and x.name in self.vars:
+                s.append(str(self.vars[x.name]))
+            else:
+                s.append(str(x))
+        return ''.join(s)
+
+class Content(BlockNode):
+    def __init__(self):
+        self.nodes = []
+        self.vars = {}
+        
+class Lexer(object):
+    def __init__(self, text, vars=None, env=None, dirs=None, writer='out.write'):
+        self.text = text
+        self.vars = vars
+        self.env = env or {}
+        self.dirs = dirs
+        self.writer = writer
+        self.content = Content()
+        self.stack = [self.content]
+        self.parse(text)
+        
+    def output(self):
+        return str(self.content)
+        
+    def parse(self, text):
+        in_tag = False
+        extend = None  #if need to process extend node
+        for i in r_tag.split(text):
+            if i:
+                if len(self.stack) == 0:
+                    raise Exception, "The 'end' tag is unmatched, please check if you spell 'block' right"
+                top = self.stack[-1]
+                if in_tag:
+                    line = i[2:-2]
+                    if line and line[0] == '=':
+                        name, value = '=', line[1:]
+                    else:
+                        v = line.strip().split(' ', 1)
+                        if len(v) == 1:
+                            name, value = v[0], ''
+                        else:
+                            name, value = v
+                    if name == 'block':
+                        node = BlockNode(name=value.strip())
+                        top.add(node)
+                        self.stack.append(node)
+                    elif name == 'end':
+                        self.stack.pop()
+                    elif name == '=':
+                        buf = "\n%s(%s)\n" % (self.writer, value)
+                        top.add(buf)
+                    elif name == 'include':
+                        self._parse_include(value)
+                    elif name == 'extend':
+                        extend = value
+                    else:
+                        if line and in_tag:
+                            top.add(line)
+                else:
+                    buf = "\n%s(%r, escape=False)\n" % (self.writer, i)
+                    top.add(buf)
+                    
+            in_tag = not in_tag
+        if extend:
+            self._parse_extend(extend)
+            
+    def _parse_include(self, filename):
+        filename = eval(filename, self.env, self.vars)
+        fname = get_templatefile(filename, self.dirs)
+        if not fname:
+            raise Exception, "Can't find the template %s" % filename
+        
+        f = open(fname, 'rb')
+        text = f.read()
+        f.close()
+        t = Lexer(text, self.vars, self.env, self.dirs)
+        self.content.merge(t.content)
+        
+    def _parse_extend(self, filename):
+        filename = eval(filename, self.env, self.vars)
+        fname = get_templatefile(filename, self.dirs)
+        if not fname:
+            raise Exception, "Can't find the template %s" % filename
+        
+        f = open(fname, 'rb')
+        text = f.read()
+        f.close()
+        t = Lexer(text, self.vars, self.env, self.dirs)
+        self.content.clear_content()
+        t.content.merge(self.content)
+        self.content = t.content
+            
 def render_text(text, vars=None, env=None, dirs=None, default_template=None):
-    dirs = dirs or []
-
-    if not isinstance(text, (str, unicode)):
-        text = text.read()
-    
-    # check whether it extends a layout
-    while 1:
-        match = re_extend.search(text)
-        if not match: break
-        filename = eval(match.group('name'), env, vars)
-        t = get_templatefile(filename, dirs, default_template)
-        if not t:
-            raise Exception, "Can't find the template file %s" % filename
-            
-        try: 
-            parent = open(t, 'rb').read()
-        except IOError: 
-            raise Exception, 'Processing View %s error!' % filename
-        text = text[0:match.start()] + re_include_nameless.sub(text[match.end():], parent)
-    
-    ##
-    # check whether it includes subtemplates
-    ##
-    while 1:
-        match = re_include.search(text)
-        if not match: break
-        filename = eval(match.group('name'), env, vars)
-        t = get_templatefile(filename, dirs, default_template)
-        if not t:
-            raise Exception, "Can't find the template file %s" % filename
-            
-        try: 
-            child = open(t,'rb').read()
-        except IOError: 
-            raise Exception, 'Processing View %s error!' % filename
-        text = re_include.sub(child, text, 1)
-    
-    text = '}}%s{{' % re_write.sub('{{out.write(\g<value>)}}', text)
-    text = replace(re_html, text, lambda x: '\nout.write(%s,escape=False)\n' % repr(x[2:-2]))
-    text = replace(re_strings, text, lambda x: x.replace('\n','\\n'))
-    code = reindent(text)
-
-    return code
+    dirs = dirs or ['.']
+    content = Lexer(text, vars, env, dirs)
+    return reindent(content.output())
 
 def render_file(filename, vars=None, env=None, dirs=None, default_template=None, use_temp=False):
     fname = get_templatefile(filename, dirs, default_template)
@@ -165,7 +221,7 @@ def render_file(filename, vars=None, env=None, dirs=None, default_template=None,
         except:
             pass
     return fname, text
-    
+
 def template_file(filename, vars=None, env=None, dirs=None, default_template=None):
     vars = vars or {}
     env = env or {}
@@ -237,33 +293,16 @@ def _run(code, locals={}, env={}, filename='template'):
     exec code in e
     return out.getvalue()
 
-def test():
-    """
+if __name__ == '__main__':
+    print template("Hello, {{=name}}", {'name':'uliweb'})
+#    print template_file('index.html', {'name':'limodou'})
+#    print render_file('index.html', {'name':'limodou'})[1]
+#    print render_text(a)
+#    print template(a, {'abc':'limodou'})
+#    def f():
+#        template_file('index.html', {'name':'limodou'})
+#        
+#    from timeit import Timer
+#    t = Timer("f()", "from __main__ import f")
+#    print t.timeit(5000)
     
-    >>> t = "hello, {{=name}}"
-    >>> print template(t, {'name':'<limodou>'})
-    hello, &lt;limodou&gt;
-    >>> t = "{{if name:}}hello, {{=name}}{{else:}}no user{{pass}}"
-    >>> print template(t, {'name':''})
-    no user
-    >>> print template(t, {'name':'limodou'})
-    hello, limodou
-    """
-    
-if __name__=='__main__':
-#    import doctest
-#    doctest.testmod()
-    a = """
-{{
-def editfile(path,file):
-    ext=os.path.splitext(file)[1]
-    if ext in ['.py', '.css', '.js', '.html']: return A('edit',_href=URL(r=request,f='edit/%s/%s/%s' % (app, path, file)))
-    else: return ''
-    pass
-def htmleditfile(path,file):
-    return A('htmledit')
-}}
-{{title='bbbbb'}}
-{{=Get('title', 'aaaaa')}}
-    """
-    print template(a)
