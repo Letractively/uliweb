@@ -171,6 +171,8 @@ class Lexer(object):
             self._parse_extend(extend)
             
     def _parse_include(self, filename):
+        if not filename.strip():
+            return
         filename = eval(filename, self.env, self.vars)
         fname = get_templatefile(filename, self.dirs)
         if not fname:
