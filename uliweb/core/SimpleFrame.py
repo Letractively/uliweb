@@ -258,14 +258,14 @@ class Dispatcher(object):
         env['redirect'] = redirect
         env['error'] = errorpage
         env['url_map'] = url_map
-        env['render'] = self.render
-        env['template'] = self.template
+#        env['render'] = self.render
+#        env['template'] = self.template
         env['settings'] = settings
-        from werkzeug import html, xhtml
-        env['html'] = html
-        env['xhtml'] = xhtml
-        from uliweb.core import Form
-        env['Form'] = Form
+#        from werkzeug import html, xhtml
+#        env['html'] = html
+#        env['xhtml'] = xhtml
+#        from uliweb.core import Form
+#        env['Form'] = Form
         env['get_file'] = self.get_file
         return env
     
