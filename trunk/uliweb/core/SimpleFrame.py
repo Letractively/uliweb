@@ -159,9 +159,11 @@ def get_app_dir(app):
 def get_apps(apps_dir, include_apps=None):
     include_apps = include_apps or []
     inifile = os.path.join(apps_dir, 'settings.ini')
-    x = Ini(inifile)
-    apps = x.GLOBAL.get('INSTALLED_APPS', [])
-    if not apps:
+    apps = []
+    if os.path.exists(inifile):
+        x = Ini(inifile)
+        apps = x.GLOBAL.get('INSTALLED_APPS', [])
+    if not apps and os.path.exists(apps_dir):
         for p in os.listdir(apps_dir):
             if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
                 apps.append(p)
