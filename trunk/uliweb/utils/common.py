@@ -1,9 +1,16 @@
 import os
 
+def myimport(module):
+    m = module.split('.')
+    mod = __import__(module)
+    for i in m[1:]:
+        mod = getattr(mod, i)
+    return mod
+
 class MyPkg(object):
     @staticmethod
     def resource_filename(module, path):
-        mod = __import__(module)
+        mod = myimport(module)
         p = os.path.dirname(mod.__file__)
         if path:
             return os.path.join(p, path)
