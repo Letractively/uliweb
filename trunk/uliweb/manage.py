@@ -225,7 +225,7 @@ def main():
 #    action_export = export
     action_exportstatic = exportstatic
     from uliweb.i18n.i18ntool import make_extract
-    action_i18n = make_extract('apps')
+    action_i18n = make_extract(apps_dir)
     action_extracturls = extracturls
     action_makeproject = make_project
     
