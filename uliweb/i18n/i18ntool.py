@@ -22,19 +22,6 @@ def _get_outputfile(apps_dir, appname='', locale='en'):
         output = os.path.join(apps_dir, '..', 'locale', locale, 'LC_MESSAGES', 'uliweb.pot')
     return output
 
-def _get_apps(apps_dir):
-    try:
-        import apps.settings as settings
-        if hasattr(settings, 'INSTALLED_APPS'):
-            return getattr(settings, 'INSTALLED_APPS')
-    except ImportError:
-        pass
-    s = []
-    for p in os.listdir(apps_dir):
-        if os.path.isdir(SimpleFrame.get_app_dir(p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
-            s.append(p)
-    return s
-
 def make_extract(apps_directory):
     apps_dir = apps_directory
     def action(appname=('a', ''), all=False, locale=('l', 'en'), whole=('w', False), merge=('m', False)):
@@ -56,7 +43,7 @@ def make_extract(apps_directory):
             except:
                 raise
         elif all:
-            apps = _get_apps(apps_dir)
+            apps = SimpleFrame.get_apps(apps_dir)
             for appname in apps:
                 path = SimpleFrame.get_app_dir(appname)
                 files = getfiles(path)
