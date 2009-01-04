@@ -41,7 +41,7 @@ References
 * `Templates <{{= index('template') }}>`_
 * Database and ORM
 * `Deployment Guide <{{= index('deployment') }}>`_
-* `manage.py User Guide <{{= index('manage_guide') }}>`_
+* `uliweb Command Guide <{{= index('manage_guide') }}>`_
 * `I18n <{{= index('i18n') }}>`_
 
 Advanced Topics
