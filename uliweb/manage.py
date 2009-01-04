@@ -56,6 +56,7 @@ def make_app(appname=''):
             elif f.endswith('../settings.ini'):
                 print >>fp, "[GLOBAL]"
                 print >>fp, "DEBUG = True"
+                print >>fp, "#INSTALLED_APPS = ['uliweb.contrib.staticfiles']"
             fp.close()
 
 def make_project(project_name='', verbose=('v', False)):
