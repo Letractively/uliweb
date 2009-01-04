@@ -17,7 +17,7 @@ _translations = {}
 _translation_objs = {}
 _localedir = []
 _domain = 'uliweb'
-_default_lang = None
+_default_lang = 'en'
 
 def set_default_language(lang):
     global _default_lang
