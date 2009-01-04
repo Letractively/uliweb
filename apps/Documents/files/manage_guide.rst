@@ -1,4 +1,4 @@
-manage.py User Guide
+uliweb Command Guide
 =====================
 
 :Author: Limodou <limodou@gmail.com>
@@ -7,8 +7,21 @@ manage.py User Guide
 .. sectnum::
 
 
-manage.py is a command line tool provided by Uliweb, you can use it do
-many works.
+``uliweb`` is a command line tool provided by Uliweb, you can use it to do
+many works. When you install Uliweb from::
+
+    python setup.py develop
+    
+or::
+
+    easy_install uliweb
+    
+it'll create a script named ``uliweb`` in Python/Scripts folder. So if you
+want to use it directly in command line, you should setup Python installation
+path and Python/Scripts path to ``PATH`` environment variable. When you finish
+it, then you can run ``python`` and ``uliweb`` directly in command line.
+
+``uliweb`` tool supports many action, I'll explain them one by one below.
 
 runserver
 -------------
@@ -17,7 +30,7 @@ Startup development server.
 
 ::
 
-    Usage: python manage.py runserver [options] 
+    Usage: uliweb runserver [options] 
     
     options:
     
@@ -43,65 +56,52 @@ Example:
 
 ::
 
-    python manage.py runserver
+    uliweb runserver
     
+makeproject
+--------------
+
+Create a new project directory according the given project name. If there is already
+a same name project exists, it'll prompt that if you want to overwrite it, you can 
+choice 'y' or 'n'.
+
+::
+
+    Usage: uliweb makeproject projectname
+
+Example:
+
+::
+
+    uliweb makeproject test
+
 makeapp
 -------------
 
 Create a new app directory structure according the given app name, it'll include
-initial sub-directories and files.
+initial sub-directories and files. After you created project, you should change
+current path to the project folder first. Say the project folder is ``./test``, 
+after you created the project, there should be a ``apps`` sub-folder in ``./test``, so
+``./test/apps`` is the exactly apps directory. And if you execute ``makeapp`` command,
+it'll find the ``apps`` folder in current directory, and create app folder in ``apps``
+folder. If there is no ``apps`` foder in current directory, it'll create a ``apps`` 
+folder in current directory, then create app folder in ``apps`` folder.
 
 ::
 
-    Usage: python manage.py makeapp appname
+    Usage: uliweb makeapp appname
   
 Example:
 
 ::
 
-    python manage.py makeapp Hello 
+    uliweb makeproject test
+    cd test
+    uliweb makeapp Hello 
     
-It'll create a Hello app in apps directory of your project folder, the folder name
-is ``Hello``.
+It'll create a Hello app in ``./test/apps`` directory of ``test`` project folder, 
+the app folder name is ``Hello``.
 
-export
---------
-
-It'll export whole uliweb source files to target directory without apps folder.
-So you can use it to create new project or update uliweb version.
-
-::
-
-    Usage: python manage.py export [options] outputdir
-    
-    options:
-    
-    -e
-        Completely sync operation. It'll delete the old version of Uliweb in 
-        outputdir directory first, then do the copy work.
-        
-    -v 
-
-        Output verbose infomation, default is no output.
-        
-    -a appname
-    
-        Export a single app to target directory, you can use it to clone an app.
-        
-Example:
-
-::
-
-    python manage.py export -e ../uliweb_test   
-    #Completely export Uliweb to ../uliweb_test directory, and remove old version
-    
-    python manage.py export -e -a Hello ../uliweb_test
-    #Completely export Hello app to ../uliweb_test directory, and remove old version
-    
-    python manage.py export -a Hello ../uliweb_test
-    #Export Hello app to ../uliweb_test directory, the old content will be overwritted.
-    
-    
 exportstatic
 ---------------
 
@@ -115,7 +115,7 @@ can disable this check of cause.
 
 ::
 
-    Usage: python manage.py exportstatic [options] outputdir
+    Usage: uliweb exportstatic [options] outputdir
     
     options:
     
@@ -132,7 +132,7 @@ Example:
 
 ::
 
-    python manage.py exportstatic ../uliweb_test   
+    uliweb exportstatic ../uliweb_test   
     #Export all available apps static to ../uliweb_test directory.
         
 i18n
@@ -149,7 +149,7 @@ You can also use it to automatically merge .pot to existed .po file.
 
 ::
 
-    Usage: python manage.py i18n [options]
+    Usage: uliweb i18n [options]
     
     options:
     
@@ -179,9 +179,9 @@ Example:
 
 ::
 
-    manage.py i18n -a appname -l zh #Single app process
-    manage.py i18n --all -l zh      #All of available apps process
-    manage.py i18n -w               #Whole apps process, and using default locale ``en``.
+    uliweb i18n -a appname -l zh #Single app process
+    uliweb i18n --all -l zh      #All of available apps process
+    uliweb i18n -w               #Whole apps process, and using default locale ``en``.
     
 extracturls
 -------------
@@ -192,7 +192,7 @@ apps/urls.py, Uliweb will automatically import it then disable expose().
 
 ::
 
-    Usage: python manage.py extracturls
+    Usage: uliweb extracturls
     
 If there is already a urls.py file in apps directory, it'll prompte you
 to confirm you want to overwrite it.
