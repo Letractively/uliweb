@@ -482,11 +482,11 @@ class Layout(object):
 
     def single_line(self, element):
         tr = self.buf << Tag('tr')
-        tr << Tag('td', element, colspan=2)
+        tr << Tag('td', element, colspan=3)
 
     def buttons_line(self, buttons):
         tr = self.buf << Tag('tr')
-        tr << Tag('td', buttons, colspan=2, _class="buttons")
+        tr << Tag('td', buttons, colspan=3, _class="buttons")
 
     def __str__(self):
         return str(self.root)
