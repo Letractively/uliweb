@@ -38,26 +38,9 @@ def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
 
 def make_app(appname=''):
     """create a new app according the appname parameter"""
+    from uliweb.utils.common import extract_dirs
     path = os.path.join(apps_dir, appname)
-    
-    for d in [path, os.path.join(path, 'templates'), os.path.join(path, 'static')]:
-        if not os.path.exists(d):
-            os.makedirs(d)
-
-    for f in (os.path.join(path, x) for x in ['../settings.ini', '../__init__.py', '__init__.py', 'views.py']):
-        if not os.path.exists(f):
-            fp = file(f, 'wb')
-            if f.endswith('views.py'):
-                print >>fp, "#coding=utf-8"
-                print >>fp, "from uliweb.core.SimpleFrame import expose\n"
-                print >>fp, "@expose('/')"
-                print >>fp, """def index():
-    return '<h1>Hello, Uliweb</h1>'"""
-            elif f.endswith('../settings.ini'):
-                print >>fp, "[GLOBAL]"
-                print >>fp, "DEBUG = True"
-                print >>fp, "#INSTALLED_APPS = ['uliweb.contrib.staticfiles']"
-            fp.close()
+    extract_dirs('uliweb', 'template_files/app', path)
 
 def make_project(project_name='', verbose=('v', False)):
     """create a new project directory according the project name"""
@@ -72,7 +55,7 @@ def make_project(project_name='', verbose=('v', False)):
     else:
         ans = 'y'
     if ans == 'y':
-        extract_dirs('uliweb', 'project', project_name)
+        extract_dirs('uliweb', 'template_files/project', project_name)
     
 def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appname=('a', '')):
     """
