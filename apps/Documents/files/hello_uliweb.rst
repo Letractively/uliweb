@@ -4,6 +4,7 @@ Hello, Uliweb
 :Author: Limodou <limodou@gmail.com>
 
 .. contents:: 
+.. sectnum::
 
 This tutorial will show you around the Uliweb frameworks. 
 In the following simple demo, we're going to generate a plain page 

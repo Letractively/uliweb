@@ -9,7 +9,6 @@ pass
 }}
 * `Introduction <{{= index('introduction') }}>`_
 * `License <{{= index('license') }}>`_
-* Change Log
 * `Credits <{{= index('credits') }}>`_
 * `Community & Links <{{= index('community') }}>`_
 * `Web sites which use Uliweb <{{= index('sites') }}>`_
@@ -18,19 +17,12 @@ Installation
 -------------------------
 
 * `Install Uliweb <{{= index('installation') }}>`_
-* `How to update Uliweb to new version <{{= index('update') }}>`_
-* How to config Uliweb
 
 Tutorials
 -------------------------------
 
 * `Hello, Uliweb(Easy) <{{= index('hello_uliweb') }}>`_
 * `Mini GuestBook(Hard) <{{= index('guestbook') }}>`_
-* Views and Templates
-* Build a weblog in minutes
-* CSS Artwork for your weblog
-* Go ahead with Uliweb
-* Reference list
 
 References
 -----------------------------
@@ -43,6 +35,7 @@ References
 * `Deployment Guide <{{= index('deployment') }}>`_
 * `uliweb Command Guide <{{= index('manage_guide') }}>`_
 * `I18n <{{= index('i18n') }}>`_
+* `Form <{{= index('form') }}>`_
 
 Advanced Topics
 -----------------------------

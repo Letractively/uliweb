@@ -18,7 +18,6 @@ pass
 
 * `系统需求 <{{= index('requirements') }}>`_
 * `安装Uliweb <{{= index('installation') }}>`_
-* `版本升级 <{{= index('update') }}>`_
 * 配置Uliweb
 
 教程
