@@ -46,11 +46,6 @@ def examples_form():
         else:
             return dict(form=f.html(request.params, data, py=False), message='')
         
-from uliweb.core.SimpleFrame import static_serve
-@expose('/static/<path:filename>')
-def static(filename):
-    return static_serve(request, filename)
-
 @expose
 def examples_error():
     error(message='This is error test!')

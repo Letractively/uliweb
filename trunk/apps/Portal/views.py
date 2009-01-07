@@ -9,9 +9,6 @@ def index():
     return {}
 
 from uliweb.core.SimpleFrame import static_serve
-@expose('/static/<path:filename>', static=True)
-def static(filename):
-    return static_serve(request, filename)
 
 @expose('/favicon.ico', static=True)
 def favicon():

@@ -29,7 +29,7 @@
   </tr>
   <tr class="{{=cycle.next()}}">
     <td class="title">{{= _('Static file testing')}}</td>
-    <td class="description">{{= _('If you can see this')}} <img src="{{= url_for('%s.views.static' % request.appname, filename='test.gif') }}"/> {{= _('image, it means this test is right.')}}</td>
+    <td class="description">{{= _('If you can see this')}} <img src="{{= url_for_static('test.gif') }}"/> {{= _('image, it means this test is right.')}}</td>
   </tr>
   <tr class="{{=cycle.next()}}">
     <td class="title"><a href="{{= url_for('%s.views.examples_error' % request.appname) }}">{{= _('Call error template testing')}}</a></td>
