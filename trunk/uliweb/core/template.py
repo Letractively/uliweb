@@ -137,11 +137,15 @@ class Lexer(object):
                     raise Exception, "The 'end' tag is unmatched, please check if you spell 'block' right"
                 top = self.stack[-1]
                 if in_tag:
-                    line = i[2:-2]
-                    if line and line[0] == '=':
-                        name, value = '=', line[1:]
+                    line = i[2:-2].strip()
+                    if not line:
+                        continue
+                    if line[0] == '=':
+                        name, value = '=', line[1:].strip()
+                    elif line[0] == '<':
+                        name, value = '<', line[1:].strip()
                     else:
-                        v = line.strip().split(' ', 1)
+                        v = line.split(' ', 1)
                         if len(v) == 1:
                             name, value = v[0], ''
                         else:
@@ -154,6 +158,9 @@ class Lexer(object):
                         self.stack.pop()
                     elif name == '=':
                         buf = "\n%s(%s)\n" % (self.writer, value)
+                        top.add(buf)
+                    elif name == '<':
+                        buf = "\n%s(%s, escape=False)\n" % (self.writer, value)
                         top.add(buf)
                     elif name == 'include':
                         self._parse_include(value)
@@ -295,16 +302,22 @@ def _run(code, locals={}, env={}, filename='template'):
     exec code in e
     return out.getvalue()
 
+def test():
+    """
+    >>> print template("Hello, {{=name}}", {'name':'uliweb'})
+    Hello, uliweb
+    >>> print template("Hello, {{ =name}}", {'name':'uliweb'})
+    Hello, uliweb
+    >>> print template("Hello, {{ = name}}", {'name':'uliweb'})
+    Hello, uliweb
+    >>> print template("Hello, {{=name}}", {'name':'<h1>Uliweb</h1>'})
+    Hello, &lt;h1&gt;Uliweb&lt;/h1&gt;
+    >>> print template("Hello, {{<name}}", {'name':'<h1>Uliweb</h1>'})
+    Hello, <h1>Uliweb</h1>
+    """
+
 if __name__ == '__main__':
-    print template("Hello, {{=name}}", {'name':'uliweb'})
-#    print template_file('index.html', {'name':'limodou'})
-#    print render_file('index.html', {'name':'limodou'})[1]
-#    print render_text(a)
-#    print template(a, {'abc':'limodou'})
-#    def f():
-#        template_file('index.html', {'name':'limodou'})
-#        
-#    from timeit import Timer
-#    t = Timer("f()", "from __main__ import f")
-#    print t.timeit(5000)
+    import doctest
+    doctest.testmod()
+    
     
