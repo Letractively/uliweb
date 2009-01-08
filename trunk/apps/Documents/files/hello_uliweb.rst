@@ -145,7 +145,7 @@ this alternative:
 
     return dict(content='Uliweb')
     
-or£º
+or:
 
 .. code:: python
 
