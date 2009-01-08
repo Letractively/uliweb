@@ -140,10 +140,10 @@ class Lexer(object):
                     line = i[2:-2].strip()
                     if not line:
                         continue
-                    if line[0] == '=':
+                    if line.startswith('='):
                         name, value = '=', line[1:].strip()
-                    elif line[0] == '<':
-                        name, value = '<', line[1:].strip()
+                    elif line.startswith('<<'):
+                        name, value = '<<', line[2:].strip()
                     else:
                         v = line.split(' ', 1)
                         if len(v) == 1:
@@ -159,7 +159,7 @@ class Lexer(object):
                     elif name == '=':
                         buf = "\n%s(%s)\n" % (self.writer, value)
                         top.add(buf)
-                    elif name == '<':
+                    elif name == '<<':
                         buf = "\n%s(%s, escape=False)\n" % (self.writer, value)
                         top.add(buf)
                     elif name == 'include':
@@ -312,12 +312,7 @@ def test():
     Hello, uliweb
     >>> print template("Hello, {{=name}}", {'name':'<h1>Uliweb</h1>'})
     Hello, &lt;h1&gt;Uliweb&lt;/h1&gt;
-    >>> print template("Hello, {{<name}}", {'name':'<h1>Uliweb</h1>'})
+    >>> print template("Hello, {{<<name}}", {'name':'<h1>Uliweb</h1>'})
     Hello, <h1>Uliweb</h1>
     """
 
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-    
-    
