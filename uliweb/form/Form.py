@@ -3,6 +3,8 @@ import os
 import cgi
 import datetime
 import time
+import messages
+from validators import *
 
 DEFAULT_FORM_CLASS = 'form'
 DEFAULT_CHARSET = 'utf-8'
@@ -34,46 +36,6 @@ class D(dict):
             del self[key]
         except KeyError, k: 
             raise AttributeError, k
-
-###############################################################
-# Validator
-###############################################################
-
-class ValidationError(Exception):
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return str(self.message)
-
-def _get_choices_keys(choices):
-    if isinstance(choices, dict):
-        keys = set(choices.keys())
-    elif isinstance(choices, (list, tuple)):
-        keys = set([])
-        for v in choices:
-            if isinstance(v, (list, tuple)):
-                keys.add(v[0])
-            else:
-                keys.add(v)
-    else:
-        raise ValidationError, 'Choices need a dict, tuple or list data.'
-    return keys
-
-def IS_IN_SET(choices, error_message='Select a valid choice. That choice is not one of the available choices.'):
-    '''
-    choices should be a list or a tuple, e.g. [1,2,3]
-    '''
-    def f(data, all_data=None):
-        if data not in _get_choices_keys(choices):
-            raise ValidationError, error_message
-    return f
-
-def IS_NUMBER(error_message='Please enter an integer'):
-    def f(data, all_data=None):
-        if not data.isdigit():
-            raise ValidationError, error_message
-    return f
 
 ##################################################################
 #  HTML Helper
@@ -359,12 +321,12 @@ class BaseField(object):
     def to_html(self, data):
         return _str(data)
 
-    def validate(self, data, all_data=None):
+    def validate(self, data):
         if isinstance(data, cgi.FieldStorage):
             if data.file:
                 v = data.filename
             else:
-                raise Exception, 'Unsupport type %s' % type(data)
+                raise Exception, messages.unsupport_error % type(data)
         else:
             v = data
         if not v:
@@ -385,10 +347,10 @@ class BaseField(object):
             else:
                 data = self.to_python(data)
         except:
-            return False, "Can't convert %r to %s." % (data, self.__class__.__name__)
+            return False, messages.convert_error % (data, self.__class__.__name__)
         try:
             for v in self.default_validators + self.validators:
-                v(data, all_data)
+                v(data)
         except ValidationError, e:
             return False, e.message
         return True, data
@@ -730,7 +692,7 @@ class DateField(StringField):
                 return datetime.date(*time.strptime(data, format)[:3])
             except ValueError:
                 continue
-        raise ValidationError, "The data is not a valid data format."
+        raise ValidationError, messages.date_format_error
     
     def to_html(self, data):
         if data:
@@ -780,7 +742,7 @@ class TimeField(StringField):
                 return datetime.time(*time.strptime(data, format)[3:6])
             except ValueError:
                 continue
-        raise ValidationError, "The data is not a valid time format."
+        raise ValidationError, messages.time_format_error
     
     def to_html(self, data):
         if data:
@@ -795,15 +757,16 @@ class FormMetaclass(type):
             if isinstance(obj, BaseField):
                 if not obj.name:
                     obj.name = field_name
+                obj.field_name = field_name
                 fields[field_name] = obj
 
-        f = {}
-        for base in bases[::-1]:
-            if hasattr(base, 'fields'):
-                f.update(base.fields)
-
-        f.update(fields)
-        attrs['_fields'] = f
+#        f = {}
+#        for base in bases[::-1]:
+#            if hasattr(base, 'fields'):
+#                f.update(base.fields)
+#
+#        f.update(fields)
+        attrs['fields'] = fields
 
         fields_list = [(k, v) for k, v in fields.items()]
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
@@ -875,19 +838,19 @@ class FieldProxy(object):
     
     @property
     def error(self):
-        return self.form._errors.get(self.field.name, '')
+        return self.form.errors.get(self.field.field_name, '')
     
     @property
     def html(self):
         default = self.field.to_html(self.field.default)
-        return self.field.html(self.form._data.get(self.field.name, default), self.form._py)
+        return self.field.html(self.form.data.get(self.field.field_name, default), self.form.ok)
     
     def __str__(self):
         return self.html
     
     @property
-    def value(self):
-        return self.form._data.get(self.field.name, self.field.default)
+    def data(self):
+        return self.form.data.get(self.field.name, self.field.default)
     
 class Form(object):
     """
@@ -909,8 +872,8 @@ class Form(object):
     layout = None
 
     def __init__(self, action='', method='post', buttons='default', 
-            validators=None, html_attrs=None, data=None, errors=None, 
-            py=True, idtype='name', layout_class=None, **kwargs):
+            validators=None, html_attrs=None, data={}, errors={}, 
+            idtype='name', **kwargs):
         self.action = action
         self.method = method
         self.kwargs = kwargs
@@ -918,8 +881,6 @@ class Form(object):
         self.validators = validators or []
         self.html_attrs = html_attrs or {}
         self.idtype = idtype
-        if layout_class:
-            self.layout_class = Form.layout_class
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
         if '_class' in self.html_attrs:
@@ -927,28 +888,41 @@ class Form(object):
         else:
             self.html_attrs['_class'] = DEFAULT_FORM_CLASS
             
-        self.binding(data, errors, py)
+        self.binding(data, errors)
+        self.__init_validators()
+        
+        self.ok = True
+        
+    def __init_validators(self):
+        for k, obj in self.fields.items():
+            func = getattr(self, 'validate_%s' % obj.field_name, None)
+            if func and callable(func):
+                obj.validators.append(func)
+                
+        func = getattr(self, 'validate', None)
+        if func and callable(func):
+            self.validators.append(func)
 
-    def validate(self, request):
+    def check(self, request):
         """
         request should provide get() and getall() functions
         """
 
         all_data = {}
-        for k, v in self._fields.items():
+        for k, v in self.fields.items():
             v.parse_data(request, all_data)
 
         errors = {}
         new_data = {}
 
         #gather all fields
-        for field_name, field in self._fields.items():
+        for field_name, field in self.fields.items():
             new_data[field_name] = field.get_data(all_data)
 
         #validate and gather the result
         result = D({})
-        for field_name, field in self._fields.items():
-            flag, value = field.validate(new_data[field_name], new_data)
+        for field_name, field in self.fields.items():
+            flag, value = field.validate(new_data[field_name])
             if not flag:
                 if isinstance(value, dict):
                     errors.update(value)
@@ -961,14 +935,19 @@ class Form(object):
             #validate global
             try:
                 for v in self.validators:
-                    v(new_data)
+                    v(result)
             except ValidationError, e:
                 errors['_'] = e.message
 
         if errors:
-            return False, errors
+            self.ok = False
+            self.errors = errors
+            self.data = new_data
         else:
-            return True, result
+            self.ok = True
+            self.errors = {}
+            self.data = result
+        return self.ok
 
     def __str__(self):
         return self.html()
@@ -995,26 +974,20 @@ class Form(object):
             b = self._buttons
         return str(b)
     
-    def binding(self, data=None, errors=None, py=True):
-        if data is None:
-            self._data = {}
-        else:
-            self._data = data
-        if errors is None:
-            self._errors = {}
-        else:
-            self._errors = errors
-        if py is None:
-            self._py = True
-        else:
-            self._py = py
+    def binding(self, data={}, errors={}):
+        if data is not None:
+            self.data = data
+        if errors is not None:
+            self.errors = errors
+            
         self.f = D({})
         for name, obj in self.fields_list:
-            self.f[name] = FieldProxy(self, obj)
+            f = FieldProxy(self, obj)
+            setattr(self, name, f)
+            self.f[name] = f
 
-    def html(self, data=None, errors=None, layout_class=None, py=True):
-        self.binding(data, errors, py)
-        cls = layout_class or self.layout_class
+    def html(self):
+        cls = self.layout_class
         layout = cls(self, self.layout)
         return str(layout)
 
