@@ -912,7 +912,7 @@ class Form(object):
         for k, v in self.fields.items():
             v.parse_data(request, all_data)
 
-        errors = {}
+        errors = D({})
         new_data = {}
 
         #gather all fields

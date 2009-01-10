@@ -183,7 +183,6 @@ def runserver(app_factory, hostname='localhost', port=5000,
     
 def main():
     global apps_dir
-    s = os.path.basename(sys.argv[0])
     prompt = """usage: %s [-d project_directory] <action> [<options>]
        %s --help""" % ('uliweb', 'uliweb')
 
@@ -193,15 +192,23 @@ def main():
         try:
             apps_dir = sys.argv[2]
             if os.path.exists(apps_dir):
-                sys.path.insert(0, os.path.join(apps_dir))
+                sys.path.insert(0, apps_dir)
+            else:
+                print "Error: Can't find the apps_dir [%s], please check it out" % apps_dir
+                sys.exit(1)
         except:
             import traceback
             traceback.print_exc()
             args = ['-h']
             
     else:
+        apps_dir = os.path.join(os.getcwd(), apps_dir)
         if os.path.exists(apps_dir):
-            sys.path.insert(0, os.path.join(apps_dir))
+            sys.path.insert(0, apps_dir)
+        else:
+            print "Error: Can't find the apps_dir [%s], please check it out" % apps_dir
+            sys.exit(1)
+        
             
     action_runserver = runserver(_make_application(None, apps_dir), 
         port=8000, use_reloader=True, use_debugger=True)
