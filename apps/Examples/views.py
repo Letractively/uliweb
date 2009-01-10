@@ -1,6 +1,6 @@
 from uliweb.core.SimpleFrame import expose
 from apps.Portal.modules.menu import menu
-from uliweb.core import Form
+from uliweb import form
 
 def __begin__():
     response.menu=menu(request, 'Examples')
