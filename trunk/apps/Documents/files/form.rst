@@ -7,9 +7,9 @@ Form
 .. sectnum::
 
 Form creating and processing is a big problem in web development. Uliweb provides
-its own Form process module, it's just named ``Form`` in uliweb/core directory.
+its own Form process module, it's just named ``form`` in ``uliweb`` directory.
 But it's not bound by default, it's just a common Python module, so you should
-import it when you want to use it. So it also means that you can use other Form module
+import it when you want to use it. It also means that you can use other Form module
 in Uliweb.
 
 What's the feature of the Form module in Uliweb?
@@ -167,7 +167,7 @@ example, below is view function:
 So after you create the instance of ``F``, you can return a dict to template. And
 the template is:
 
-.. code:: html
+::
 
     {{ if '_' in form.errors: }}
     <h2>Error:{{=form.errors._}}</h2>
@@ -175,11 +175,11 @@ the template is:
     {{<< form}}
 
 For first 3 lines, they are the form level error display process. And ``{<< form}}``
-is: outputing the form object withouth escaping, so characters like ``<`` etc. will
+is: outputing the form object without escaping, so characters like ``<`` etc. will
 not be converted to ``&lt;``. That's exactly what we want.
 
 If you want the form have initial values, you have two ways. One you can pass the
-``data`` and ``errors``(if existing) parameters to Form initialization function. For
+``data`` and ``errors`` (if existing) parameters to Form initialization function. For
 example:
 
 .. code:: python
@@ -205,3 +205,29 @@ Or you can use Form.binding() function. For example:
 
     The ``data`` should be a dict, and the values are matched with the Fields date
     type.
+
+You can also output Form HTML code with ``f.html()`` method, it the same as ``str(f)``.
+Here ``f`` is the instance of a defined Form.
+
+Because f.html() will output a whole Form HTML code, but sometimes you may want
+to create Form HTML code yourself, and you can do it in template. form module also
+provides funnctions to help you to do that. For example:
+
+::
+
+    {{<<form.form_begin}}
+    <dl>
+    <dt>{{<<form.title.label}}</dt>
+    <dd>{{<<form.title}} {{<<form.f.title.error}} {{<<form.f.title.help_string}}</dd>
+    <dt>{{<<form.title.label}}</dt>
+    <dd>{{<<form.title}}</dd>
+    <dt>{{<<form.date.label}}</dt>
+    <dd>{{<<form.date}}</dd>
+    
+    </dl>
+    {{<<form.buttons}}
+    {{<<form.form_end}}
+
+You can see, Form has provides: ``form.form_begin``, ``form.form.buttons``, ``form.form_end``,
+and ``form.<field>.lable``, ``form.<field>``, ``form.<field>.error``, ``formm.<field>.help_string``
+methods or properties to create a Form in a template.
