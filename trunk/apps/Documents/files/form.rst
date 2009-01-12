@@ -21,7 +21,7 @@ What's the feature of the Form module in Uliweb?
 * Support user defined validator
 * Provide a form app(not implemented yet), so you can use it more easier
 
-Form class
+Form Class
 ------------
 
 If you want to use Form module, you should define a Form class first, just like
@@ -144,7 +144,7 @@ For example:
         title = StringField(label='Title:', required=True, help_string="This is a help string")
         date = DateField(label='Date:', name='adate', required=True)
 
-Outputing HTML code
+Outputing HTML Code
 ----------------------
 
 For simple cases, you may want to output Form HTML code with empty value. For 
@@ -194,12 +194,12 @@ example:
     d = {'user_name':'limodou'}
     f = F(data=d)
     
-Or you can use Form.binding() function. For example:
+Or you can use Form.bind() function. For example:
 
 .. code:: python
 
     f = F()
-    f.binding(data=d)
+    f.bind(data=d)
     
 .. note::
 
@@ -231,3 +231,44 @@ provides funnctions to help you to do that. For example:
 You can see, Form has provides: ``form.form_begin``, ``form.form.buttons``, ``form.form_end``,
 and ``form.<field>.lable``, ``form.<field>``, ``form.<field>.error``, ``formm.<field>.help_string``
 methods or properties to create a Form in a template.
+
+Validating Submitted Data
+-----------------------------
+
+When you defining a Form, you may want to validate the value. And you've seen 
+how to define validator functions in a Form. So when user submitting the data,
+how to validate them and what's the next step after validating?
+
+You can use Form.check() to validate the submmited data. For example:
+
+.. code:: python
+
+    from uliweb.form import *
+    
+    class F(Form):
+        user_name = StringField(required=True)
+        password = PasswordField(required=True)
+        enter_password_again = PasswordField(required=True)
+    
+    f = F()
+    if f.check(request.params):
+        ...
+    else:
+        return {'form':f}
+        
+Above example demonstrates how to validate the submitted data. You should pass
+request.GET or request.POST or request.params(for WebOb module) to Form.check() 
+function.
+
+.. note::
+
+    Here the data passed to Form.check() should be a dict-like object, and if 
+    you define ``multiple`` parameter in one field definition, the data should 
+    support getall() method or getlist() method.
+    
+If Form.check() validate the submitted data ok, it'll return ``True``. Or it'll return
+``False``. If the validatation result is True, the submitted data will be converted to
+Python data type, and be bound to the Form instance. You can use ``Form.data`` and 
+``Form.errors`` to get the data and errors. They are dict data type. You can also
+use ``Form.<field>.data`` and ``Form.<field>.error`` to get some field data and error.
+    
