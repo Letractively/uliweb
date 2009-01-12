@@ -311,7 +311,11 @@ class BaseField(object):
         
     def parse_data(self, request, all_data):
         if self.multiple:
-            all_data[self.name] = request.getall(self.name)
+            if hasattr(request, 'getlist'):
+                func = getattr(request, 'getlist')
+            else:
+                func = getattr(request, 'getall')
+            all_data[self.name] = func(self.name)
         else:
             all_data[self.name] = request.get(self.name, None)
 
@@ -888,7 +892,7 @@ class Form(object):
         else:
             self.html_attrs['_class'] = DEFAULT_FORM_CLASS
             
-        self.binding(data, errors)
+        self.bind(data, errors)
         self.__init_validators()
         
         self.ok = True
@@ -974,7 +978,7 @@ class Form(object):
             b = self._buttons
         return str(b)
     
-    def binding(self, data={}, errors={}):
+    def bind(self, data={}, errors={}):
         if data is not None:
             self.data = data
         if errors is not None:
