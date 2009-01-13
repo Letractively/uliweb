@@ -232,6 +232,13 @@ You can see, Form has provides: ``form.form_begin``, ``form.form.buttons``, ``fo
 and ``form.<field>.lable``, ``form.<field>``, ``form.<field>.error``, ``formm.<field>.help_string``
 methods or properties to create a Form in a template.
 
+.. note::
+
+    If you've already validated submitted data, the data or errors will be bound
+    to the form instance, so when you re-render the form instance again, just lik
+    ``return {'form':f}`` and ``{{<< form}}``, it'll output the data and errors to 
+    HTML code.
+
 Validating Submitted Data
 -----------------------------
 
@@ -257,7 +264,7 @@ You can use Form.check() to validate the submmited data. For example:
         return {'form':f}
         
 Above example demonstrates how to validate the submitted data. You should pass
-request.GET or request.POST or request.params(for WebOb module) to Form.check() 
+``request.GET`` or ``request.POST`` or ``request.params``(for WebOb module) to Form.check() 
 function.
 
 .. note::
@@ -267,8 +274,51 @@ function.
     support getall() method or getlist() method.
     
 If Form.check() validate the submitted data ok, it'll return ``True``. Or it'll return
-``False``. If the validatation result is True, the submitted data will be converted to
+``False``. If the validatation result is ``True``, the submitted data will be converted to
 Python data type, and be bound to the Form instance. You can use ``Form.data`` and 
 ``Form.errors`` to get the data and errors. They are dict data type. You can also
-use ``Form.<field>.data`` and ``Form.<field>.error`` to get some field data and error.
-    
+use ``Form.<field>.data`` and ``Form.<field>.error`` to get one field data and error.
+
+So after validating the data, you can use ``form.data`` or ``form.<field>.data`` to do 
+more process.
+
+Field Definition
+-------------------
+
+The basic field class definition will be:
+
+.. code:: python
+
+    Form.BaseField(label='', default=None, required=False, validators=None, 
+        name='', html_attrs=None, help_string='', build=None, datatype=None, 
+        multiple=False, idtype=None, **kwargs)
+        
+Let's explain these parameters one by one:
+
+    label
+        Will be used to display a ``<label>label</label>`` tag. If it's empty,
+        Uliweb form will use the field name, and it'll convert a field name to
+        camel case format, and if ``'_'`` is in field name, it'll be converted to 
+        space. So ``user_name`` will be converted to ``User Name``.
+        
+    default
+        Default value of a field. There are many sueful of defult parameter.
+        When you render the field to HTML code, if the field data is not existed,
+        default value will be used. Or when you validating submitted data, and 
+        the feild is not required, and there is no matched submitted data, default
+        value will be used. default value for DateField and TimeField has other
+        usage, you'll find it at DateField description.
+        
+        Different fields have differnt default value, you should check documentan
+        carefully.
+        
+    required
+        Indicate whether a field is must existed. Default is False. If it's ``True``,
+        you must enter value to the field, but not empty value. If it's ``False``,
+        you don't need to enter the field.
+        
+    validators
+        It's a validators list. If you want to validate whether the submitted
+        data is correct, you can define your validator functions or just use built-in
+        validator functions, and pass a validators list to it. More details please
+        read *Validator* section.
