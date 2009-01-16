@@ -302,7 +302,7 @@ Let's explain these parameters one by one:
         space. So ``user_name`` will be converted to ``User Name``.
         
     default
-        Default value of a field. There are many sueful of defult parameter.
+        Default value of a field. There are many usages of defult parameter.
         When you render the field to HTML code, if the field data is not existed,
         default value will be used. Or when you validating submitted data, and 
         the feild is not required, and there is no matched submitted data, default
@@ -322,3 +322,50 @@ Let's explain these parameters one by one:
         data is correct, you can define your validator functions or just use built-in
         validator functions, and pass a validators list to it. More details please
         read *Validator* section.
+        
+    name
+        The name of the field. By default, you don't need to define it, because
+        when you define a field in a form, Uliweb form will assign field name to
+        field instance. But you can still pass ``name`` parameter to a field. That
+        will result: the form will use field name to access the data, and HTML
+        code will use ``name`` to access the HTML data. For example:
+        
+        .. code:: python
+        
+            from uliweb.form import *
+            
+            class F(Form):
+                user_name = StringField(name='username')
+                
+        So you can see the you defined a field with ``user_name``, but it's really
+        name is ``username``.
+        
+    help_string
+        Just a help string of the field. And Layout class can use it to display
+        a hint message.
+        
+    build
+        Every field has a defult HTML code build class, but you can change default
+        build class by passing this parameter. But you seldom to use it.
+        
+    datatype
+        Every field has a default Python data type, and it'll be used when validating
+        the submitted data, it'll convert the HTML code to defult Python data type.
+        But you can change the default data type by passing this parameter.
+        
+    multiple
+        If a field can accept multiple same name values. If there are some same
+        name fields, and you pass multiple parameter to True, the result will
+        be a list but not a single value. 
+        
+        .. note::
+        
+            Uliweb Form can't corrently create HTML code for the field with
+            multiple values, so you can't simple use ``{{<< form}}`` to render the
+            form, but create the form code manually.
+            
+    idtype
+        Indicating how to create an id attribute for html code of a field. If 
+        ``None``, it'll not create ``id`` attribute. If it's ``name``, it'll use 
+        ``field_<name>`` format to create ``id`` attribute. Others will use
+        ``field_<no>``, and ``no`` is a unique number of a field.
