@@ -20,14 +20,13 @@ Uliweb uses ``func_globals`` inject(You can inject objects into function's ``fun
 these injected objects without importing or declaring them.) So you can use
 ``request``, ``response``, etc. directly in the view function.
 
-For template, you don't need to invoke them in commonly, just return a dict
-variable from view function, and Uliweb will automatically find a matched 
-template for you according the function name. For example your view function
-is ``show_document()``, and the default template will be ``show_document.html``.
-And if you return other type object, Uliweb will not use default template for
-you. And you can assign a template filename to ``response.template`` so that
-the Uliweb will not use the default matched template file but this filename.
-
+The **T** stands for template. Templates dont need to be rendered explicitly, just return a dict
+variable from the view function, and Uliweb will automatically find a matching 
+template to render accrding the function name. For example, if your view function
+is named ``show_document()``, the default template will then be ``show_document.html``.
+If you decide to return another type of object, Uliweb will not use the above mechanism to render a 
+default template, you will need to assign the view function a template file, this is done as follows:
+``response.template`` = "new_template.html"
 
 Project Organization
 -----------------------
@@ -143,21 +142,23 @@ parse config.ini, and insert the ``REQUIRED_APPS`` to apps list. So with this
 feature will simplify the configuration.
 
 Startup and initialisation process
------------------
+------------------------------------
 
-When an Uliweb project starts up, it searches the apps folder and imports all of them one by one. This means that
-during an app import, plugin hooks or other initialization procedures are processed. 
-Code in an app's ``__init__.py`` module is prcessed first, after that, it will process the apps
-settings file, and create an ini object named ``settings`` and bind it to ``application`` object.
+When an Uliweb project starts up, it searches the apps folder and imports all them one by one. So if you have plugins hook or some
+initialization process you can write them in app's ``__init__.py`` module.
+Then it'll process all settings file, and 
+create an ini object named ``settings`` and bind it to ``application`` object.
+As you've already known, there are many settings files, one is globals 
+settings.ini which in ``apps`` folder, others are apps' settings file they are in their
+own folder. Uliweb will process the apps' settings files first, then the global
+settings.ini. So you can write some same name options in global settings.ini to
+override the apps' settings.
 
-Options placed in global settings.ini file can override the settings in an individual apps
-settings file.
-
-The next step will be that Uliweb will automatically find views module in every **available** apps
-directory. This is necessary as Uliweb neds to collect all the defined URL mappings in these modules.
-View files are files which start with ``view``. So 
-``view.py`` and ``view_about.py`` are both available views module, and they'll be 
-imported automatically at startup. 
+Then Uliweb will automatically find views module in every **available** app
+directory. View modules are files which filename starts with ``views``. So 
+``views.py`` and ``views_about.py`` are both available views module, and they'll be 
+imported automatically at startup. Why doing this, because Uliweb need to 
+collect all URL mapping definition from all of these view modules. 
   
 URL Mapping Process
 ---------------------
@@ -174,18 +175,19 @@ can be used for reversed URL creation, it'll create URLs according to the corres
 name. For more details, see the `URL Mapping <url_mapping>`_ document.b
 
 Extending Uliweb
--------------------
+--------------------
 
-Uliweb provides many ways to extend its functionality:
+Uliweb provides many ways to extend it:
 
-* Plugin extensions. This plugin mechanism is similar to the Dispatch module, but much easier.
-  Uliweb has already predefined plugin hook points, if there is a plugin that implements one of the hooks dfined by the Uliweb
-  Plugin mechanism, it would be invoked at that point.
-* middleware extension. It's similar to Djangos. You can configure them in 
+* Plugin extension. This is a plugin mechanism. It's similar as Dispatch module,
+  but I created it myself, and it's easy and simple. Uliweb has already predefined
+  some plugin hook points, when it runs there, it'll find if there are some
+  matched plugin hook functions existed, and will invoke them one by one.
+* middleware extension. It's similar with Django. You can configure them in 
   ``settings.ini``, and it can be used for processing before or after the view
   process.
-* views module initialization process. If you define a function that starts with the prefix
-  ``__begin__``, it'll be invoked before view function. This allows you to include
-  put some module level code there. The preffered method would be to divide the different
-  views modules according to their different functionalities.
+* views module initialization process. If you defined a function named as
+  ``__begin__``, it'll be invoked before invoke the exact view function. So you can
+  put some module level process code there. So I suggest that you can divide
+  different views modules via different functionalities.
 
