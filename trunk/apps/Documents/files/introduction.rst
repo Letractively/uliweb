@@ -6,17 +6,17 @@ Uliweb Introduction
 
 .. contents:: 
 
-What's it?
+What is Uliweb?
 ------------
 
-Uliweb is a new Python Web Framework. Before started to create this framework,
-I had learned and used a few other frameworks such as Karrigell, Cherrypy, 
-Django and web2py, but more or less they do not fully satisfy me. So I decided 
-to create a web framework myself. By combining the strength of these frameworks, 
-I hope to make Uliweb simple, easy to use yet powerful.
+Uliweb is a new Python Web Framework. Before I started to create this framework,
+I had used a few other frameworks such as Karrigell, Cherrypy, 
+Django and web2py, but they did satisfy me due to several reasons. I then decided 
+to create a web framework that combined the strengths of these frameworks, keeping in mind
+that the main focus is to make Uliweb easy to use yet powerful.
 
-This project is created and leaded by Limodou <limodou@gmail.com>. However it 
-has received a lot of help from kind folks around the world.
+This project was created and lead by Limodou <limodou@gmail.com>. It is in constant development 
+from several other developers around the world.
 
 License
 ------------
@@ -27,7 +27,7 @@ Infrastructure
 ----------------
 
 Uliweb was not created totally from scratch. It uses some modules created by 
-others, for example:
+other developers, for example:
 
 * `Werkzeug <http://werkzeug.pocoo.org/>`_ Used in core process of framework. 
   For example: command line, URL Mapping, Debug, etc.
@@ -42,11 +42,11 @@ I also referenced some code from other web frameworks, for example:
   improvements.
 * Some codes were referenced from `Django <http://www.djangoproject.com/>`_ project.
 
-And I also made some new "wheels" myself. For example:
+And I also constructed a few new "wheels" myself. For example:
 
-* Form process, user can use it to create HTML code, validate submitted data and 
-  convert submitted data to Python data type.
-* I18n process, including template support, language lazy process.
+* Form process, developers can use it to create HTML code, validate submitted data and 
+  convert submitted data to Python data types.
+* I18n processing including template support, language lazy process.
 * Uliorm, which is an ORM module, was built on top of SqlAlchemy. I also referenced from 
   GAE datastore module.
 * Framework runtime process.
