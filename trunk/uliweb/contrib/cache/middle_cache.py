@@ -1,4 +1,4 @@
-from uliweb.middlewares import Middleware
+from uliweb.middleware import Middleware
 
 class CacheMiddle(Middleware):
     def __init__(self, application, settings):
