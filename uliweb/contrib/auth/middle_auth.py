@@ -1,4 +1,4 @@
-from uliweb.middlewares import Middleware
+from uliweb.middleware import Middleware
 
 class AuthMiddle(Middleware):
     def process_request(self, request):

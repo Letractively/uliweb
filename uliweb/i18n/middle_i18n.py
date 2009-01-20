@@ -1,7 +1,7 @@
 import re
 
 from uliweb.i18n import set_language, format_locale
-from uliweb.middlewares import Middleware
+from uliweb.middleware import Middleware
 
 accept_language_re = re.compile(r'''
         ([A-Za-z]{1,8}(?:-[A-Za-z]{1,8})*|\*)   # "en", "en-au", "x-y-z", "*"

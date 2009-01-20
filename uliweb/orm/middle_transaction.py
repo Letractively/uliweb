@@ -1,4 +1,6 @@
-class TransactionMiddle(object):
+from uliweb.middleware import Middleware
+
+class TransactionMiddle(Middleware):
     ORDER = 100
     
     def __init__(self, application, settings):
