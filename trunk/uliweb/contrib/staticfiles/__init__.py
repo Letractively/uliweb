@@ -1,4 +1,5 @@
 from uliweb.core.plugin import plugin
+from uliweb.core.SimpleFrame import expose
 
 @plugin('prepare_template_env')
 def prepare_template_env(sender, env):
