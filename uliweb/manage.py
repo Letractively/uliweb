@@ -9,6 +9,11 @@ sys.path.insert(0, os.path.join(workpath, 'lib'))
 from werkzeug import script
 from uliweb.core import SimpleFrame
 
+def check_apps_dir():
+    if not os.path.exists(apps_dir):
+        print "Error: Can't find the apps_dir [%s], please check it out" % apps_dir
+        sys.exit(1)
+
 def make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
@@ -31,6 +36,7 @@ def make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
 
 def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
     def action():
+        check_apps_dir()
         print ' * APPS_DIR =',  os.path.abspath(apps_dir)
         
         return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi)
@@ -38,6 +44,8 @@ def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
 
 def make_app(appname=''):
     """create a new app according the appname parameter"""
+    check_apps_dir()
+
     from uliweb.utils.common import extract_dirs
     path = os.path.join(apps_dir, appname)
     extract_dirs('uliweb', 'template_files/app', path)
@@ -100,6 +108,8 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     """
     Export all installed apps' static directory to outputdir directory.
     """
+    check_apps_dir()
+
     from uliweb.utils.common import copy_dir_with_check
 
     if not outputdir:
@@ -115,6 +125,8 @@ def extracturls(urlfile='urls.py'):
     """
     Extract all url mappings from view modules to a specified file.
     """
+    check_apps_dir()
+
     application = SimpleFrame.Dispatcher(apps_dir=apps_dir, use_urls=False)
     filename = os.path.join(application.apps_dir, urlfile)
     if os.path.exists(filename):
@@ -173,6 +185,8 @@ def runserver(app_factory, hostname='localhost', port=5000,
                reloader=use_reloader, debugger=use_debugger,
                evalex=use_evalex, threaded=threaded, processes=processes):
         """Start a new development server."""
+        check_apps_dir()
+
         from werkzeug.serving import run_simple
         app = app_factory()
         extra_files = collect_ini()
@@ -205,10 +219,6 @@ def main():
         apps_dir = os.path.join(os.getcwd(), apps_dir)
         if os.path.exists(apps_dir):
             sys.path.insert(0, apps_dir)
-        else:
-            print "Error: Can't find the apps_dir [%s], please check it out" % apps_dir
-            sys.exit(1)
-        
             
     action_runserver = runserver(_make_application(None, apps_dir), 
         port=8000, use_reloader=True, use_debugger=True)
