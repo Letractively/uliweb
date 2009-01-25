@@ -13,7 +13,7 @@ which displays "Hello, Uliweb." step by step.
 Getting Started
 -----------------
 
-The first thing you should do is reading this article `Installation <{{= url_for('%s.views.show_document' % request.appname, filename=filename) }}>`_,
+The first thing you should do is reading this article `Installation <installation>`_,
 you should install Uliweb correctly first according the article.
 
 After you finished installation of Uliweb, you could already run Python and 

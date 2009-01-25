@@ -81,7 +81,7 @@ Features
     view function, Uliweb will automatically find a default applied template according
     to the view function name.
   * Environment execution mode. Each view function will be run in an environment,
-     which eliminates the need to write many import statements. Plus there are already many
+    which eliminates the need to write many import statements. Plus there are already many
     objects that can be used directly, for example: request, response, etc. When used, 
     these objectsIt can save many lines of code.
   * User can directly use Python code in a template, and user does not need to indent
