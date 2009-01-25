@@ -17,7 +17,7 @@ from rules import Mapping, add_rule
 import template
 from storage import Storage
 from plugin import *
-from uliweb.utils.common import pkg
+from uliweb.utils.common import pkg, log
 from uliweb.utils.pyini import Ini
 
 APPS_DIR = 'apps'
@@ -149,9 +149,8 @@ def get_app_dir(app):
     else:
         try:
             path = pkg.resource_filename(app, '')
-        except ImportError:
-            import traceback
-            traceback.print_exc()
+        except ImportError, e:
+            log.exception(e)
             path = ''
         __app_dirs[app] = path
         return path
@@ -480,11 +479,17 @@ class Dispatcher(object):
     
     def install_views(self, views):
         for v in views:
-            __import__(v, {}, {}, [''])
+            try:
+                __import__(v, {}, {}, [''])
+            except Exception, e:
+                log.exception(e)
             
     def install_apps(self):
         for p in self.apps:
-            __import__(p)
+            try:
+                __import__(p)
+            except Exception, e:
+                log.exception(e)
             
     def install_settings(self, s):
         global settings
