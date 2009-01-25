@@ -47,13 +47,13 @@ def extract_file(module, path, dist, verbose=False):
     inf = pkg.resource_filename(module, path)
     shutil.copy2(inf, dist)
     if verbose:
-        print 'Info : Copy [%s] to [%s]' % (inf, dist)
+        log.info('Info : Copy [%s] to [%s]' % (inf, dist))
   
 def extract_dirs(mod, path, dst, verbose=False):
     if not os.path.exists(dst):
         os.makedirs(dst)
         if verbose:
-            print 'Info : Make directory', dst
+            log.info('Info : Make directory', dst)
     for r in pkg.resource_listdir(mod, path):
         if r in ['.svn', '_svn']:
             continue
@@ -72,7 +72,7 @@ def copy_dir(d, dst, verbose, exact=False):
     for f in d:
         if not os.path.exists(f):
             if verbose:
-                print "Warn : %s does not exist, SKIP" % f
+                log.warn("Warn : %s does not exist, SKIP" % f)
             continue
         dd = os.path.join(dst, os.path.basename(f))
         if exact:
@@ -80,7 +80,7 @@ def copy_dir(d, dst, verbose, exact=False):
         if not os.path.exists(dd):
             os.makedirs(dd)
             if verbose:
-                print 'Info : Make directory', dst
+                log.info('Info : Make directory', dst)
             
         for r in os.listdir(f):
             if r in ['.svn', '_svn']:
@@ -94,7 +94,7 @@ def copy_dir(d, dst, verbose, exact=False):
                     continue
                 shutil.copy2(fpath, dd)
                 if verbose:
-                    print "Info : Copy [%s] to [%s]" % (fpath, dd)
+                    log.info("Info : Copy [%s] to [%s]" % (fpath, dd))
 
 def copy_dir_with_check(d, dst, verbose=False, check=True):
     import shutil
@@ -108,10 +108,10 @@ def copy_dir_with_check(d, dst, verbose=False, check=True):
     for f in d:
         if not os.path.exists(f):
             if verbose:
-                print "Warn : %s does not exist, SKIP" % f
+                log.warn("Warn : %s does not exist, SKIP" % f)
             continue
         if verbose:
-            print "Info : Processing %s" % f
+            log.info("Info : Processing %s" % f)
         for r in os.listdir(f):
             if r in ['.svn', '_svn']:
                 continue
@@ -139,3 +139,23 @@ def copy_dir_with_check(d, dst, verbose=False, check=True):
                         shutil.copy2(fpath, dst)
                 else:
                     shutil.copy2(fpath, dst)
+
+log = None
+def _log():
+    """Log into the internal werkzeug logger."""
+    global log
+    if log is None:
+        import logging
+        handler = logging.StreamHandler()
+        log = logging.getLogger('uliweb')
+        log.addHandler(handler)
+        log.setLevel(logging.INFO)
+
+_log()
+
+if __name__ == '__main__':
+    log.info('Info: info')
+    try:
+        1/0
+    except:
+        log.exception('1/0')
