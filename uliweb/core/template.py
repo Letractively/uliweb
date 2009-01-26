@@ -64,9 +64,14 @@ def get_templatefile(filename, dirs, default_template=None):
             path = os.path.join(d, filename)
             if os.path.exists(path):
                 return path
-    else:
-        if default_template:
-            return default_template
+    if default_template:
+        if isinstance(default_template, (list, tuple)):
+            for i in default_template:
+                f = get_templatefile(i, dirs)
+                if f:
+                    return f
+        else:
+            return get_templatefile(default_template, dirs)
 
 r_tag = re.compile(r'(\{\{.*?\}\})', re.DOTALL|re.M)
 
@@ -291,6 +296,7 @@ def _prepare_run(locals, env, out):
     e.update(locals)
     e['out'] = out
     e['xml'] = out.noescape
+    e['_vars'] = locals
     return e
     
 def _run(code, locals={}, env={}, filename='template'):

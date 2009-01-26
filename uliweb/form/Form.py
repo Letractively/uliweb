@@ -247,10 +247,15 @@ class BaseField(object):
         self.html_attrs = html_attrs or {}
         self.datatype = datatype or self.default_datatype
         self.idtype = idtype
+        _cls = ''
         if '_class' in self.html_attrs:
-            self.html_attrs['_class'] = ' '.join([self.html_attrs['_class'], self.field_css_class])
+            _cls = '_class'
+        elif 'class' in self.html_attrs:
+            _cls = 'class'
+        if _cls:
+            self.html_attrs['class'] = ' '.join([self.html_attrs[_cls], self.field_css_class])
         else:
-            self.html_attrs['_class'] = ' '.join([self.field_css_class])
+            self.html_attrs['class'] = ' '.join([self.field_css_class])
         
         self.multiple = multiple
         self.build = build or self.default_build
@@ -394,6 +399,9 @@ class StringField(BaseField):
     (*)
     </span>
     </label>
+    >>> a = StringField(name='title', label='Title:', required=True, html_attrs={'class':'ffff'})
+    >>> print a.html('')
+    <input name="title" type="text" class="ffff field" value=""></input>
     
     """
     default_datatype = str
