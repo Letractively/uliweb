@@ -252,6 +252,7 @@ class Dispatcher(object):
         callplugin(self, 'prepare_default_env', Dispatcher.env)
         callplugin(self, 'prepare_template_env', Dispatcher.template_env)
         Dispatcher.installed = True
+        self.default_template = pkg.resource_filename('uliweb.core', 'default.html')
         
     def _prepare_env(self):
         env = Storage({})
@@ -288,7 +289,7 @@ class Dispatcher(object):
         return None
 #        errorpage("Can't find the file %s" % filename)
 
-    def template(self, filename, vars, env=None, dirs=None, request=None):
+    def template(self, filename, vars, env=None, dirs=None, request=None, default_template=None):
         vars = vars or {}
         dirs = dirs or self.template_dirs
         env = self.get_template_env(env)
@@ -298,12 +299,11 @@ class Dispatcher(object):
             def _compile(code, filename, action):
                 __loader__ = Loader(filename, vars, env, dirs, notest=True)
                 return compile(code, filename, 'exec')
-            fname, code = template.render_file(filename, vars, env, dirs)
+            fname, code = template.render_file(filename, vars, env, dirs, default_template=default_template)
             out = template.Out()
             e = template._prepare_run(vars, env, out)
             #user can insert new local environment variables to env variable
             callplugin(self, 'before_render_template', e, out)
-            
             if isinstance(code, (str, unicode)):
                 code = _compile(code, fname, 'exec')
             __loader__ = Loader(fname, vars, env, dirs)
@@ -312,7 +312,7 @@ class Dispatcher(object):
             output = execplugin(self, 'after_render_template', text, vars, e)
             return output or text
         else:
-            fname, code = template.render_file(filename, vars, env, dirs)
+            fname, code = template.render_file(filename, vars, env, dirs, default_template=default_template)
             out = template.Out()
             e = template._prepare_run(vars, env, out)
             callplugin(self, 'before_render_template', e, out)
@@ -324,8 +324,8 @@ class Dispatcher(object):
             output = execplugin(self, 'after_render_template', text, vars, e)
             return output or text
     
-    def render(self, templatefile, vars, env=None, dirs=None, request=None):
-        return Response(self.template(templatefile, vars, env, dirs, request), content_type='text/html')
+    def render(self, templatefile, vars, env=None, dirs=None, request=None, default_template=None):
+        return Response(self.template(templatefile, vars, env, dirs, request, default_template=default_template), content_type='text/html')
     
     def _page_not_found(self, description=None, **kwargs):
         if not description:
@@ -399,7 +399,7 @@ class Dispatcher(object):
                 tmpfile = response.template
             else:
                 tmpfile = request.function + settings.GLOBAL.TEMPLATE_SUFFIX
-            response = self.render(tmpfile, result, env=env, request=request)
+            response = self.render(tmpfile, result, env=env, request=request, default_template=['default.html', self.default_template])
         elif isinstance(result, (str, unicode)):
             response = Response(result, content_type='text/html')
         elif isinstance(result, (Response, BaseResponse)):
