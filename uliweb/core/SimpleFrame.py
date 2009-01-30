@@ -19,6 +19,10 @@ from storage import Storage
 from plugin import *
 from uliweb.utils.common import pkg, log
 from uliweb.utils.pyini import Ini
+try:
+    set
+except:
+    from sets import Set as set
 
 APPS_DIR = 'apps'
 
@@ -169,13 +173,22 @@ def get_apps(apps_dir, include_apps=None):
     
     apps.extend(include_apps)
     #process dependencies
-    for p in apps:
-        configfile = os.path.join(get_app_dir(p), 'config.ini')
-        if os.path.exists(configfile):
-            x = Ini(configfile)
-            for i in x.DEFAULT.get('REQUIRED_APPS', []):
-                if i not in apps:
-                    apps.append(i)
+    s = apps[:]
+    visited = set()
+    while s:
+        p = s.pop()
+        if p in visited:
+            continue
+        else:
+            configfile = os.path.join(get_app_dir(p), 'config.ini')
+            if os.path.exists(configfile):
+                x = Ini(configfile)
+                for i in x.DEFAULT.get('REQUIRED_APPS', []):
+                    if i not in apps:
+                        apps.append(i)
+                    s.append(i)
+                visited.add(p)
+    
     return apps
         
 class Loader(object):
@@ -454,7 +467,7 @@ class Dispatcher(object):
                         views.add('.'.join([appname, subfolder, fname]))
                     else:
                         views.add('.'.join([appname, fname]))
-            
+
         for p in self.apps:
             path = get_app_dir(p)
             if p.startswith('.') or p.startswith('_') or p.startswith('CVS'):
