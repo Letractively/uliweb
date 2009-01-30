@@ -6,13 +6,12 @@ Form
 .. contents:: 
 .. sectnum::
 
-Form creating and processing is a big problem in web development. Uliweb provides
-its own Form process module, it's just named ``form`` in ``uliweb`` directory.
-But it's not bound by default, it's just a common Python module, so you should
-import it when you want to use it. It also means that you can use other Form module
-in Uliweb.
+Form creation and processing is a big problem in web development. Uliweb provides
+its own form processing module, but it's not bound by default, it is named ``form`` 
+and can be found in the ``uliweb`` directory. It is basically a common Python module, and can, as such, 
+be imported as one when you want to use it. You can use other form processing modules in Uliweb.
 
-What's the feature of the Form module in Uliweb?
+What are the features of the Uliweb Form module?
 
 * Define it just like define a model
 * Creating HTML code directly from Field, Form object
