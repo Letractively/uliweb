@@ -6,38 +6,34 @@ Hello, Uliweb
 .. contents:: 
 .. sectnum::
 
-This tutorial will show you around the Uliweb frameworks. 
+This tutorial will get you started with the Uliweb framework. 
 In the following simple demo, we're going to generate a plain page 
 which displays "Hello, Uliweb." step by step.
 
 Getting Started
 -----------------
 
-The first thing you should do is reading this article `Installation <installation>`_,
-you should install Uliweb correctly first according the article.
+The first thing would be to read this article `Installation <installation>`_,
+ a correct installation of Uliweb is a prerequisite.
 
-After you finished installation of Uliweb, you could already run Python and 
-``uliweb`` in command line. So let go!
-
-Creating new project
+Creating a new project
 ---------------------
 
-Uliweb has already provided a command line tool named ``uliweb``, you can use
-it to execute some commands. 
+Uliweb provides a command line tool named ``uliweb``, you can use
+it to execute several commands. 
 
-Go into command line and chanage to a directory which you want to create new
-project of Uliweb. Then execute:
+At the command line,  change to or create a directory in which you want to create new
+Uliweb project,  then execute:
 
 ::
 
     uliweb makeproject hello_project
     
-If the command execution is successful, it'll output nothing. It'll create a
-directory named ``hello_project``. And it'll also copy some files to this 
-directory. It's a very clean workspace. You can change above ``hello_project`` to
-what you want.
+If the command execution is successful, it'll output nothing and create a
+directory named ``hello_project``. A clean workspace is created with relevant files
+for the project in this directory.
 
-Creating 'Hello' app
+Creating the 'Hello' app
 ----------------------
 
 .. code::
@@ -45,11 +41,11 @@ Creating 'Hello' app
     cd hello_project
     uliweb makeapp Hello
     
-Go into ``hello_project`` directory first, then create a new app, I named it as
-``Hello``.
+Go into ``hello_project`` directory, create a new app following the command as
+shown. You can substitute the name of the app, ``Hello`` with another name of your choice.
 
 After the command above is executed successfully, 
-you can find the following things in ``apps`` directory::
+you can find the following files in ``apps`` directory::
 
     apps/
       __init__.py
@@ -60,23 +56,27 @@ you can find the following things in ``apps`` directory::
         static/
         templates/
         
-Now, you can start development server to test this new project already.
 
 Starting the server
 -----------------------
+
+After the above steps, you can start up your web project as follows:
 
 ::
 
     uliweb runserver
     
-Then it may shows something in the console. You can open browser, then enter
-the url http://localhost:8000. Now you can see there is a "Hello, Uliweb" message.
+Following the instructions and information printout to the console, you can 
+open a browser and enter the url http://localhost:8000.  You would see a rendered
+page with the message "Hello, Uliweb" . Congratulations!
 
-View module
+Modifying the "View" 
 ----------------------------
 
-When user request an url, it'll be mapped to a view function. So http://localhost:8000
-also maps to a view function, you can find it in ``Hello/view.py`` file.
+When user requests an URL, Uliweb tries to map the URL to a view function. So in 
+the case of our example, the request for http://localhost:8000 would map to a function
+thatmaps to the "/" location on our server. To see how this works, take a look in
+the ``Hello/view.py`` file. All your view functions should be declared in this file.
 Open it in your favourite editor, then you will see:
 
 .. code:: python
@@ -89,11 +89,11 @@ Open it in your favourite editor, then you will see:
         return '<h1>Hello, Uliweb</h1>'
 
 The above code was generated automatically when you executing ``makeapp``, 
-and we even don't need write any code, there is already a "Hello, Uliweb" view function!
+and we even don't need write any code, the  !
 
-``@expose('/')`` is used for URL Mapping, which means map the url ``'/'`` to 
+``@expose('/')`` decorator is used for URL Mapping, which means map the url ``'/'`` to 
 the view function below. So when visiting http://localhost:8000, function ``index()`` 
-will be called. If a function without being decorated by ``expose``, it will not 
+will be called. If a view function is not decorated by ``expose``, it will not 
 be mapped to any url and is treated as a local function.
 
 This function will return a line of HTML code that will be displayed directly in browser.
@@ -102,7 +102,7 @@ Adding templates
 -------------------
 
 If your view function returns a dict object, Uliweb will apply it to a template automatically.
-It means that different return value will cause different actions.
+It means that different return value will cause a different action.
 The filename of this automatically template is the same as your view function, 
 and it ends with '.html', for example, the template of ``index()`` is ``index.html``. 
 Templates should be placed into the directory ``templates`` which will be automatically
@@ -127,9 +127,8 @@ Type http://localhost:8000/template in the browser, you will see the same thing 
 Using template variables
 ---------------------------
 
-In above two examples, all data are outputed directly, this makes the app less general, 
-so we're going to use template variables to change that.
-Add another view function with the following code:
+In above two examples, all data are outputed directly, we're going to use template
+ variables to change that. Add another view function with the following code:
 
 .. code:: python
 
@@ -186,5 +185,4 @@ and lots of topics are not mentioned, such as:
 * Configurations
 * etc.
 
-You can find other documentations on http://uliwebproject.appspot.com, 
-and most important, Uliweb is getting powerful!
+You can find other documentation at http://uliwebproject.appspot.com.
