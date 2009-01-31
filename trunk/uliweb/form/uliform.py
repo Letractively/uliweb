@@ -9,6 +9,7 @@ from validators import *
 DEFAULT_FORM_CLASS = 'form'
 DEFAULT_CHARSET = 'utf-8'
 REQUIRED_CAPTION = '(*)'
+REQUIRED_CAPTION_AFTER = True
 
 __id = 0
 
@@ -298,7 +299,10 @@ class BaseField(object):
         else:
             label = self.label
         if self.required:
-            label += str(Tag('span', REQUIRED_CAPTION, _class='field_required'))
+            if REQUIRED_CAPTION_AFTER:
+                label += str(Tag('span', REQUIRED_CAPTION, _class='field_required'))
+            else:
+                label = str(Tag('span', REQUIRED_CAPTION, _class='field_required')) + label
         return str(Tag('label', label, _for=self.id, **kwargs))
     
     @property
