@@ -1,0 +1,11 @@
+{{extend "layout.html"}}
+{{block nav_menu}}
+{{menu('settings')}}
+{{end}}
+{{block content}}
+<div>
+<pre>
+{{=str(settings)}}
+</pre>
+</div>
+{{end}}

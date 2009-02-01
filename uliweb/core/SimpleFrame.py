@@ -341,8 +341,7 @@ class Dispatcher(object):
         return Response(self.template(templatefile, vars, env, dirs, request, default_template=default_template), content_type='text/html')
     
     def _page_not_found(self, description=None, **kwargs):
-        if not description:
-            description = "Can't visit the URL \"{{=url}}\""
+        description = 'The requested URL "{{=url}}" was not found on the server.'
         text = """<h1>Page Not Found</h1>
     <p>%s</p>
     <h3>Current URL Mapping is</h3>
@@ -361,7 +360,7 @@ class Dispatcher(object):
             for r in self.url_map.iter_rules():
                 urls.append((r.rule, r.endpoint))
             urls.sort()
-            return self._page_not_found(description=e.description, url=request.path, urls=urls)
+            return self._page_not_found(url=request.path, urls=urls)
         tmp_file = template.get_templatefile('404'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})

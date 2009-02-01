@@ -15,11 +15,11 @@ def check_apps_dir():
         log.error("Can't find the apps_dir [%s], please check it out", apps_dir)
         sys.exit(1)
 
-def make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
+def make_application(debug=None, apps_dir='apps', wrap_wsgi=None, include_apps=None):
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
         
-    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir)
+    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps)
     debug_flag = app.settings.GLOBAL.DEBUG
     if wrap_wsgi:
         for p in wrap_wsgi:
@@ -41,6 +41,15 @@ def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
         log.info('APPS_DIR = %s', os.path.abspath(apps_dir))
         
         return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi)
+    return action
+
+def _make_admin(debug=None, apps_dir='apps', wrap_wsgi=None):
+    def action():
+        check_apps_dir()
+        log.info('APPS_DIR = %s', os.path.abspath(apps_dir))
+        
+        return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi, 
+            include_apps=['uliweb.contrib.admin'])
     return action
 
 def make_app(appname=''):
@@ -223,6 +232,9 @@ def main():
             
     action_runserver = runserver(_make_application(None, apps_dir), 
         port=8000, use_reloader=True, use_debugger=True)
+    action_runadmin = runserver(_make_admin(None, apps_dir), 
+        port=8000, use_reloader=True, use_debugger=True)
+
     action_makeapp = make_app
 #    action_export = export
     action_exportstatic = exportstatic
