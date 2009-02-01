@@ -1,0 +1,16 @@
+{{
+menus = [
+    ('settings', 'Settings.ini', '/admin'),
+    ('appsinfo', 'Apps Info', '/admin/appsinfo'),
+    ('urls', 'Urls', '/admin/urls')
+]
+def menu(current='settings'):
+    for id, caption, link in menus:
+        if id == current:
+            out.write('<li id="current"><strong>%s</strong></li>' % caption, escape=False)
+        else:
+            out.write('<li><a href="%s">%s</a></li>' % (link, caption), escape=False)
+        pass
+    pass
+pass
+}}

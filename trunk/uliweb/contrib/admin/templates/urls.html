@@ -1,0 +1,12 @@
+{{extend "layout.html"}}
+{{block nav_menu}}
+{{menu('urls')}}
+{{end}}
+{{block content}}
+<table border="1">
+<tr><th>URL</th><th>View Functions</th></tr>
+{{for url, endpoint in urls:}}
+<tr><td><a href="{{=url}}">{{=url}}</a></td><td>{{=endpoint}}</td></tr>
+{{pass}}
+</table>
+{{end}}
