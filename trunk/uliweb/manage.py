@@ -45,16 +45,23 @@ def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
 
 def make_app(appname=''):
     """create a new app according the appname parameter"""
-    check_apps_dir()
 
     if not appname:
         appname = ''
         while not appname:
             appname = raw_input('Please enter app name:')
         
-    from uliweb.utils.common import extract_dirs
-    path = os.path.join(apps_dir, appname)
-    extract_dirs('uliweb', 'template_files/app', path)
+    ans = '-1'
+    if os.path.exists(appname):
+        while ans not in ('y', 'n'):
+            ans = raw_input('The app directory has been existed, do you want to overwrite it?(y/n)[n]')
+            if not ans:
+                ans = 'n'
+    else:
+        ans = 'y'
+    if ans == 'y':
+        from uliweb.utils.common import extract_dirs
+        extract_dirs('uliweb', 'template_files/app', appname)
 
 def make_project(project_name='', verbose=('v', False)):
     """create a new project directory according the project name"""
@@ -158,11 +165,6 @@ def extracturls(urlfile='urls.py'):
         print >>f, "add_rule(url_map, %r, %r%s)" % (url, endpoint, t)
     f.close()
 
-#def make_shell():
-#    from shorty import models, utils
-#    application = make_app()
-#    return locals()
-
 def collcet_commands():
     from uliweb.core.SimpleFrame import get_apps
     for f in get_apps(apps_dir):
@@ -215,25 +217,9 @@ def main():
     prompt = """usage: %s [-d project_directory] <action> [<options>]
        %s --help""" % ('uliweb', 'uliweb')
 
-    args = None
-    if len(sys.argv) > 2 and sys.argv[1] == '-d':
-        args = sys.argv[3:]
-        try:
-            apps_dir = sys.argv[2]
-            if os.path.exists(apps_dir):
-                sys.path.insert(0, apps_dir)
-            else:
-                log.error("Can't find the apps_dir [%s], please check it out", apps_dir)
-                sys.exit(1)
-        except:
-            import traceback
-            traceback.print_exc()
-            args = ['-h']
-            
-    else:
-        apps_dir = os.path.join(os.getcwd(), apps_dir)
-        if os.path.exists(apps_dir):
-            sys.path.insert(0, apps_dir)
+    apps_dir = os.path.join(os.getcwd(), apps_dir)
+    if os.path.exists(apps_dir):
+        sys.path.insert(0, apps_dir)
             
     action_runserver = runserver(_make_application(None, apps_dir), 
         port=8000, use_reloader=True, use_debugger=True)
@@ -248,7 +234,7 @@ def main():
     #process app's commands.py
     collcet_commands()
 
-    script.run(args=args, prompt=prompt)
+    script.run(prompt=prompt)
 
 if __name__ == '__main__':
     main()
