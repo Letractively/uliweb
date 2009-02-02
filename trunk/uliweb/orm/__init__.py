@@ -3,9 +3,8 @@
 # 2008.06.11
 
 
-__all__ = ['Field', 'get_connection', 'Model', 'migrate_table',
-    'set_auto_bind', 'set_auto_migrate', 'set_debug_query', 
-    'blob', 'text',
+__all__ = ['Field', 'get_connection', 'Model', 'set_auto_bind', 
+    'set_debug_query', 'blob', 'text',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FileProperty', 'FloatProperty',
     'IntegerProperty', 'Property', 'PickleProperty', 'StringProperty',
@@ -16,7 +15,6 @@ __all__ = ['Field', 'get_connection', 'Model', 'migrate_table',
 
 __default_connection__ = None  #global connection instance
 __auto_bind__ = False
-__auto_migrate__ = False
 __debug_query__ = None
 
 import decimal
@@ -38,10 +36,6 @@ _SELF_REFERENCE = object()
 def set_auto_bind(flag):
     global __auto_bind__
     __auto_bind__ = flag
-    
-def set_auto_migrate(flag):
-    global __auto_migrate__
-    __auto_migrate__ = flag
     
 def set_debug_query(flag):
     global __debug_query__
@@ -115,7 +109,7 @@ class ModelMetaclass(type):
                 attr.__property_config__(cls, attr_name)
                 
         if 'id' not in cls.properties:
-            cls.properties['id'] = f = Field(int, autoincrement=True, key=True)
+            cls.properties['id'] = f = Field(int, autoincrement=True, key=True, default=None)
             f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)
 
@@ -124,7 +118,7 @@ class ModelMetaclass(type):
         cls._fields_list = fields_list
         
         if __auto_bind__:
-            cls.bind(auto_create=__auto_migrate__)
+            cls.bind(auto_create=True)
         
 class Property(object):
     data_type = str
@@ -375,6 +369,9 @@ class IntegerProperty(Property):
 
     data_type = int
     field_class = Integer
+    
+    def __init__(self, verbose_name=None, default=0, **kwds):
+        super(IntegerProperty, self).__init__(verbose_name, default=default, **kwds)
     
     def validate(self, value):
         value = super(IntegerProperty, self).validate(value)
@@ -656,6 +653,21 @@ def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
 
 SelfReference = SelfReferenceProperty
 
+class Result(object):
+    def __init__(self, model=None, condition=None):
+        self.model = model
+        self.condition = condition
+        
+    def all(self):
+        if not self.model or not self.condition:
+            return []
+        return self.model.filter(self.condition)
+    
+    def count(self):
+        if not self.model or not self.condition:
+            return 0
+        return self.model.count(self.condition)
+
 class _ReverseReferenceProperty(Property):
     """The inverse of the Reference property above.
 
@@ -688,9 +700,9 @@ class _ReverseReferenceProperty(Property):
             if _id is not None:
                 b_id = self.__reference_id
                 d = self.__model.c[self.__reference_id]
-                return self.__model.filter(d==_id)
+                return Result(self.__model, d==_id)
             else:
-                return []
+                return Result()
         else:
             return self
 
@@ -818,8 +830,6 @@ class Model(object):
         try:
             if not db and not __default_connection__:
                 return
-            if __auto_migrate__:
-                import migrate.changeset
                 
             if not hasattr(cls, '_created') or force:
                 cls.db = db or get_connection()
@@ -828,10 +838,13 @@ class Model(object):
                 cols = []
                 for k, f in cls.properties.items():
                     cols.append(f.create())
+                t = metadata.tables.get(cls.tablename, None)
+                if t:
+                    metadata.remove(t)
                 cls.table = Table(cls.tablename, metadata, *cols)
                 
                 if auto_create:
-                    cls.create(migrate=__auto_migrate__)
+                    cls.create()
                 cls.c = cls.table.c
                 cls.columns = cls.table.c
                 cls._created = True
@@ -839,14 +852,11 @@ class Model(object):
             cls._lock.release()
             
     @classmethod
-    def create(cls, migrate=False):
+    def create(cls):
         cls._c_lock.acquire()
         try:
             if not cls.table.exists():
                 cls.table.create(checkfirst=True)
-            else:
-                if migrate:
-                    migrate_table(cls.table)
         finally:
             cls._c_lock.release()
             
@@ -881,7 +891,7 @@ class Model(object):
     def remove(cls, condition=None, **kwargs):
         if isinstance(condition, int):
             cls.table.delete(cls.c.id==condition, **kwargs).execute()
-        if isinstance(condition, (tuple, list)):
+        elif isinstance(condition, (tuple, list)):
             cls.table.delete(cls.c.id.in_(condition)).execute()
         else:
             cls.table.delete(condition, **kwargs).execute()
@@ -898,62 +908,3 @@ class Model(object):
             count = 0
         return count
             
-def migrate_table(table):
-    def compare_column(a, b):
-        return ((a.key == b.key) 
-#            and issubclass(b.type.__class__, a.type.__class__)
-            and (bool(a.nullable) == bool(b.nullable))
-            and (bool(a.primary_key) == bool(b.primary_key))
-            )
-    
-    metadata = MetaData(table.bind)
-    _t = Table(table.name, metadata, autoload=True)
-    t = {}
-    for k in _t.c.keys():
-        t[k] = _t.c[k]
-    for k in table.c.keys():
-        v = table.c[k]
-        if k in t:
-            if not compare_column(v, t[k]):
-                t[k].alter(v)
-            del t[k]
-        elif not k in t:
-            r = v.copy()
-            r.create(_t)
-    for k, v in t.items():
-        t[k].drop()
-
-if __name__ == '__main__':
-#    set_debug_query(True)
-    set_auto_bind(True)         #auto bind table to db and schema
-    set_auto_migrate(True)     #if you changed model, then automatically change the table
-    get_connection('sqlite://')
-    
-    class Test(Model):
-        username = Field(str)
-        year = Field(int)
-        
-    class Test1(Model):
-        test = Reference(Test)
-        name = Field(str)
-        
-    a1 = Test(username='limodou1').save() #use nomally insert
-    a2 = Test(username='limodou2').save() #use nomally insert
-    a3 = Test(username='limodou3').save() #use nomally insert
-    
-    b1 = Test1(name='zoom', test=a1).save()
-    b2 = Test1(name='aaaa', test=a1).save()
-    b3 = Test1(name='bbbb', test=a2).save()
-#    print a
-#    a.username = 'zoom'
-#    a.save()
-#    print a
-#    a.delete()
-#    for o in Test.filter(order_by=[desc(Test.c.username)]):
-#        print o
-#        
-#    print b2.test.username
-    for o in a1.test1_set:
-        print o
-#    for k in Test1.filter():
-#        print k
