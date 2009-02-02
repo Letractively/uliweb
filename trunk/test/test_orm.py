@@ -63,6 +63,7 @@ def test_3():
     """
     >>> set_auto_bind(True)
     >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
     >>> class Test(Model):
     ...     username = Field(str)
     ...     year = Field(int)
@@ -89,4 +90,26 @@ def test_3():
     >>> x = a1.save()
     >>> Test.get(1)
     <Test {'username':'zoom','year':0,'id':1}>
+    """
+    
+def test_4():
+    """
+    >>> set_auto_bind(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(str)
+    ...     year = Field(int)
+    >>> class Test1(Model):
+    ...     test = Reference(Test, collection_name='tttt')
+    ...     name = Field(str)
+    >>> a1 = Test(username='limodou1').save()
+    >>> b1 = Test1(name='zoom', test=a1).save()
+    >>> b2 = Test1(name='aaaa', test=a1).save()
+    >>> a1
+    <Test {'username':'limodou1','year':0,'id':1}>
+    >>> list(a1.tttt.all())[0]   #here we use tttt but not test1_set
+    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'zoom','id':1}>
+    >>> a1.tttt.count()
+    2
     """
