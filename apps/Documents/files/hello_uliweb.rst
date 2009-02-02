@@ -17,7 +17,7 @@ The first thing would be to read this article `Installation <installation>`_,
  a correct installation of Uliweb is a prerequisite.
 
 Creating a new project
----------------------
+------------------------
 
 Uliweb provides a command line tool named ``uliweb``, you can use
 it to execute several commands. 
@@ -34,7 +34,7 @@ directory named ``hello_project``. A clean workspace is created with relevant fi
 for the project in this directory.
 
 Creating the 'Hello' app
-----------------------
+---------------------------
 
 .. code::
 
