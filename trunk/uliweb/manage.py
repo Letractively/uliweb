@@ -176,6 +176,7 @@ def extracturls(urlfile='urls.py'):
 
 def collcet_commands():
     from uliweb.core.SimpleFrame import get_apps
+    actions = {}
     for f in get_apps(apps_dir):
         m = '%s.commands' % f
         try:
@@ -183,7 +184,6 @@ def collcet_commands():
         except ImportError:
             continue
         
-        actions = {}
         for t in dir(mod):
             if t.startswith('action_') and callable(getattr(mod, t)):
                 actions[t] = getattr(mod, t)(apps_dir)
