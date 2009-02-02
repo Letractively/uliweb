@@ -38,9 +38,6 @@ def check_password(raw_password, enc_password):
     algo, salt, hsh = enc_password.split('$')
     return hsh == get_hexdigest(algo, salt, raw_password)
 
-class Group(Model):
-    name = Field(str, max_length=30, unique=True, index=True)
-
 class User(Model):
     username = Field(str, max_length=30, unique=True, index=True)
     email = Field(str, max_length=40)
