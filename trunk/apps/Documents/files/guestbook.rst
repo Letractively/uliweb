@@ -13,12 +13,13 @@ use database simply.
 Prepare
 ---------
 
-There is already the whole GuestBook source code in Uliweb apps directory.
+There is already the whole GuestBook source code in Uliweb demos directory.
 Just download the newest source code of Uliweb, then start developing server:
 
 ::
 
-    python manage.py runserver
+    cd demos/guestbook
+    uliweb runserver
     
 Enter http://localhost:8000/guestbook in the browser, then you'll find it.
 By default, it'll use sqlite3, so if you are using Python 2.5, you'll not need
@@ -33,12 +34,11 @@ Ok, let's begin to write code.
 Create Project
 ----------------
 
-I suggest that you begin your work at a new directory, and Uliweb provides an 
-``export`` command, for example:
+I suggest that you begin your work in a new directory, for example: samples:
 
 ::
 
-    python manage.py export outputdir
+    uliweb makeproject guestbook
     
 So it'll export all necessary Uliweb source code to outputdir directory. Then
 goto this directory, ready to begin.
@@ -51,7 +51,8 @@ new app.
 
 ::
 
-    python manage.py makeapp GuestBook
+    cd samples
+    uliweb makeapp GuestBook
     
 This will automatially create a ``GuestBook`` app for you in ``apps`` 
 directory of your project.
@@ -59,61 +60,39 @@ directory of your project.
 Configure Database
 --------------------
 
-Uliweb indeed provide a default database and ORM for you, but it's not configured
-by default, so you need configure it first. So if you don't like the ORM provided
-by Uliweb, you can easily change it. Uliweb provide a plugin mechanism, it lets you
-can add some initialization code when you need. Open ``GuestBook/settings.py`` file,
-you can see something already existed:
+In this tutorial we'll use Uliweb orm to access database. And there is also
+a builtin orm app, so that you can use it directly. Just editing ``guestbook/apps/settings.ini``,
+then change the ``INSTALLED_APPS`` to::
 
-.. code:: python
+    INSTALLED_APPS = [
+        'GuestBook',
+        'uliweb.contrib.orm',
+        ]
 
-    from uliweb.core.plugin import plugin
+Then add following content::
+
+    [ORM]
+    CONNECTION = 'sqlite:///guestbook.db'
+
+So the ``settings.ini`` will look like::
+
+    [GLOBAL]
+    DEBUG = True
     
-``plugin`` is a decorator too, just like ``expose``, you can use it to decorate a function,
-so it'll bind the function to a invoke point, and when the program runs at this
-point, Uliweb will execute all the plugin functions one bye one. Ok, let's add
-below code:
-
-.. code:: python
-
-    connection = {'connection':'sqlite:///database.db'}
-    #connection = {'connection':'mysql://root:limodou@localhost/test'}
+    INSTALLED_APPS = [
+        'GuestBook',
+        'uliweb.contrib.orm',
+        ]
     
-    DEBUG_LOG = True
+    [ORM]
+    CONNECTION = 'sqlite:///guestbook.db'
     
-    @plugin('prepare_template_env')
-    def prepare_template_env(sender, env):
-        from uliweb.utils.textconvert import text2html
-        env['text2html'] = text2html
-        
-    @plugin('startup')
-    def startup(sender):
-        from uliweb import orm
-        orm.set_debug_query(DEBUG_LOG)
-        orm.set_auto_bind(True)
-        orm.set_auto_migrate(True)
-        orm.get_connection(**connection)
-        
-Let me explain it bit by bit.
-
-Connection String of Database
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-``connection`` is used for database connection configure, it's a dict variable. 
-The key ``connection`` is must, it the connection string of some database.
-If there are some arguments which are difficult to write in ``connection`` string,
-you can add them in the dict variable.
-
-Here, we use sqlite database, and if you want to use MySql, you can write like 
-the comment line.
-
-A connection string format looks like
-
-::
+ORM.CONNECTION is the connection string of orm, it's the same as SQLAlchemy package,
+the generic format will look like::
 
     provider://username:password@localhost:port/dbname?argu1=value1&argu2=value2
     
-    For Sqlite, the conntection is somewhat different:
+For Sqlite, the conntection is somewhat different::
     
     sqlite_db = create_engine('sqlite:////absolute/path/to/database.txt')
     sqlite_db = create_engine('sqlite:///d:/absolute/path/to/database.txt')
@@ -121,83 +100,30 @@ A connection string format looks like
     sqlite_db = create_engine('sqlite://')  # in-memory database
     sqlite_db = create_engine('sqlite://:memory:')  # the same
     
-Initialize Database
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Uliweb will not do it for you, you should do it yourself. But if you choice Uliorm
-(Uliweb ORM module), it's easy for you. Here we'll use Uliorm.
-
-First we can set ``DEBUG_LOG = True``, notice that the ``DEBUG_LOG`` should be upper 
-case. And if you set it, the underlying Sql statements will be outputed in the console,
-so you can see if the Sql is what you want.
-
-Then:
-
-.. code:: python
-
-    @plugin('startup')
-    def startup(sender):
-        from uliweb import orm
-        orm.set_debug_query(DEBUG_LOG)
-        orm.set_auto_bind(True)
-        orm.set_auto_migirate(True)
-        orm.get_connection(**connection)
-
-When Uliweb executing at the position of ``startup``, it'll invoke all matched
-plugin functions one by one. ``startup`` is a name of plugin invoking point,
-and it's already defined in SimpleFrame.py, when Uliweb starting, the ``startup`` will
-be invoked. Here ``sender`` is exactly the framework instance. The first argument 
-of each plugin function is always the caller object. Here is the application instance
-object.
-
-Then it's the database initialization process. Because Uliweb will automatically
-find and import each ``settings.py`` in every app directory, so you can write
-initialization code an any app ``settings.py`` file, but I suggest you put it in 
-your main app of your project.
-
-``set_debug_query(DEBUG_LOG)`` will enable Uliweb output SQL statements in console when
-running.
-
-``set_auto_bind(True)`` will enable automatically binding setting. So when you 
-import a Model, it'll be bound to default database connection, and you can use
-it directly. Otherwise, you need manully bind each table to database connection.
-
-``set_auto_migrate(True)`` will enable automatically table migirate process. It's
-very useful. Firstly, if when you startup Uliweb and the table is not existed
-in database yet, Uliweb will automatically create this table for you. Secondly,
-it'll automatically check the Model structure and table structure, adding or
-deleting fields automatically. So you don't need to change the table structure
-manually. But it can't find out renaming field, just delete old field and add
-new field, so this will make some data lost. So you should use it carefully.
-
-Through above two steps, you can use Uliorm easily in Uliweb, just define it,
-then use it. Working like create table, change table structure will be finished
-automatically, it's very simple.
-
-``orm.get_connection(**connection)`` will create database connection, and it'll 
-do initialization works according above settings. So above settings need to be
-done before you invoke get_connection() function. After creating database connection,
-it'll set this connection object as global defult connection object.
-
+Here we use relative path format, so the ``guestbook.db`` will be created at guestbook
+folder.
+    
 Template Environment Extension
 ---------------------------------
 
-There is other thing in settings.py
+Because we want to enable user input plain text and output them as HTML code,
+so we'll use uliweb.utils.text2html function to convert text to HTML code, and
+we can indeed import this function in template file, but we can also hook
+``prepare_template_env`` plugin, and inject a ``text2html`` function object to 
+template environment, so that you can use ``text2html`` directly in template.
+Open ``GuestBook/__init__.py`` and adding below codes:
 
 .. code:: python
 
+    from uliweb.core.plugin import plugin
+    
     @plugin('prepare_template_env')
     def prepare_template_env(sender, env):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
 
-This is also a plugin usage example, it'll inject a new template function 
-``text2html`` into template environment, so you can use it directly in template.
-And this process will be available for global scope, so you can also use ``text2html``
-in other apps.
-
-``text2html`` can be used to convert plain text to HTML code, including hyperlink
-process. This is written by me when I developing web application in Django before.
+This is a plugin hook usage example, and there are some others plugin hook you can
+use.
 
 Prepare Model
 ----------------
@@ -263,40 +189,33 @@ etc.
 Static Files Serving
 -----------------------
 
-If you open ``views.py`` in ``GuestBook`` directory, there should has some code:
+We'll need to display static files later, now we can just add ``uliweb.contrib.staticfiles``
+to ``INSTALLE_APPS`` of ``settings.ini``. Using this app, all static directories of 
+available apps will be processed as static folder, and the URL link will start
+begin with ``/static/``. Now the ``settings.ini`` will look like::
 
-.. code:: python
-
-    #coding=utf-8
-    from uliweb.core.SimpleFrame import expose
+    [GLOBAL]
+    DEBUG = True
     
-    @expose('/')
-    def index():
-        return '<h1>Hello, Uliweb</h1>'
+    INSTALLED_APPS = [
+        'GuestBook',
+        'uliweb.contrib.orm',
+        'uliweb.contrib.staticfiles',
+        ]
     
-Delete no useful index() first, just keep the first two lines.
+    [ORM]
+    CONNECTION = 'sqlite:///guestbook.db'
+    
+Just a Test
+---------------
 
-Then add static file serving code:
+Now we can test it. Just run the command line::
 
-.. code:: python
+    uliweb runadmin
+    
+Then we can visit the http://localhost:8000 the result will be:
 
-    from uliweb.core.SimpleFrame import static_serve
-    @expose('/static/<path:filename>')
-    def static(filename):
-        return static_serve(request, filename)
-
-Uliweb has already provided static files serving support, so you can use it to 
-serve static files directly, or you can use other web server(Like Apache)
-to do that. Each app in Uliweb has its own static directory, the goal of it is
-to make each app individual as possible as it can. If you let Uliweb to 
-serve static files, it'll try to find matched file in current app's static
-directory, if it found it'll return the file, if not found, it'll search in
-other apps' static directory. And in order to reduce download the same file
-again, it'll just the modification of files, and return 304 response code if no
-changes at all. You can see this in console when you use develop server.
-
-Above expose uses regular expression, you can find more detail in `URL Mapping <url_mapping>`_
-document.
+.. image:: /static/guestbook01.jpg
 
 Display Comments
 -----------------------
@@ -328,7 +247,7 @@ Here are some simple usages:
 
 .. code:: python
 
-    notes = Note.filter()               #Gain all records, with no condition
+    notes = Note.all()               #Gain all records, with no condition
     note = Note.get(3)                  #Gain records with id equals 3
     note = Note.get(Note.c.username=='limodou') #Gain records with username equals 'limodou'
     
@@ -359,16 +278,18 @@ should be the same with ``guestbook()`` function. And add below code to it:
 .. code:: django+html
 
     {{extend "base.html"}}
+    {{block main}}
     <h1>Uliweb Guest Book</h1>
     <h2><a href="{{=url_for('%s.views.new_comment' % request.appname)}}">New Comment</a></h2>
     {{for n in notes:}}
-    <div class="message">
-    <h3><a href="{{= url_for('%s.views.del_comment' % request.appname, id=n.id) }}">
-    <img src="{{= url_for('%s.views.static' % request.appname, filename='delete.gif') }}"/>
-    </a> {{=n.username}} at {{=n.datetime.strftime('%Y/%m/%d %H:%M:%S')}} say:</h3>
-    <p>{{=text2html(n.message)}}</p>
-    </div>
+        <div class="message">
+        <h3><a href="{{= url_for('%s.views.del_comment' % request.appname, id=n.id) }}">
+        <img src="{{= url_for_static('delete.gif') }}"/>
+        </a> {{=n.username}} at {{=n.datetime.strftime('%Y/%m/%d %H:%M:%S')}} say:</h3>
+        <p>{{=text2html(n.message)}}</p>
+        </div>
     {{pass}}
+    {{end}}
     
     
 The first line means this template will inherit from ``base.html``. I don't want to 
@@ -541,13 +462,15 @@ Creating a ``new_comment.html`` file in ``GuestBook/templates`` directory, then 
 .. code:: html
 
     {{extend "base.html"}}
+    {{block main}}
     {{if message:}}
-    <p class="message">{{=message}}</p>
+        <p class="message">{{=message}}</p>
     {{pass}}
     <h1>New Comment</h1>
     <div class="form">
     {{Xml(form)}}
     </div>
+    {{end}}
 
 First line is ``{{extend "base.html"}}``, it means that you'll extend from ``base.html``
 template file.
@@ -555,7 +478,7 @@ template file.
 Then it's a if statement, it'll test if the message is not empty, if not, then
 display it. Notice the ``:`` at the end of the line.
 
-Then display form element, here I used ``{{Xml(form)}}``. ``form`` is passwd from view
+Then display form element, here I used ``{{<<form}}``. ``form`` is passwd from view
 function, but ``Xml()`` is a builtin function define in template system, you can 
 use it directly, it'll output the code directly without any escape process.
 For ``{{= variable}}`` will escape the output, it'll convert HTML tag to HTML entities.
