@@ -196,3 +196,15 @@ apps/urls.py, Uliweb will automatically import it then disable expose().
     
 If there is already a urls.py file in apps directory, it'll prompte you
 to confirm you want to overwrite it.
+
+runadmin
+-------------
+
+Start developing server with admin app.
+
+::
+
+    Usage: uliweb runadmin
+    
+It's very like ``runserver`` command, but the difference is it'll automatically
+add admin app to your project.

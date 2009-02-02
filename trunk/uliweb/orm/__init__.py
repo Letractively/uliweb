@@ -4,7 +4,7 @@
 
 
 __all__ = ['Field', 'get_connection', 'Model', 'set_auto_bind', 
-    'set_debug_query', 'blob', 'text',
+    'set_debug_query', 'blob', 'text', 'set_auto_create',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FileProperty', 'FloatProperty',
     'IntegerProperty', 'Property', 'PickleProperty', 'StringProperty',
@@ -15,6 +15,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'set_auto_bind',
 
 __default_connection__ = None  #global connection instance
 __auto_bind__ = False
+__auto_create__ = True
 __debug_query__ = None
 
 import decimal
@@ -36,6 +37,10 @@ _SELF_REFERENCE = object()
 def set_auto_bind(flag):
     global __auto_bind__
     __auto_bind__ = flag
+    
+def set_auto_create(flag):
+    global __auto_create__
+    __auto_create__ = flag
     
 def set_debug_query(flag):
     global __debug_query__
@@ -118,7 +123,7 @@ class ModelMetaclass(type):
         cls._fields_list = fields_list
         
         if __auto_bind__:
-            cls.bind(auto_create=True)
+            cls.bind(auto_create=__auto_create__)
         
 class Property(object):
     data_type = str
