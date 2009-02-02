@@ -8,18 +8,18 @@ def login():
     form = LoginForm()
     
     if request.method == 'GET':
-        return {'form':form.html(), 'message':''}
+        return {'form':form, 'message':''}
     if request.method == 'POST':
-        flag, data = form.validate(request.params)
+        flag = form.check(request.params)
         if flag:
-            f, d = authenticate(request, username=data['username'], password=data['password'])
+            f, d = authenticate(request, username=form.username.data, password=form.password.data)
             if f:
                 login(request, d)
                 return redirect('/')
             else:
                 data = d
         message = "Login failed!"
-        return {'form':form.html(request.params, data, py=False), 'message':message, 'message_type':'error'}
+        return {'form':form, 'message':message, 'message_type':'error'}
 
 @expose('/register')
 def register():
@@ -29,19 +29,19 @@ def register():
     form = RegisterForm()
     
     if request.method == 'GET':
-        return {'form':form.html(), 'message':''}
+        return {'form':form, 'message':''}
     if request.method == 'POST':
-        flag, data = form.validate(request.params)
+        flag = form.check(request.params)
         if flag:
-            f, d = create_user(request, username=data['username'], password=data['password'])
+            f, d = create_user(request, username=form.username.data, password=form.password.data)
             if f:
                 logined(request, d)
                 return redirect('/')
             else:
-                data = d
+                form.errors.update(d)
                 
         message = "There was something wrong! Please fix them."
-        return {'form':form.html(request.params, data, py=False), 'message':message, 'message_type':'error'}
+        return {'form':form, 'message':message, 'message_type':'error'}
         
 @expose('/logout')
 def logout():
