@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys, os
-from uliweb.utils.common import log
+from uliweb.utils.common import log, check_apps_dir
         
 apps_dir = 'apps'
 
@@ -9,11 +9,6 @@ sys.path.insert(0, os.path.join(workpath, 'lib'))
 
 from werkzeug import script
 from uliweb.core import SimpleFrame
-
-def check_apps_dir():
-    if not os.path.exists(apps_dir):
-        log.error("Can't find the apps_dir [%s], please check it out", apps_dir)
-        sys.exit(1)
 
 def make_application(debug=None, apps_dir='apps', wrap_wsgi=None, include_apps=None):
     if apps_dir not in sys.path:
@@ -37,7 +32,7 @@ def make_application(debug=None, apps_dir='apps', wrap_wsgi=None, include_apps=N
 
 def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
     def action():
-        check_apps_dir()
+        check_apps_dir(apps_dir)
         log.info('APPS_DIR = %s', os.path.abspath(apps_dir))
         
         return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi)
@@ -45,7 +40,7 @@ def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
 
 def _make_admin(debug=None, apps_dir='apps', wrap_wsgi=None):
     def action():
-        check_apps_dir()
+        check_apps_dir(apps_dir)
         log.info('APPS_DIR = %s', os.path.abspath(apps_dir))
         
         return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi, 
@@ -140,7 +135,7 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     """
     Export all installed apps' static directory to outputdir directory.
     """
-    check_apps_dir()
+    check_apps_dir(apps_dir)
 
     from uliweb.utils.common import copy_dir_with_check
 
@@ -157,7 +152,7 @@ def extracturls(urlfile='urls.py'):
     """
     Extract all url mappings from view modules to a specified file.
     """
-    check_apps_dir()
+    check_apps_dir(apps_dir)
 
     application = SimpleFrame.Dispatcher(apps_dir=apps_dir, use_urls=False)
     filename = os.path.join(application.apps_dir, urlfile)
@@ -187,9 +182,12 @@ def collcet_commands():
             mod = __import__(m, {}, {}, [''])
         except ImportError:
             continue
+        
+        actions = {}
         for t in dir(mod):
             if t.startswith('action_') and callable(getattr(mod, t)):
-                globals()[t] = getattr(mod, t)
+                actions[t] = getattr(mod, t)(apps_dir)
+    return actions
                 
 def collect_files():
     files = []
@@ -216,7 +214,7 @@ def runserver(app_factory, hostname='localhost', port=5000,
                reloader=use_reloader, debugger=use_debugger,
                evalex=use_evalex, threaded=threaded, processes=processes):
         """Start a new development server."""
-        check_apps_dir()
+        check_apps_dir(apps_dir)
 
         from werkzeug.serving import run_simple
         app = app_factory()
@@ -249,7 +247,7 @@ def main():
     action_makeproject = make_project
     
     #process app's commands.py
-    collcet_commands()
+    locals().update(collcet_commands())
 
     script.run(prompt=prompt)
 

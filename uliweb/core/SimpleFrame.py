@@ -190,7 +190,7 @@ def get_apps(apps_dir, include_apps=None):
                 visited.add(p)
     
     return apps
-        
+
 class Loader(object):
     def __init__(self, tmpfilename, vars, env, dirs, notest=False):
         self.tmpfilename = tmpfilename
@@ -216,7 +216,7 @@ class Loader(object):
 
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir=APPS_DIR, use_urls=None, include_apps=None):
+    def __init__(self, apps_dir=APPS_DIR, use_urls=None, include_apps=None, start=True):
         global __use_urls
         self.debug = False
         self.use_urls = __use_urls = use_urls
@@ -225,7 +225,8 @@ class Dispatcher(object):
             self.init(apps_dir)
             callplugin(self, 'startup_installed')
             
-        callplugin(self, 'startup')
+        if start:
+            callplugin(self, 'startup')
         
     def init(self, apps_dir):
         global APPS_DIR, url_map, _static_urls
@@ -469,21 +470,17 @@ class Dispatcher(object):
 
         for p in self.apps:
             path = get_app_dir(p)
-            if p.startswith('.') or p.startswith('_') or p.startswith('CVS'):
-                continue
-            if os.path.isdir(path):
-                #deal with views
-                if check_view:
-                    views_path = os.path.join(p, 'views')
-                    if os.path.exists(views_path) and os.path.isdir(views_path):
-                        enum_views(views_path, p, 'views')
-                    else:
-                        enum_views(path, p, pattern='views*')
-                #deal with settings
-                if p in self.apps:
-                    inifile =os.path.join(get_app_dir(p), 'settings.ini')
-                    if os.path.exists(inifile):
-                        settings.insert(0, inifile)
+            #deal with views
+            if check_view:
+                views_path = os.path.join(p, 'views')
+                if os.path.exists(views_path) and os.path.isdir(views_path):
+                    enum_views(views_path, p, 'views')
+                else:
+                    enum_views(path, p, pattern='views*')
+            #deal with settings
+            inifile =os.path.join(get_app_dir(p), 'settings.ini')
+            if os.path.exists(inifile):
+                settings.insert(0, inifile)
            
         modules['views'] = list(views)
         modules['settings'] = settings
