@@ -1,4 +1,4 @@
-import os
+import os, sys
 
 def myimport(module):
     m = module.split('.')
@@ -152,6 +152,12 @@ def _log():
         log.setLevel(logging.INFO)
 
 _log()
+
+def check_apps_dir(apps_dir):
+    if not os.path.exists(apps_dir):
+        log.error("Can't find the apps_dir [%s], please check it out", apps_dir)
+        sys.exit(1)
+
 
 if __name__ == '__main__':
     log.info('Info: info')
