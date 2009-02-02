@@ -264,8 +264,8 @@ class Dispatcher(object):
         Dispatcher.template_env = Storage(Dispatcher.env.copy())
         callplugin(self, 'prepare_default_env', Dispatcher.env)
         callplugin(self, 'prepare_template_env', Dispatcher.template_env)
+        Dispatcher.default_template = pkg.resource_filename('uliweb.core', 'default.html')
         Dispatcher.installed = True
-        self.default_template = pkg.resource_filename('uliweb.core', 'default.html')
         
     def _prepare_env(self):
         env = Storage({})
