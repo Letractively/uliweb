@@ -9,7 +9,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'set_auto_bind',
     'TimeProperty', 'DecimalProperty', 'FileProperty', 'FloatProperty',
     'IntegerProperty', 'Property', 'PickleProperty', 'StringProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
-    'SelfReference', 'SelfReferenceProperty',
+    'SelfReference', 'SelfReferenceProperty', 'One2One',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError']
 
@@ -411,7 +411,8 @@ class FloatProperty(Property):
     def validate(self, value):
         value = super(FloatProperty, self).validate(value)
         if value is not None and not isinstance(value, float):
-            raise BadValueError('Property %s must be a float' % self.name)
+            raise BadValueError('Property %s must be a float, not a %s' 
+                % (self.name, type(value).__name__))
         return value
     
 class DecimalProperty(Property):
@@ -426,7 +427,8 @@ class DecimalProperty(Property):
     def validate(self, value):
         value = super(DecimalProperty, self).validate(value)
         if value is not None and not isinstance(value, decimal.Decimal):
-            raise BadValueError('Property %s must be a float' % self.name)
+            raise BadValueError('Property %s must be a decimal, not a %s'
+                % (self.name, type(value).__name__))
         return value
 
 class BooleanProperty(Property):
@@ -441,7 +443,8 @@ class BooleanProperty(Property):
     def validate(self, value):
         value = super(BooleanProperty, self).validate(value)
         if value is not None and not isinstance(value, bool):
-            raise BadValueError('Property %s must be a bool' % self.name)
+            raise BadValueError('Property %s must be a boolean, not a %s' 
+                % (self.name, type(value).__name__))
         return value
 
 class PickleProperty(Property):
@@ -469,16 +472,16 @@ class FileProperty(Property):
     field_class = BLOB
     
     def validate(self, value):
-        value = super(IntegerProperty, self).validate(value)
+        value = super(FileProperty, self).validate(value)
         if value is None:
             return value
         if not hasattr(value, 'read') or not hasattr(value, 'write'):
-            raise BadValueError('Property %s must be an int or long, not a %s'
+            raise BadValueError('Property %s must be a file-like object, not a %s'
                 % (self.name, type(value).__name__))
         return value
     
     def get_value_for_datastore(self, model_instance):
-        value = super(TimeProperty, self).get_value_for_datastore(model_instance)
+        value = super(FileProperty, self).get_value_for_datastore(model_instance)
         import cStringIO
         buf = cStringIO.StringIO()
         if value is not None:
@@ -548,7 +551,7 @@ class ReferenceProperty(Property):
             raise DuplicatePropertyError('Class %s already has property %s'
                  % (self.reference_class.__name__, self.collection_name))
         setattr(self.reference_class, self.collection_name,
-            _ReverseReferenceProperty(model_class, property_name, self.__id_attr_name()))
+            _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
 
     def __get__(self, model_instance, model_class):
         """Get reference object.
@@ -561,22 +564,22 @@ class ReferenceProperty(Property):
         """
         if model_instance is None:
             return self
-        if hasattr(model_instance, self.__id_attr_name()):
+        if hasattr(model_instance, self._id_attr_name()):
             reference_id = getattr(model_instance, self._attr_name())
         else:
             reference_id = None
         if reference_id is not None:
             #this will cache the reference object
-            resolved = getattr(model_instance, self.__resolved_attr_name())
+            resolved = getattr(model_instance, self._resolved_attr_name())
             if resolved is not None:
                 return resolved
             else:
-                id_field = self.__id_attr_name()
+                id_field = self._id_attr_name()
                 d = self.reference_class.c[id_field]
                 instance = self.reference_class.get(d==reference_id)
                 if instance is None:
                     raise Error('ReferenceProperty failed to be resolved')
-                setattr(model_instance, self.__resolved_attr_name(), instance)
+                setattr(model_instance, self._resolved_attr_name(), instance)
                 return instance
         else:
             return None
@@ -587,17 +590,17 @@ class ReferenceProperty(Property):
         if value is not None:
             if isinstance(value, int):
                 setattr(model_instance, self._attr_name(), value)
-                setattr(model_instance, self.__resolved_attr_name(), None)
+                setattr(model_instance, self._resolved_attr_name(), None)
             else:
                 setattr(model_instance, self._attr_name(), value.id)
-                setattr(model_instance, self.__resolved_attr_name(), value)
+                setattr(model_instance, self._resolved_attr_name(), value)
         else:
             setattr(model_instance, self._attr_name(), None)
-            setattr(model_instance, self.__resolved_attr_name(), None)
+            setattr(model_instance, self._resolved_attr_name(), None)
 
     def get_value_for_datastore(self, model_instance):
         """Get key of reference rather than reference itself."""
-        return getattr(model_instance, self.__id_attr_name())
+        return getattr(model_instance, self._id_attr_name())
 
     def validate(self, value):
         """Validate reference.
@@ -626,7 +629,7 @@ class ReferenceProperty(Property):
 
         return value
 
-    def __id_attr_name(self):
+    def _id_attr_name(self):
         """Get attribute of referenced id.
         #todo add id function or key function to model
         """
@@ -634,7 +637,7 @@ class ReferenceProperty(Property):
             self.reference_fieldname = 'id'
         return self.reference_fieldname
 
-    def __resolved_attr_name(self):
+    def _resolved_attr_name(self):
         """Get attribute of resolved attribute.
 
         The resolved attribute is where the actual loaded reference instance is
@@ -647,6 +650,36 @@ class ReferenceProperty(Property):
 
 
 Reference = ReferenceProperty
+
+class One2One(ReferenceProperty):
+    def create(self):
+        args = self.kwargs.copy()
+        args['key'] = self.name
+        args['default'] = self.default_value()
+        args['primary_key'] = self.kwargs.pop('key', False)
+        args['autoincrement'] = self.kwargs.pop('autoincrement', False)
+        args['index'] = self.kwargs.pop('index', False)
+        args['unique'] = self.kwargs.pop('unique', True)
+        args['nullable'] = self.kwargs.pop('nullable', True)
+        f_type = self._create_type()
+        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
+
+    def __property_config__(self, model_class, property_name):
+        """Loads all of the references that point to this model.
+        """
+        super(ReferenceProperty, self).__property_config__(model_class, property_name)
+    
+        if self.reference_class is _SELF_REFERENCE:
+            self.reference_class = self.data_type = model_class
+    
+        if self.collection_name is None:
+            self.collection_name = '%s' % (model_class.tablename)
+        if hasattr(self.reference_class, self.collection_name):
+            raise DuplicatePropertyError('Class %s already has property %s'
+                 % (self.reference_class.__name__, self.collection_name))
+        setattr(self.reference_class, self.collection_name,
+            _One2OneReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
+    
 
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
@@ -694,18 +727,18 @@ class _ReverseReferenceProperty(Property):
             property: Foreign property on referred model that points back to this
                 properties entity.
         """
-        self.__model = model
-        self.__reference_id = reference_id    #B Reference(A) this is B's id
-        self.__reversed_id = reversed_id    #A's id
+        self._model = model
+        self._reference_id = reference_id    #B Reference(A) this is B's id
+        self._reversed_id = reversed_id    #A's id
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
         if model_instance is not None:
-            _id = getattr(model_instance, self.__reversed_id, None)
+            _id = getattr(model_instance, self._reversed_id, None)
             if _id is not None:
-                b_id = self.__reference_id
-                d = self.__model.c[self.__reference_id]
-                return Result(self.__model, d==_id)
+                b_id = self._reference_id
+                d = self._model.c[self._reference_id]
+                return Result(self._model, d==_id)
             else:
                 return Result()
         else:
@@ -714,6 +747,21 @@ class _ReverseReferenceProperty(Property):
     def __set__(self, model_instance, value):
         """Not possible to set a new collection."""
         raise BadValueError('Virtual property is read-only')
+    
+class _One2OneReverseReferenceProperty(_ReverseReferenceProperty):
+    def __get__(self, model_instance, model_class):
+        """Fetches collection of model instances of this collection property."""
+        if model_instance is not None:
+            _id = getattr(model_instance, self._reversed_id, None)
+            if _id is not None:
+                b_id = self._reference_id
+                d = self._model.c[self._reference_id]
+                return self._model.get(d==_id)
+            else:
+                return None
+        else:
+            return self
+    
 
 class blob(type):pass
 class text(type):pass
@@ -785,7 +833,7 @@ class Model(object):
                     x = x.id
                 if isinstance(v, DateTimeProperty) and v.auto_now:
                     d[k] = v.default_value()
-                if (x is not None and t is not None) and repr(t) != repr(x):
+                if (x is not None) and (repr(t) != repr(x)):
                     d[k] = x
         
         return d
@@ -839,7 +887,6 @@ class Model(object):
             if not hasattr(cls, '_created') or force:
                 cls.db = db or get_connection()
                 cls.metadata = metadata = cls.db.metadata
-#                cls.table = table = schema.table(cls.tablename)
                 cols = []
                 for k, f in cls.properties.items():
                     cols.append(f.create())
