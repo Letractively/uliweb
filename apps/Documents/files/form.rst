@@ -263,7 +263,7 @@ You can use Form.check() to validate the submmited data. For example:
         return {'form':f}
         
 Above example demonstrates how to validate the submitted data. You should pass
-``request.GET`` or ``request.POST`` or ``request.params``(for WebOb module) to Form.check() 
+``request.GET`` or ``request.POST`` or ``request.params`` (for WebOb module) to Form.check() 
 function.
 
 .. note::
