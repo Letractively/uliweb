@@ -61,7 +61,12 @@ def make_app(appname=''):
             appname = raw_input('Please enter app name:')
         
     ans = '-1'
-    if os.path.exists(appname):
+    if os.path.exists(apps_dir):
+        path = os.path.join(apps_dir, appname)
+    else:
+        path = appname
+    
+    if os.path.exists(path):
         while ans not in ('y', 'n'):
             ans = raw_input('The app directory has been existed, do you want to overwrite it?(y/n)[n]')
             if not ans:
@@ -70,7 +75,7 @@ def make_app(appname=''):
         ans = 'y'
     if ans == 'y':
         from uliweb.utils.common import extract_dirs
-        extract_dirs('uliweb', 'template_files/app', appname)
+        extract_dirs('uliweb', 'template_files/app', path)
 
 def make_project(project_name='', verbose=('v', False)):
     """create a new project directory according the project name"""
