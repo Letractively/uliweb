@@ -10,7 +10,9 @@ class SessionMiddle(Middleware):
             'timeout':3600, 
             'encrypt_key':'uliweb', 
             'key':'uliweb.session.id',
-            'table_name':'uliweb_table'
+            'table_name':'uliweb_table',
+            'cookie_expires': 300
+            
         }
         self.options = settings.get('SESSION', default)
         default.update(self.options)
