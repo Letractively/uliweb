@@ -9,7 +9,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'set_auto_bind',
     'TimeProperty', 'DecimalProperty', 'FileProperty', 'FloatProperty',
     'IntegerProperty', 'Property', 'PickleProperty', 'StringProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
-    'SelfReference', 'SelfReferenceProperty', 'One2One',
+    'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError']
 
@@ -113,12 +113,16 @@ class ModelMetaclass(type):
                 cls.properties[attr_name] = attr
                 attr.__property_config__(cls, attr_name)
                 
+        #if there is already defined primary_key, the id will not be primary_key
+        has_primary_key = bool([v for v in cls.properties.itervalues() if 'primary_key' in v.kwargs])
+        
         if 'id' not in cls.properties:
-            cls.properties['id'] = f = Field(int, autoincrement=True, key=True, default=None)
+            cls.properties['id'] = f = Field(int, autoincrement=True, 
+                primary_key=not has_primary_key, default=None)
             f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)
 
-        fields_list = [(k, v) for k, v in cls.properties.items()]
+        fields_list = [(k, v) for k, v in cls.properties.items() if not isinstance(v, ManyToMany)]
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls._fields_list = fields_list
         
@@ -145,11 +149,11 @@ class Property(object):
         self.value = None
         Property.creation_counter += 1
         
-    def create(self):
+    def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
         args['default'] = self.default_value()
-        args['primary_key'] = self.kwargs.pop('key', False)
+        args['primary_key'] = self.kwargs.pop('primary_key', False)
         args['autoincrement'] = self.kwargs.pop('autoincrement', False)
         args['index'] = self.kwargs.pop('index', False)
         args['unique'] = self.kwargs.pop('unique', False)
@@ -525,11 +529,11 @@ class ReferenceProperty(Property):
             raise KindError('reference_class must be Model or _SELF_REFERENCE')
         self.reference_class = self.data_type = reference_class
         
-    def create(self):
+    def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
         args['default'] = self.default_value()
-        args['primary_key'] = self.kwargs.pop('key', False)
+        args['primary_key'] = self.kwargs.pop('primary_key', False)
         args['autoincrement'] = self.kwargs.pop('autoincrement', False)
         args['index'] = self.kwargs.pop('index', False)
         args['unique'] = self.kwargs.pop('unique', False)
@@ -648,15 +652,14 @@ class ReferenceProperty(Property):
         """
         return '_RESOLVED' + self._attr_name()
 
-
 Reference = ReferenceProperty
 
-class One2One(ReferenceProperty):
-    def create(self):
+class OneToOne(ReferenceProperty):
+    def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
         args['default'] = self.default_value()
-        args['primary_key'] = self.kwargs.pop('key', False)
+        args['primary_key'] = self.kwargs.pop('primary_key', False)
         args['autoincrement'] = self.kwargs.pop('autoincrement', False)
         args['index'] = self.kwargs.pop('index', False)
         args['unique'] = self.kwargs.pop('unique', True)
@@ -678,9 +681,117 @@ class One2One(ReferenceProperty):
             raise DuplicatePropertyError('Class %s already has property %s'
                  % (self.reference_class.__name__, self.collection_name))
         setattr(self.reference_class, self.collection_name,
-            _One2OneReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
+            _OneToOneReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
     
-
+class ManyResult(object):
+    def __init__(self, modela, modelb, table, fielda, fieldb, valuea):
+        self.modela = modela
+        self.modelb = modelb
+        self.table = table
+        self.fielda = fielda
+        self.fieldb = fieldb
+        self.valuea = valuea
+        
+    def add(self, *objs):
+        for o in objs:
+            assert isinstance(o, (int, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
+            if isinstance(o, int):
+                v = o
+            else:
+                v = o.id
+            d = {self.fielda:self.valuea, self.fieldb:v}
+            self.table.insert().execute(**d)
+    
+    def clear(self):
+        self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
+    
+    def all(self):
+        from sqlalchemy.sql import select
+        s = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
+        ids = [x[0] for x in self.table.bind.execute(s)]
+        return self.modelb.filter(self.modelb.c.id.in_(ids))
+    
+    def delete(self, *objs):
+        ids = []
+        for o in objs:
+            assert isinstance(o, (int, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
+            if isinstance(o, int):
+                ids.append(o)
+            else:
+                ids.append(o.id)
+        self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
+        
+    def count(self):
+        result = self.table.count(self.table.c[self.fielda]==self.valuea).execute()
+        count = 0
+        if result:
+            r = result.fetchone()
+            if r:
+                count = r[0]
+        else:
+            count = 0
+        return count
+    
+        
+        
+class ManyToMany(ReferenceProperty):
+    def create(self, cls):
+        self.fielda = a = "%s_id" % self.model_class.tablename
+        self.fieldb = b = "%s_id" % self.reference_class.tablename
+        a_id = "%s.id" % self.model_class.tablename
+        b_id = "%s.id" % self.reference_class.tablename
+        self.table = Table(self.tablename, cls.metadata,
+            Column(a, Integer, primary_key=True),
+            Column(b, Integer, primary_key=True),
+            ForeignKeyConstraint([a], [a_id]),
+            ForeignKeyConstraint([b], [b_id]),
+        )
+        cls.manytomany.append(self.table)
+        return
+    
+    def __property_config__(self, model_class, property_name):
+        """Loads all of the references that point to this model.
+        """
+        super(ReferenceProperty, self).__property_config__(model_class, property_name)
+    
+        if self.reference_class is _SELF_REFERENCE:
+            self.reference_class = self.data_type = model_class
+        self.tablename = '%s_%s_%s' % (model_class.tablename, self.reference_class.tablename, property_name)
+        if self.collection_name is None:
+            self.collection_name = '%s_set' % (model_class.tablename)
+        if hasattr(self.reference_class, self.collection_name):
+            raise DuplicatePropertyError('Class %s already has property %s'
+                 % (self.reference_class.__name__, self.collection_name))
+        setattr(self.reference_class, self.collection_name,
+            _ManyToManyReverseReferenceProperty(self, self._id_attr_name()))
+    
+    def __get__(self, model_instance, model_class):
+        """Get reference object.
+    
+        This method will fetch unresolved entities from the datastore if
+        they are not already loaded.
+    
+        Returns:
+            ReferenceProperty to Model object if property is set, else None.
+        """
+        if model_instance:
+            if hasattr(model_instance, self._id_attr_name()):
+                reference_id = getattr(model_instance, self._id_attr_name())
+            else:
+                reference_id = None
+            x = ManyResult(self.model_class, self.reference_class, self.table,
+                self.fielda, self.fieldb, reference_id)
+            return x
+        else:
+            return self
+    
+    def __set__(self, model_instance, value):
+        pass
+    
+    def get_value_for_datastore(self, model_instance):
+        """Get key of reference rather than reference itself."""
+        return getattr(model_instance, self._id_attr_name())
+    
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
     """
@@ -722,10 +833,6 @@ class _ReverseReferenceProperty(Property):
 
         Constructor does not take standard values of other property types.
 
-        Args:
-            model: Model that this property is a collection of.
-            property: Foreign property on referred model that points back to this
-                properties entity.
         """
         self._model = model
         self._reference_id = reference_id    #B Reference(A) this is B's id
@@ -748,10 +855,20 @@ class _ReverseReferenceProperty(Property):
         """Not possible to set a new collection."""
         raise BadValueError('Virtual property is read-only')
     
-class _One2OneReverseReferenceProperty(_ReverseReferenceProperty):
+class _OneToOneReverseReferenceProperty(_ReverseReferenceProperty):
+    def __init__(self, model, reference_id, reversed_id):
+        """Constructor for reverse reference.
+    
+        Constructor does not take standard values of other property types.
+    
+        """
+        self._model = model
+        self._reference_id = reference_id    #B Reference(A) this is B's id
+        self._reversed_id = reversed_id    #A's id
+
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
-        if model_instance is not None:
+        if model_instance:
             _id = getattr(model_instance, self._reversed_id, None)
             if _id is not None:
                 b_id = self._reference_id
@@ -762,6 +879,30 @@ class _One2OneReverseReferenceProperty(_ReverseReferenceProperty):
         else:
             return self
     
+class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
+    def __init__(self, reference_property, reversed_id):
+        """Constructor for reverse reference.
+    
+        Constructor does not take standard values of other property types.
+    
+        """
+        self.reference_property = reference_property
+        self._reversed_id = reversed_id
+
+    def __get__(self, model_instance, model_class):
+        """Fetches collection of model instances of this collection property."""
+        if model_instance:
+            if hasattr(model_instance, self._reversed_id):
+                reference_id = getattr(model_instance, self._reversed_id)
+            else:
+                reference_id = None
+            x = ManyResult(self.reference_property.reference_class, 
+                self.reference_property.model_class, self.reference_property.table,
+                self.reference_property.fieldb, self.reference_property.fielda, reference_id)
+            return x
+        else:
+            return self
+
 
 class blob(type):pass
 class text(type):pass
@@ -793,11 +934,13 @@ class Model(object):
     def __init__(self, **kwargs):
         self._old_values = {}
         for prop in self.properties.values():
-            if prop.name in kwargs:
-                value = kwargs[prop.name]
-            else:
-                value = prop.default_value()
-            prop.__set__(self, value)
+            if not isinstance(prop, ManyToMany):
+                if prop.name in kwargs:
+                    value = kwargs[prop.name]
+                else:
+                    value = prop.default_value()
+                prop.__set__(self, value)
+            
         
     def _set_saved(self):
         self._old_values = self.to_dict()
@@ -805,10 +948,11 @@ class Model(object):
     def to_dict(self):
         d = {}
         for k, v in self.properties.items():
-            t = getattr(self, k, None)
-            if isinstance(t, Model):
-                t = t.id
-            d[k] = t
+            if not isinstance(v, ManyToMany):
+                t = getattr(self, k, None)
+                if isinstance(t, Model):
+                    t = t.id
+                d[k] = t
         return d
             
     def _get_data(self):
@@ -819,22 +963,24 @@ class Model(object):
             d = {}
             for k in self.properties.keys():
                 v = getattr(self, k, None)
-                if isinstance(v, Model):
-                    v = v.id
-                if v is not None:
-                    d[k] = v
+                if not isinstance(v, ManyToMany):
+                    if isinstance(v, Model):
+                        v = v.id
+                    if v is not None:
+                        d[k] = v
         else:
             d = {}
             d['id'] = self.id
             for k, v in self.properties.items():
-                t = self._old_values.get(k, None)
-                x = getattr(self, k, None)
-                if isinstance(x, Model):
-                    x = x.id
-                if isinstance(v, DateTimeProperty) and v.auto_now:
-                    d[k] = v.default_value()
-                if (x is not None) and (repr(t) != repr(x)):
-                    d[k] = x
+                if not isinstance(v, ManyToMany):
+                    t = self._old_values.get(k, None)
+                    x = getattr(self, k, None)
+                    if isinstance(x, Model):
+                        x = x.id
+                    if isinstance(v, DateTimeProperty) and v.auto_now:
+                        d[k] = v.default_value()
+                    if (x is not None) and (repr(t) != repr(x)):
+                        d[k] = x
         
         return d
             
@@ -888,8 +1034,11 @@ class Model(object):
                 cls.db = db or get_connection()
                 cls.metadata = metadata = cls.db.metadata
                 cols = []
+                cls.manytomany = []
                 for k, f in cls.properties.items():
-                    cols.append(f.create())
+                    c = f.create(cls)
+                    if c:
+                        cols.append(c)
                 t = metadata.tables.get(cls.tablename, None)
                 if t:
                     metadata.remove(t)
@@ -909,6 +1058,9 @@ class Model(object):
         try:
             if not cls.table.exists():
                 cls.table.create(checkfirst=True)
+            for x in cls.manytomany:
+                if not x.exists():
+                    x.create(checkfirst=True)
         finally:
             cls._c_lock.release()
             
