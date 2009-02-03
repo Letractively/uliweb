@@ -148,7 +148,7 @@ def test_5():
     2
     """
   
-#testing one2one
+#testing OneToOne
 def test_6():
     """
     >>> set_auto_bind(True)
@@ -158,7 +158,7 @@ def test_6():
     ...     username = Field(str)
     ...     year = Field(int)
     >>> class Test1(Model):
-    ...     test = One2One(Test)
+    ...     test = OneToOne(Test)
     ...     name = Field(str)
     >>> a1 = Test(username='limodou1').save()
     >>> b1 = Test1(name='zoom', test=a1).save()
@@ -168,6 +168,50 @@ def test_6():
     <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'zoom','id':1}>
     >>> b1.test
     <Test {'username':'limodou1','year':0,'id':1}>
-    >>> b1.test == a1
-    True
+    """
+    
+#test ManyToMany
+def test_7():
+    """
+    >>> set_auto_bind(True)
+    >>> set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    >>> class Group(Model):
+    ...     name = Field(str)
+    ...     users = ManyToMany(User)
+    >>> a = User(username='limodou').save()
+    >>> b = User(username='zoom').save()
+    >>> c = User(username='abc').save()
+    >>> g1 = Group(name='python').save()
+    >>> g2 = Group(name='perl').save()
+    >>> g3 = Group(name='java').save()
+    >>> g1.users.add(a)
+    >>> g1.users.add(b, 3) #add can support multiple object, and object can also int
+    >>> try:
+    ...     g1.users.add(a, b)  #can't has duplicated records
+    ... except Exception, e:
+    ...     print e
+    (IntegrityError) columns group_id, user_id are not unique u'INSERT INTO group_user_users (group_id, user_id) VALUES (?, ?)' [1, 1]
+    >>> list(g1.users.all())
+    [<User {'username':u'limodou','id':1}>, <User {'username':u'zoom','id':2}>, <User {'username':u'abc','id':3}>]
+    >>> g1.users.delete(a)
+    >>> g1.users.clear()
+    >>> g1.users.count()
+    0
+    >>> g1.users.add(a, b, c)
+    >>> g2.users.add(a)
+    >>> list(a.group_set.all())
+    [<Group {'name':'python','id':1}>, <Group {'name':'perl','id':2}>]
+    >>> a.group_set.add(g3)
+    >>> list(a.group_set.all())
+    [<Group {'name':'python','id':1}>, <Group {'name':'perl','id':2}>, <Group {'name':'java','id':3}>]
+    >>> g1.users.delete(a)
+    >>> list(g1.users.all())
+    [<User {'username':u'zoom','id':2}>, <User {'username':u'abc','id':3}>]
+    >>> list(g2.users.all())
+    [<User {'username':u'limodou','id':1}>]
+    >>> list(a.group_set.all())
+    [<Group {'name':'perl','id':2}>, <Group {'name':'java','id':3}>]
     """
