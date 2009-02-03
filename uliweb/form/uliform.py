@@ -72,7 +72,7 @@ def _create_kwargs(args, nocreate_if_none=['id', 'for']):
     if not args:
         return ''
     s = ['']
-    for k, v in args.items():
+    for k, v in sorted(args.items()):
         if k.startswith('_'):
             k = k[1:]
         if v is None:
@@ -231,6 +231,39 @@ class Checkbox(Build):
 # Form Helper
 ###############################################################
 
+class FieldProxy(object):
+    def __init__(self, form, field):
+        self.form = form
+        self.field = field
+        
+    @property
+    def label(self):
+        return self.field.get_label()
+    
+    @property
+    def help_string(self):
+        return self.field.help_string
+    
+    @property
+    def error(self):
+        return self.form.errors.get(self.field.field_name, '')
+    
+    @property
+    def html(self):
+        default = self.field.to_html(self.field.default)
+        return self.field.html(self.form.data.get(self.field.field_name, default), self.form.ok)
+    
+    def __str__(self):
+        return self.html
+    
+    def _get_data(self):
+        return self.form.data.get(self.field.name, self.field.default)
+    
+    def _set_data(self, value):
+        self.form.data[self.field.name] = value
+        
+    data = property(_get_data, _set_data)
+    
 class BaseField(object):
     default_build = Text
     field_css_class = 'field'
@@ -368,11 +401,29 @@ class BaseField(object):
             return False, e.message
         return True, data
     
+    def __property_config__(self, form_class, field_name):
+        self.form_class = form_class
+        self.field_name = field_name
+        if not self.name:
+            self.name = field_name
+    
+    def __get__(self, model_instance, model_class):
+        if model_instance is None:
+            return self
+        else:
+            return FieldProxy(model_instance, self)
+    
+    def __set__(self, model_instance, value):
+        raise Exception('Virtual property is read-only')
+        
+#    def _attr_name(self):
+#        return '_' + self.name + '_'
+#    
 class StringField(BaseField):
     """
     >>> a = StringField(name='title', label='Title:', required=True, id='field_title')
     >>> print a.html('Test')
-    <input class="field" type="text" id="field_title" value="Test" name="title"></input>
+    <input class="field" id="field_title" name="title" type="text" value="Test"></input>
     >>> print a.get_label()
     <label for="field_title">
     Title:<span class="field_required">
@@ -387,7 +438,7 @@ class StringField(BaseField):
     'Hello'
     >>> a = StringField(name='title', label='Title:', required=True)
     >>> print a.html('')
-    <input class="field" type="text" value="" name="title"></input>
+    <input class="field" name="title" type="text" value=""></input>
     >>> print a.get_label()
     <label>
     Title:<span class="field_required">
@@ -396,7 +447,7 @@ class StringField(BaseField):
     </label>
     >>> a.idtype = 'name'
     >>> print a.html('')
-    <input class="field" type="text" id="field_title" value="" name="title"></input>
+    <input class="field" id="field_title" name="title" type="text" value=""></input>
     >>> print a.get_label()
     <label for="field_title">
     Title:<span class="field_required">
@@ -405,7 +456,7 @@ class StringField(BaseField):
     </label>
     >>> a = StringField(name='title', label='Title:', required=True, html_attrs={'class':'ffff'})
     >>> print a.html('')
-    <input name="title" type="text" class="ffff field" value=""></input>
+    <input class="ffff field" name="title" type="text" value=""></input>
     
     """
     default_datatype = str
@@ -416,7 +467,7 @@ class UnicodeField(BaseField):
     """
     >>> a = UnicodeField(name='title', label='Title:', required=True, id='field_title')
     >>> print a.html('Test')
-    <input class="field" type="text" id="field_title" value="Test" name="title"></input>
+    <input class="field" id="field_title" name="title" type="text" value="Test"></input>
     >>> print a.get_label()
     <label for="field_title">
     Title:<span class="field_required">
@@ -449,7 +500,7 @@ class PasswordField(StringField):
     """
     >>> a = PasswordField(name='password', label='Password:', required=True, id='field_password')
     >>> print a.html('Test')
-    <input class="field" type="password" id="field_password" value="Test" name="password"></input>
+    <input class="field" id="field_password" name="password" type="password" value="Test"></input>
     
     """
     default_build = Password
@@ -458,7 +509,7 @@ class HiddenField(StringField):
     """
     >>> a = HiddenField(name='id', id='field_id')
     >>> print a.html('Test')
-    <input class="field" type="hidden" id="field_id" value="Test" name="id"></input>
+    <input class="field" id="field_id" name="id" type="hidden" value="Test"></input>
     
     """
     default_build = Hidden
@@ -467,7 +518,7 @@ class ListField(StringField):
     """
     >>> a = ListField(name='list', id='field_list')
     >>> print a.html(['a', 'b'])
-    <input class="field" type="text" id="field_list" value="a b" name="list"></input>
+    <input class="field" id="field_list" name="list" type="text" value="a b"></input>
     >>> print a.validate('a b')
     (True, ['a', 'b'])
     >>> print a.validate('')
@@ -498,7 +549,7 @@ class BooleanField(BaseField):
     """
     >>> a = BooleanField(name='bool', id='field_bool')
     >>> print a.html('Test')
-    <input checked class="field" type="checkbox" name="bool" id="field_bool"></input>
+    <input checked class="field" id="field_bool" name="bool" type="checkbox"></input>
     >>> print a.validate('on')
     (True, True)
     >>> print a.validate('')
@@ -534,7 +585,7 @@ class TextField(StringField):
     """
     >>> a = TextField(name='text', id='field_text')
     >>> print a.html('Test')
-    <textarea id="field_text" rows="5" class="field" name="text" cols="40">
+    <textarea class="field" cols="40" id="field_text" name="text" rows="5">
     Test
     </textarea>
     
@@ -557,7 +608,7 @@ class IntField(BaseField):
     """
     >>> a = IntField(name='int', id='field_int')
     >>> print a.html('Test')
-    <input class="field" type="text" id="field_int" value="Test" name="int"></input>
+    <input class="field" id="field_int" name="int" type="text" value="Test"></input>
     >>> print a.validate('')
     (True, 0)
     >>> print a.validate(None)
@@ -568,7 +619,7 @@ class IntField(BaseField):
     (True, 122)
     >>> a = BaseField(name='int', id='field_int', datatype=int)
     >>> print a.html('Test')
-    <input class="field" type="text" id="field_int" value="Test" name="int"></input>
+    <input class="field" id="field_int" name="int" type="text" value="Test"></input>
     >>> print a.validate('122')
     (True, 122)
 
@@ -586,7 +637,7 @@ class SelectField(BaseField):
     """
     >>> a = SelectField(name='select', id='field_select', default='a', choices=[('a', 'AAA'), ('b', 'BBB')])
     >>> print a.html('a')
-    <select class="field" name="select" id="field_select">
+    <select class="field" id="field_select" name="select">
     <option selected value="a">
     AAA
     </option>
@@ -626,9 +677,9 @@ class RadioSelectField(SelectField):
     """
     >>> a = RadioSelectField(name='select', id='field_select', default='a', choices=[('a', 'AAA'), ('b', 'BBB')])
     >>> print a.html('a')
-    <input checked type="radio" id="radio_1" value="a" name="select"></input><label for="radio_1">
+    <input checked id="radio_1" name="select" type="radio" value="a"></input><label for="radio_1">
     AAA
-    </label><input type="radio" id="radio_2" value="b" name="select"></input><label for="radio_2">
+    </label><input id="radio_2" name="select" type="radio" value="b"></input><label for="radio_2">
     BBB
     </label>
     >>> print a.validate('')
@@ -645,7 +696,7 @@ class FileField(BaseField):
     """
     >>> a = FileField(name='file', id='field_file')
     >>> print a.html('a')
-    <input class="field" type="file" id="field_file" name="file"></input>
+    <input class="field" id="field_file" name="file" type="file"></input>
     """
     
     default_build = File
@@ -677,7 +728,7 @@ class DateField(StringField):
     """
     >>> a = DateField(name='date', id='field_date')
     >>> print a.html(datetime.date(2009, 1, 1))
-    <input class="field field_date" type="text" id="field_date" value="2009-01-01" name="date"></input>
+    <input class="field field_date" id="field_date" name="date" type="text" value="2009-01-01"></input>
     >>> print a.validate('2009-01-01')
     (True, datetime.date(2009, 1, 1))
     >>> print a.validate('2009/01/01')
@@ -724,7 +775,7 @@ class TimeField(StringField):
     """
     >>> a = TimeField(name='time', id='field_time')
     >>> print a.html(datetime.time(14, 30, 59))
-    <input class="field field_time" type="text" id="field_time" value="14:30:59" name="time"></input>
+    <input class="field field_time" id="field_time" name="time" type="text" value="14:30:59"></input>
     >>> print a.validate('14:30:59')
     (True, datetime.time(14, 30, 59))
     >>> print a.validate('14:30')
@@ -767,14 +818,13 @@ class TimeField(StringField):
             return ''
 
 class FormMetaclass(type):
-    def __new__(cls, name, bases, attrs):
+    def __init__(cls, name, bases, dct):
         fields = {}
-        for field_name, obj in attrs.items():
+        for field_name, obj in dct.items():
             if isinstance(obj, BaseField):
-                if not obj.name:
-                    obj.name = field_name
-                obj.field_name = field_name
                 fields[field_name] = obj
+                obj.__property_config__(cls, field_name)
+                
 
 #        f = {}
 #        for base in bases[::-1]:
@@ -782,13 +832,11 @@ class FormMetaclass(type):
 #                f.update(base.fields)
 #
 #        f.update(fields)
-        attrs['fields'] = fields
+        cls.fields = fields
 
         fields_list = [(k, v) for k, v in fields.items()]
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
-        attrs['fields_list'] = fields_list
-
-        return type.__new__(cls, name, bases, attrs)
+        cls.fields_list = fields_list
 
 class Layout(object):
     def __init__(self, form, layout=None):
@@ -829,7 +877,7 @@ class TableLayout(Layout):
         tbody = table << Tag('tbody')
 
         for name, obj in self.form.fields_list:
-            f = self.form.f[name]
+            f = getattr(self.form, name)
             if isinstance(obj, HiddenField):
                 tbody << f
             else:
@@ -839,45 +887,16 @@ class TableLayout(Layout):
         buf << self.form.form_end
         return str(buf)
     
-class FieldProxy(object):
-    def __init__(self, form, field):
-        self.form = form
-        self.field = field
-        
-    @property
-    def label(self):
-        return self.field.get_label()
-    
-    @property
-    def help_string(self):
-        return self.field.help_string
-    
-    @property
-    def error(self):
-        return self.form.errors.get(self.field.field_name, '')
-    
-    @property
-    def html(self):
-        default = self.field.to_html(self.field.default)
-        return self.field.html(self.form.data.get(self.field.field_name, default), self.form.ok)
-    
-    def __str__(self):
-        return self.html
-    
-    @property
-    def data(self):
-        return self.form.data.get(self.field.name, self.field.default)
-    
 class Form(object):
     """
     >>> class F(Form):
     ...     title = StringField(lable='Title:')
     >>> form = F()
     >>> print form.form_begin
-    <form action="" class="form" method="post" enctype="multipart/form-data">
+    <form class="form" action="" enctype="multipart/form-data" method="post">
     >>> form = F(action='post')
     >>> print form.form_begin
-    <form action="post" class="form" method="post" enctype="multipart/form-data">
+    <form class="form" action="post" enctype="multipart/form-data" method="post">
     >>> print form.form_end
     </form>
     """
@@ -996,11 +1015,11 @@ class Form(object):
         if errors is not None:
             self.errors = errors
             
-        self.f = D({})
-        for name, obj in self.fields_list:
-            f = FieldProxy(self, obj)
-            setattr(self, name, f)
-            self.f[name] = f
+#        self.f = D({})
+#        for name, obj in self.fields_list:
+#            f = FieldProxy(self, obj)
+#            setattr(self, name, f)
+#            self.f[name] = f
 
     def html(self):
         cls = self.layout_class
@@ -1036,7 +1055,7 @@ class CSSLayout(Layout):
         root = buf
     
         for name, obj in self.form.fields_list:
-            f = self.form.f[name]
+            f = getattr(self.form, name)
             if isinstance(obj, HiddenField):
                 root << f
             else:

@@ -7,6 +7,7 @@ class RegisterForm(Form):
     username = StringField(label=_('Username:'), required=True)
     password = PasswordField(label=_('Password:'), required=True)
     password1 = PasswordField(label=_('Password again:'), required=True)
+    next = HiddenField()
     
     def validate(self, all_data):
         if all_data.password != all_data.password1:
@@ -16,4 +17,5 @@ class RegisterForm(Form):
 class LoginForm(Form):
     username = StringField(label=_('Username:'), required=True)
     password = PasswordField(label=_('Password:'), required=True)
-
+    next = HiddenField()
+    
