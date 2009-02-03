@@ -222,12 +222,6 @@ class Property(object):
     def empty(self, value):
         return value is None
 
-    def get_value_for_datastore(self, model_instance):
-        return self.__get__(model_instance, model_instance.__class__)
-
-    def make_value_from_datastore(self, value):
-        return value
-    
     def convert(self, value):
         if isinstance(value, unicode):
             return value.encode('utf-8')
@@ -319,13 +313,6 @@ class DateTimeProperty(Property):
             return self.now()
         return Property.default_value(self)
 
-    def get_value_for_datastore(self, model_instance):
-        if self.auto_now:
-            return self.now()
-        else:
-            return super(DateTimeProperty,
-                self).get_value_for_datastore(model_instance)
-
     @staticmethod
     def now():
         return datetime.datetime.now()
@@ -342,37 +329,12 @@ class DateProperty(DateTimeProperty):
     data_type = datetime.date
     field_class = Date
     
-    def get_value_for_datastore(self, model_instance):
-        value = super(DateProperty, self).get_value_for_datastore(model_instance)
-        if value is not None:
-            value = datetime.datetime(value.year, value.month, value.day)
-        return value
-
-    def make_value_from_datastore(self, value):
-        if value is not None:
-            value = value.date()
-        return value
-
 class TimeProperty(DateTimeProperty):
     """A time property, which stores a time without a date."""
 
     data_type = datetime.time
     field_class = Time
     
-    def get_value_for_datastore(self, model_instance):
-        value = super(TimeProperty, self).get_value_for_datastore(model_instance)
-        if value is not None:
-            value = datetime.time(value.hour, value.minute, value.second,
-                value.microsecond)
-        return value
-
-    def make_value_from_datastore(self, value):
-        if value is not None:
-            value = datetime.datetime(1970, 1, 1,
-                value.hour, value.minute, value.second,
-                value.microsecond)
-        return value
-
 class IntegerProperty(Property):
     """An integer property."""
 
@@ -458,19 +420,6 @@ class PickleProperty(Property):
     def validate(self, value):
         return value
     
-#    def get_value_for_datastore(self, model_instance):
-#        value = super(TimeProperty, self).get_value_for_datastore(model_instance)
-#        if value is not None:
-#            import cPickle
-#            value = cPickle.loads(value)
-#        return value
-#
-#    def make_value_from_datastore(self, value):
-#        if value is not None:
-#            import cPickle
-#            value = cPickle.dumps(value)
-#        return value
-    
 class FileProperty(Property):
     data_type = None
     field_class = BLOB
@@ -484,20 +433,6 @@ class FileProperty(Property):
                 % (self.name, type(value).__name__))
         return value
     
-    def get_value_for_datastore(self, model_instance):
-        value = super(FileProperty, self).get_value_for_datastore(model_instance)
-        import cStringIO
-        buf = cStringIO.StringIO()
-        if value is not None:
-            buf.write(value)
-        return buf
-    
-    def make_value_from_datastore(self, value):
-        if value is not None:
-            value = value.read()
-        return value
-    
-
 class ReferenceProperty(Property):
     """A property that represents a many-to-one reference to another model.
     """
@@ -601,10 +536,6 @@ class ReferenceProperty(Property):
         else:
             setattr(model_instance, self._attr_name(), None)
             setattr(model_instance, self._resolved_attr_name(), None)
-
-    def get_value_for_datastore(self, model_instance):
-        """Get key of reference rather than reference itself."""
-        return getattr(model_instance, self._id_attr_name())
 
     def validate(self, value):
         """Validate reference.
@@ -732,8 +663,6 @@ class ManyResult(object):
             count = 0
         return count
     
-        
-        
 class ManyToMany(ReferenceProperty):
     def create(self, cls):
         self.fielda = a = "%s_id" % self.model_class.tablename
@@ -787,10 +716,6 @@ class ManyToMany(ReferenceProperty):
     
     def __set__(self, model_instance, value):
         pass
-    
-    def get_value_for_datastore(self, model_instance):
-        """Get key of reference rather than reference itself."""
-        return getattr(model_instance, self._id_attr_name())
     
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
