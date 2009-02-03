@@ -172,11 +172,11 @@ def test_6():
     
 #test ManyToMany
 def test_7():
-    import interlude
     """
     >>> set_auto_bind(True)
     >>> set_debug_query(True)
     >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
     >>> class User(Model):
     ...     username = Field(unicode)
     >>> class Group(Model):
@@ -216,3 +216,30 @@ def test_7():
     >>> list(a.group_set.all())
     [<Group {'name':'perl','id':2}>, <Group {'name':'java','id':3}>]
     """
+
+#test SelfReference
+def test_8():
+    """
+    >>> set_auto_bind(True)
+    >>> set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     parent = SelfReference(collection_name='children')
+    >>> a = User(username='a').save()
+    >>> b = User(username='b', parent=a).save()
+    >>> c = User(username='c', parent=a).save()
+    >>> for i in User.all():
+    ...     print i
+    <User {'username':u'a','parent':None,'id':1}>
+    <User {'username':u'b','parent':<User {'username':u'a','parent':None,'id':1}>,'id':2}>
+    <User {'username':u'c','parent':<User {'username':u'a','parent':None,'id':1}>,'id':3}>
+    >>> for i in a.children.all():
+    ...     print i
+    <User {'username':u'b','parent':<User {'username':u'a','parent':None,'id':1}>,'id':2}>
+    <User {'username':u'c','parent':<User {'username':u'a','parent':None,'id':1}>,'id':3}>
+    """
+    
+if __name__ == '__main__':
+    test_8()
