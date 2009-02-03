@@ -13,7 +13,7 @@ def test_form():
     ...     content = TextField(label='Content:')
     >>> f = F()
     >>> print f
-    <form action="" class="form" method="post" enctype="multipart/form-data">
+    <form class="form" action="" enctype="multipart/form-data" method="post">
     <table>
     <tbody>
     <tr>
@@ -25,7 +25,7 @@ def test_form():
     </label>
     </td>
     <td>
-    <input name="title" type="text" class="field" value="" id="field_title"></input>
+    <input class="field" id="field_title" name="title" type="text" value=""></input>
     </td>
     <td>
     Title help string
@@ -38,12 +38,12 @@ def test_form():
     </label>
     </td>
     <td>
-    <textarea class="field" rows="5" cols="40" name="content" id="field_content"></textarea>
+    <textarea class="field" cols="40" id="field_content" name="content" rows="5"></textarea>
     </td>
     <td></td>
     </tr>
     <tr>
-    <td colspan="3" class="buttons">
+    <td class="buttons" colspan="3">
     <input type="submit" value="Submit"></input>
     <input type="reset" value="Reset"></input>
     </td>
@@ -60,4 +60,12 @@ def test_form():
     >>> req = Request.blank('/test?title=Hello&content=aaaa')
     >>> f.check(req.GET)
     True
+    >>> f.title.data
+    'Hello'
+    >>> f.title.data = 'limodou'
+    >>> f.title.html
+    '<input class="field" id="field_title" name="title" type="text" value="limodou"></input>'
+    >>> F.title.html()
+    '<input class="field" id="field_title" name="title" type="text" value=""></input>'
     """
+

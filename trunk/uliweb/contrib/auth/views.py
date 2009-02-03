@@ -8,6 +8,7 @@ def login():
     form = LoginForm()
     
     if request.method == 'GET':
+        form.next.data = reqeust.GET.get('next', '/')
         return {'form':form, 'message':''}
     if request.method == 'POST':
         flag = form.check(request.params)
@@ -15,7 +16,8 @@ def login():
             f, d = authenticate(request, username=form.username.data, password=form.password.data)
             if f:
                 login(request, d)
-                return redirect('/')
+                next = request.POST.get('next', '/')
+                return redirect(next)
             else:
                 data = d
         message = "Login failed!"
@@ -29,6 +31,7 @@ def register():
     form = RegisterForm()
     
     if request.method == 'GET':
+        form.next.data = request.GET.get('next', '/')
         return {'form':form, 'message':''}
     if request.method == 'POST':
         flag = form.check(request.params)
@@ -36,7 +39,8 @@ def register():
             f, d = create_user(request, username=form.username.data, password=form.password.data)
             if f:
                 logined(request, d)
-                return redirect('/')
+                next = reqeust.POST.get('next', '/')
+                return redirect(next)
             else:
                 form.errors.update(d)
                 
@@ -45,7 +49,8 @@ def register():
         
 @expose('/logout')
 def logout():
-    from uliweb.contrib.auth import logout
-    logout(request)
-    return redirect('/')
+    from uliweb.contrib.auth import logout as out
+    out(request)
+    next = reqeust.GET.get('next', '/')
+    return redirect(next)
     

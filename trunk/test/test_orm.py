@@ -172,6 +172,7 @@ def test_6():
     
 #test ManyToMany
 def test_7():
+    import interlude
     """
     >>> set_auto_bind(True)
     >>> set_debug_query(True)
