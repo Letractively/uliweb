@@ -92,44 +92,20 @@ def make_project(project_name='', verbose=('v', False)):
     if ans == 'y':
         extract_dirs('uliweb', 'template_files/project', project_name)
     
-def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appname=('a', '')):
+def export(outputdir=('o', ''), verbose=('v', False)):
     """
     Export Uliweb to a directory.
     """
-    import shutil
-    from uliweb.utils.common import copy_dir
+    from uliweb.utils.common import extract_dirs
     
     if not outputdir:
-        log.error("Error: outputdir should be a directory and can't be empty")
+        log.error("Error: outputdir can't be empty")
         sys.exit(0)
 
     if not os.path.exists(outputdir):
         os.makedirs(outputdir)
         
-    if appname:
-        if not os.path.exists(outputdir):
-            os.makedirs(outputdir)
-            
-        for f in (os.path.join(outputdir, x) for x in ['settings.py', '__init__.py']):
-            if not os.path.exists(f):
-                fp = file(f, 'wb')
-                fp.close()
-        
-        dirs = [SimpleFrame.get_app_dir(appname)]
-        copy_dir(dirs, outputdir, verbose, exact)
-        
-    else:
-        #copy files
-        for f in ['app.yaml', 'gae_handler.py', 'wsgi_handler.wsgi', 'runcgi.py']:
-            path = os.path.join(outputdir, f)
-            if f == 'app.yaml':
-                if not os.path.exists(path):
-                    shutil.copy2(f, path)
-            else:
-                shutil.copy2(f, path)
-            
-        dirs = ['uliweb']
-        copy_dir(dirs, outputdir, verbose, exact)
+    extract_dirs('uliweb', '', outputdir, verbose)
         
 def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     """
@@ -239,7 +215,7 @@ def main():
         port=8000, use_reloader=True, use_debugger=True)
 
     action_makeapp = make_app
-#    action_export = export
+    action_export = export
     action_exportstatic = exportstatic
     from uliweb.i18n.i18ntool import make_extract
     action_i18n = make_extract(apps_dir)
