@@ -48,7 +48,6 @@ def action_reset(apps_dir):
         app = Dispatcher(apps_dir=apps_dir, start=False)
         orm.set_auto_bind(True)
         orm.set_auto_create(False)
-#        orm.set_debug_query(True)
         db = orm.get_connection(app.settings.ORM.CONNECTION)
 
         path = os.path.join(get_app_dir(appname), 'models.py')

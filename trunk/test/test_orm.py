@@ -6,7 +6,6 @@ from uliweb.orm import *
 #basic testing
 def test_1():
     """
-    >>> set_auto_bind(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
     >>> class Test(Model):
@@ -46,7 +45,6 @@ def test_1():
 #testing model alter one the fly
 def test_2():
     """
-    >>> set_auto_bind(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
     >>> class Test(Model):
@@ -63,7 +61,6 @@ def test_2():
 #testing many2one
 def test_3():
     """
-    >>> set_auto_bind(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
     >>> class Test(Model):
@@ -97,7 +94,6 @@ def test_3():
 #testing many2one using collection_name
 def test_4():
     """
-    >>> set_auto_bind(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
     >>> class Test(Model):
@@ -128,7 +124,6 @@ def test_4():
 #testing transaction
 def test_5():
     """
-    >>> set_auto_bind(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
     >>> class Test(Model):
@@ -151,7 +146,6 @@ def test_5():
 #testing OneToOne
 def test_6():
     """
-    >>> set_auto_bind(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
     >>> class Test(Model):
@@ -173,7 +167,6 @@ def test_6():
 #test ManyToMany
 def test_7():
     """
-    >>> set_auto_bind(True)
     >>> set_debug_query(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
@@ -220,7 +213,6 @@ def test_7():
 #test SelfReference
 def test_8():
     """
-    >>> set_auto_bind(True)
     >>> set_debug_query(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
@@ -243,7 +235,6 @@ def test_8():
     
 def test_9():
     """
-    >>> set_auto_bind(True)
     >>> set_debug_query(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
@@ -275,18 +266,27 @@ def test_9():
     
     """
     
-def test_10():
-    """
-    >>> set_auto_bind(True)
-    >>> set_debug_query(True)
-    >>> db = get_connection('sqlite://')
-    >>> db.metadata.drop_all()
-    >>> import datetime
-    >>> class Test(Model):
-    ...     file = Field(file)
-    >>> import StringIO
-    >>> buf = StringIO.StringIO('hello uliweb')
-    >>> a = Test(file=buf).save()
-    >>> Test.get(1).file.read()
-    'hello uliweb'
-    """
+#def test_10():
+#    """
+#    >>> set_debug_query(True)
+#    >>> db = get_connection('sqlite://')
+#    >>> db.metadata.drop_all()
+#    >>> import datetime
+#    >>> class Test(Model):
+#    ...     file = Field(file)
+#    >>> import StringIO
+#    >>> buf = StringIO.StringIO('hello uliweb')
+#    >>> a = Test(file=buf).save()
+#    >>> Test.get(1).file.read()
+#    'hello uliweb'
+#    """
+
+if __name__ == '__main__':
+    set_debug_query(True)
+    db = get_connection('sqlite://')
+    db.metadata.drop_all()
+    import datetime
+    class Test(Model):
+        username = Field(unicode)
+    a = Test(username='limodou').save()
+    print list(Test.all())

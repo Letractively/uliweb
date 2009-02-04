@@ -3,18 +3,18 @@
 # 2008.06.11
 
 
-__all__ = ['Field', 'get_connection', 'Model', 'set_auto_bind', 
+__all__ = ['Field', 'get_connection', 'Model', 'create_all',
     'set_debug_query', 'blob', 'text', 'set_auto_create', 'set_connection',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
-    'TimeProperty', 'DecimalProperty', 'FileProperty', 'FloatProperty',
+    'TimeProperty', 'DecimalProperty', 'FloatProperty',
     'IntegerProperty', 'Property', 'StringProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
-    'ModelInstanceError', 'KindError', 'ConfigurationError']
+    'ModelInstanceError', 'KindError', 'ConfigurationError',
+    'BadPropertyTypeError']
 
 __default_connection__ = None  #global connection instance
-__auto_bind__ = False
 __auto_create__ = True
 __debug_query__ = None
 
@@ -23,21 +23,20 @@ import threading
 import datetime
 from sqlalchemy import *
 
+_default_metadata = MetaData()
+
 class Error(Exception):pass
 class ReservedWordError(Error):pass
 class ModelInstanceError(Error):pass
 class DuplicatePropertyError(Error):
   """Raised when a property is duplicated in a model definition."""
 class BadValueError(Error):pass
+class BadPropertyTypeError(Error):pass
 class KindError(Error):pass
 class ConfigurationError(Error):pass
 
 _SELF_REFERENCE = object()
 
-def set_auto_bind(flag):
-    global __auto_bind__
-    __auto_bind__ = flag
-    
 def set_auto_create(flag):
     global __auto_create__
     __auto_create__ = flag
@@ -46,25 +45,34 @@ def set_debug_query(flag):
     global __debug_query__
     __debug_query__ = flag
 
-def get_connection(connection='', default=True, debug=None, **args):
+def get_connection(connection='', metadata=_default_metadata, default=True, debug=None, **args):
     """
     default encoding is utf-8
     """
     global __default_connection__
   
-    if debug is None:
-        debug = __debug_query__
+    debug = debug or __debug_query__
     
     if default and __default_connection__:
         return __default_connection__
     
-    db = create_engine(connection, strategy='threadlocal', **args)
+    if 'strategy' not in args:
+        args['strategy'] = 'threadlocal'
+        
+    db = create_engine(connection, **args)
     if default:
         __default_connection__ = db
+        
     if debug:
         db.echo = debug
-    metadata = MetaData(db)
+        
+    if not metadata:
+        metadata = MetaData(db)
+    else:
+        metadata.bind = db
+        
     db.metadata = metadata
+    create_all(db)
     return db
 
 def set_connection(db, default=True, debug=False):
@@ -94,6 +102,17 @@ def check_reserved_word(f):
             "Cannot define property using reserved word '%s'. " % f
             )
 
+__models = {}
+
+def create_all(db=None):
+    global __models
+    for cls in __models.values():
+        cls.bind(db.metadata, auto_create=True)
+        
+def set_model(model):
+    global __models
+    __models[model.tablename] = model
+        
 class ModelMetaclass(type):
     def __init__(cls, name, bases, dct):
         super(ModelMetaclass, cls).__init__(name, bases, dct)
@@ -137,8 +156,7 @@ class ModelMetaclass(type):
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls._fields_list = fields_list
         
-        if __auto_bind__:
-            cls.bind(auto_create=__auto_create__)
+        cls.bind(auto_create=__auto_create__)
         
 class Property(object):
     data_type = str
@@ -498,41 +516,41 @@ class BooleanProperty(Property):
                 % (self.name, type(value).__name__))
         return value
 
-class FileProperty(Property):
-    """
-    This Property can be used to store file-like object, so you can pass it
-    a real file object or StringIO object, as soon as the object has 'read'
-    and 'write' function.
-    
-    But you should notice that it'll use the currect file point, so if you 
-    want to save the whole file content, you should reset the file point to the
-    beginning position.
-    """
-    data_type = None
-    field_class = BLOB
-    
-    def validate(self, value):
-        value = super(FileProperty, self).validate(value)
-        if value is None:
-            return value
-        if not hasattr(value, 'read') or not hasattr(value, 'write'):
-            raise BadValueError('Property %s must be a file-like object, not a %s'
-                % (self.name, type(value).__name__))
-        return value
-    
-    def get_value_for_datastore(self, model_instance):
-        value = super(FileProperty, self).get_value_for_datastore(model_instance)
-        if value is not None:
-            value = value.read()
-        return value
-    
-    def make_value_from_datastore(self, value):
-        import cStringIO
-        buf = cStringIO.StringIO()
-        if value is not None:
-            buf.write(value)
-            buf.seek(0)
-        return buf
+#class FileProperty(Property):
+#    """
+#    This Property can be used to store file-like object, so you can pass it
+#    a real file object or StringIO object, as soon as the object has 'read'
+#    and 'write' function.
+#    
+#    But you should notice that it'll use the currect file point, so if you 
+#    want to save the whole file content, you should reset the file point to the
+#    beginning position.
+#    """
+#    data_type = None
+#    field_class = BLOB
+#    
+#    def validate(self, value):
+#        value = super(FileProperty, self).validate(value)
+#        if value is None:
+#            return value
+#        if not hasattr(value, 'read') or not hasattr(value, 'write'):
+#            raise BadValueError('Property %s must be a file-like object, not a %s'
+#                % (self.name, type(value).__name__))
+#        return value
+#    
+#    def get_value_for_datastore(self, model_instance):
+#        value = super(FileProperty, self).get_value_for_datastore(model_instance)
+#        if value is not None:
+#            value = value.read()
+#        return value
+#    
+#    def make_value_from_datastore(self, value):
+#        import cStringIO
+#        buf = cStringIO.StringIO()
+#        if value is not None:
+#            buf.write(value)
+#            buf.seek(0)
+#        return buf
 
 class ReferenceProperty(Property):
     """A property that represents a many-to-one reference to another model.
@@ -942,7 +960,7 @@ _fields_mapping = {
     unicode: UnicodeProperty,
     text:TextProperty,
     blob:BlobProperty,
-    file:FileProperty,
+#    file:FileProperty,
     int:IntegerProperty,
     float:FloatProperty,
     bool:BooleanProperty,
@@ -953,6 +971,8 @@ _fields_mapping = {
 }
 def Field(type, **kwargs):
     t = _fields_mapping.get(type)
+    if t is None:
+        raise BadPropertyTypeError('This type(%s) cannot be supported' % type)
     return t(**kwargs)
 
 class Model(object):
@@ -1054,15 +1074,11 @@ class Model(object):
         cls.tablename = name
         
     @classmethod
-    def bind(cls, db=None, auto_create=False, force=False):
+    def bind(cls, metadata=None, auto_create=False):
         cls._lock.acquire()
         try:
-            if not db and not __default_connection__:
-                return
-                
-            if not hasattr(cls, '_created') or force:
-                cls.db = db or get_connection()
-                cls.metadata = metadata = cls.db.metadata
+            cls.metadata = metadata or _default_metadata
+            if cls.metadata and not hasattr(cls, '_bound'):
                 cols = []
                 cls.manytomany = []
                 for k, f in cls.properties.items():
@@ -1072,16 +1088,20 @@ class Model(object):
                         
                 #if there is already a same name table, then remove the old one
                 #replace with new one
-                t = metadata.tables.get(cls.tablename, None)
+                t = cls.metadata.tables.get(cls.tablename, None)
                 if t:
-                    metadata.remove(t)
-                cls.table = Table(cls.tablename, metadata, *cols)
+                    cls.metadata.remove(t)
+                cls.table = Table(cls.tablename, cls.metadata, *cols)
                 
-                if auto_create:
-                    cls.create()
                 cls.c = cls.table.c
                 cls.columns = cls.table.c
-                cls._created = True
+                cls._bound = True
+            if cls._bound:
+                if auto_create:
+                    if cls.metadata == _default_metadata and cls.metadata.bind:
+                        cls.create()
+                    else:
+                        set_model(cls)
         finally:
             cls._lock.release()
             
