@@ -4,10 +4,10 @@
 
 
 __all__ = ['Field', 'get_connection', 'Model', 'set_auto_bind', 
-    'set_debug_query', 'blob', 'text', 'set_auto_create',
+    'set_debug_query', 'blob', 'text', 'set_auto_create', 'set_connection',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FileProperty', 'FloatProperty',
-    'IntegerProperty', 'Property', 'PickleProperty', 'StringProperty',
+    'IntegerProperty', 'Property', 'StringProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
@@ -51,6 +51,7 @@ def get_connection(connection='', default=True, debug=None, **args):
     default encoding is utf-8
     """
     global __default_connection__
+  
     if debug is None:
         debug = __debug_query__
     
@@ -65,6 +66,16 @@ def get_connection(connection='', default=True, debug=None, **args):
     metadata = MetaData(db)
     db.metadata = metadata
     return db
+
+def set_connection(db, default=True, debug=False):
+    global __default_connection__
+
+    if default:
+        __default_connection__ = db
+    if debug:
+        db.echo = debug
+    metadata = MetaData(db)
+    db.metadata = metadata
 
 class SQLStorage(dict):
     """
@@ -208,7 +219,7 @@ class Property(object):
                 if not match:
                     raise BadValueError('Property %s is %r; must be one of %r' %
                         (self.name, value, self.choices))
-        if value is not None and not isinstance(value, self.data_type):
+        if (value is not None) and self.data_type and (not isinstance(value, self.data_type)):
             try:
                 value = self.convert(value)
             except TypeError, err:
@@ -222,6 +233,12 @@ class Property(object):
     def empty(self, value):
         return value is None
 
+    def get_value_for_datastore(self, model_instance):
+        return self.__get__(model_instance, model_instance.__class__)
+
+    def make_value_from_datastore(self, value):
+        return value
+    
     def convert(self, value):
         if isinstance(value, unicode):
             return value.encode('utf-8')
@@ -229,10 +246,12 @@ class Property(object):
             return self.data_type(value)
     
     def __repr__(self):
-        return ("<Property 'type':%r, 'verbose_name':%r, 'name':%r, " 
+        return ("<%s 'type':%r, 'verbose_name':%r, 'name':%r, " 
             "'default':%r, 'required':%r, 'validator':%r, "
             "'chocies':%r, 'max_length':%r, 'kwargs':%r>"
-            % (self.data_type, 
+            % (
+            self.__class__.__name__,
+            self.data_type, 
             self.verbose_name,
             self.name,
             self.default,
@@ -293,6 +312,8 @@ class DateTimeProperty(Property):
         '%m/%d/%y %H:%M:%S',     # '10/25/06 14:30:59'
         '%m/%d/%y %H:%M',        # '10/25/06 14:30'
         '%m/%d/%y',              # '10/25/06'
+        '%H:%M:%S',              # '14:30:59'
+        '%H:%M',                 # '14:30'
     )
     
     def __init__(self, verbose_name=None, auto_now=False, auto_now_add=False,
@@ -308,10 +329,17 @@ class DateTimeProperty(Property):
                 (self.name, self.data_type.__name__))
         return value
 
-    def default_value(self):
-        if self.auto_now or self.auto_now_add:
+#    def default_value(self):
+#        if self.auto_now or self.auto_now_add:
+#            return self.now()
+#        return Property.default_value(self)
+#
+    def get_value_for_datastore(self, model_instance):
+        if self.auto_now:
             return self.now()
-        return Property.default_value(self)
+        else:
+            return super(DateTimeProperty,
+                self).get_value_for_datastore(model_instance)
 
     @staticmethod
     def now():
@@ -324,16 +352,73 @@ class DateTimeProperty(Property):
                 return datetime.datetime(*time.strptime(value, format)[:6])
             except ValueError:
                 continue
+        raise BadValueError('The datetime value is not a valid format')
     
 class DateProperty(DateTimeProperty):
     data_type = datetime.date
     field_class = Date
+    
+    def get_value_for_datastore(self, model_instance):
+        value = super(DateProperty, self).get_value_for_datastore(model_instance)
+        if value is not None:
+            value = datetime.datetime(value.year, value.month, value.day)
+        return value
+
+    def make_value_from_datastore(self, value):
+        if value is not None:
+            value = datetime.date(value.year, value.month, value.day)
+        return value
+
+    #if the value is datetime.datetime, this convert will not be invoked at all
+    #Todo: so if I need to fix it?
+    def convert(self, value):
+        assert isinstance(value, (str, unicode, datetime.datetime)), \
+            'The value of DataProperty should be str, unicode, or datetime.datetime type.'\
+            'But it is %s' % type(value).__name__
+        if isinstance(value, datetime.datetime):
+            return datetime.date(value.year, value.month, value.day)
+        else:
+            import time
+            for format in self.DEFAULT_DATETIME_INPUT_FORMATS:
+                try:
+                    return datetime.date(*time.strptime(value, format)[:3])
+                except ValueError:
+                    continue
+            raise BadValueError('The date value is not a valid format')
     
 class TimeProperty(DateTimeProperty):
     """A time property, which stores a time without a date."""
 
     data_type = datetime.time
     field_class = Time
+    
+    def get_value_for_datastore(self, model_instance):
+        value = super(TimeProperty, self).get_value_for_datastore(model_instance)
+        if value is not None:
+            value = datetime.datetime(1970, 1, 1, value.hour, value.minute, value.second,
+                value.microsecond)
+        return value
+
+    def make_value_from_datastore(self, value):
+        if value is not None:
+            value = datetime.time(value.hour, value.minute, value.second,
+                value.microsecond)
+        return value
+
+    def convert(self, value):
+        assert isinstance(value, (str, unicode, datetime.datetime)), \
+            'The value of DataProperty should be str, unicode, or datetime.datetime type.'\
+            'But it is %s' % type(value).__name__
+        if isinstance(value, datetime.datetime):
+            return datetime.time(value.hour, value.minute, value.second)
+        else:
+            import time
+            for format in self.DEFAULT_DATETIME_INPUT_FORMATS:
+                try:
+                    return datetime.time(*time.strptime(value, format)[3:6])
+                except ValueError:
+                    continue
+            raise BadValueError('The time value is not a valid format')
     
 class IntegerProperty(Property):
     """An integer property."""
@@ -413,14 +498,16 @@ class BooleanProperty(Property):
                 % (self.name, type(value).__name__))
         return value
 
-class PickleProperty(Property):
-    data_type = None
-    field_class = PickleType
-
-    def validate(self, value):
-        return value
-    
 class FileProperty(Property):
+    """
+    This Property can be used to store file-like object, so you can pass it
+    a real file object or StringIO object, as soon as the object has 'read'
+    and 'write' function.
+    
+    But you should notice that it'll use the currect file point, so if you 
+    want to save the whole file content, you should reset the file point to the
+    beginning position.
+    """
     data_type = None
     field_class = BLOB
     
@@ -433,6 +520,20 @@ class FileProperty(Property):
                 % (self.name, type(value).__name__))
         return value
     
+    def get_value_for_datastore(self, model_instance):
+        value = super(FileProperty, self).get_value_for_datastore(model_instance)
+        if value is not None:
+            value = value.read()
+        return value
+    
+    def make_value_from_datastore(self, value):
+        import cStringIO
+        buf = cStringIO.StringIO()
+        if value is not None:
+            buf.write(value)
+            buf.seek(0)
+        return buf
+
 class ReferenceProperty(Property):
     """A property that represents a many-to-one reference to another model.
     """
@@ -662,7 +763,7 @@ class ManyResult(object):
         else:
             count = 0
         return count
-    
+        
 class ManyToMany(ReferenceProperty):
     def create(self, cls):
         self.fielda = a = "%s_id" % self.model_class.tablename
@@ -716,6 +817,10 @@ class ManyToMany(ReferenceProperty):
     
     def __set__(self, model_instance, value):
         pass
+    
+    def get_value_for_datastore(self, model_instance):
+        """Get key of reference rather than reference itself."""
+        return getattr(model_instance, self._id_attr_name())
     
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
@@ -846,7 +951,7 @@ _fields_mapping = {
     decimal.Decimal:DecimalProperty,
 }
 def Field(type, **kwargs):
-    t = _fields_mapping.get(type, PickleProperty)
+    t = _fields_mapping.get(type)
     return t(**kwargs)
 
 class Model(object):
@@ -865,7 +970,6 @@ class Model(object):
                 else:
                     value = prop.default_value()
                 prop.__set__(self, value)
-            
         
     def _set_saved(self):
         self._old_values = self.to_dict()
@@ -886,25 +990,25 @@ class Model(object):
         """
         if self.id is None:
             d = {}
-            for k in self.properties.keys():
-                v = getattr(self, k, None)
+            for k, v in self.properties.items():
+                x = v.get_value_for_datastore(self)
                 if not isinstance(v, ManyToMany):
-                    if isinstance(v, Model):
-                        v = v.id
-                    if v is not None:
-                        d[k] = v
+                    if isinstance(x, Model):
+                        x = x.id
+                    if x is not None:
+                        d[k] = x
         else:
             d = {}
             d['id'] = self.id
             for k, v in self.properties.items():
                 if not isinstance(v, ManyToMany):
                     t = self._old_values.get(k, None)
-                    x = getattr(self, k, None)
+                    x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
                         x = x.id
                     if isinstance(v, DateTimeProperty) and v.auto_now:
-                        d[k] = v.default_value()
-                    if (x is not None) and (repr(t) != repr(x)):
+                        d[k] = v.now()
+                    elif (x is not None) and (repr(t) != repr(x)):
                         d[k] = x
         
         return d
@@ -964,6 +1068,9 @@ class Model(object):
                     c = f.create(cls)
                     if c:
                         cols.append(c)
+                        
+                #if there is already a same name table, then remove the old one
+                #replace with new one
                 t = metadata.tables.get(cls.tablename, None)
                 if t:
                     metadata.remove(t)
@@ -999,11 +1106,22 @@ class Model(object):
                 return obj
     
     @classmethod
+    def _data_prepare(cls, record):
+        d = {}
+        for k, v in record.items():
+            p = cls.properties.get(k)
+            if p and not isinstance(p, ManyToMany):
+                d[str(k)] = p.make_value_from_datastore(v)
+            else:
+                d[str(k)] = v
+        return d
+    
+    @classmethod
     def all(cls):
         r = cls.table.select().execute()
         for obj in r:
-            d = [(str(x), y) for x, y in obj.items()]
-            o = cls(**dict(d))
+            d = cls._data_prepare(obj)
+            o = cls(**d)
             o._set_saved()
             yield o
         
@@ -1011,8 +1129,8 @@ class Model(object):
     def filter(cls, condition=None, **kwargs):
         r = select([cls.table], condition, **kwargs).execute()
         for obj in r:
-            d = [(str(x), y) for x, y in obj.items()]
-            o = cls(**dict(d))
+            d = cls._data_prepare(obj)
+            o = cls(**d)
             o._set_saved()
             yield o
             
