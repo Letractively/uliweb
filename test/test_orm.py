@@ -241,5 +241,52 @@ def test_8():
     <User {'username':u'c','parent':<User {'username':u'a','parent':None,'id':1}>,'id':3}>
     """
     
-if __name__ == '__main__':
-    test_8()
+def test_9():
+    """
+    >>> set_auto_bind(True)
+    >>> set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> import datetime
+    >>> class Test(Model):
+    ...     date1 = DateTimeProperty()
+    ...     date2 = DateProperty()
+    ...     date3 = TimeProperty()
+    >>> a = Test(date1=datetime.datetime(2009,1,1,14,0,5), date2=datetime.date(2009,1,1), date3=datetime.time(14,0,0)).save()
+    >>> a
+    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'id':1}>
+    >>> b = Test(date1='2009-1-1 14:0:5', date2="2009-1-1", date3="14:0:5").save()
+    >>> b
+    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'id':2}>
+    >>> t = datetime.datetime(2009,1,1,14,0,5)
+    >>> c = Test(date1=t, date2=t, date3=t).save()
+    >>> c
+    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.datetime(2009, 1, 1, 14, 0, 5),'date3':datetime.time(14, 0, 5),'id':3}>
+    >>> try:
+    ...     d = Test(date1="2008*99").save()
+    ... except Exception, e:
+    ...     print e
+    The datetime value is not a valid format
+    >>> for i in Test.all():
+    ...     print i
+    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'id':1}>
+    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'id':2}>
+    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'id':3}>
+    
+    """
+    
+def test_10():
+    """
+    >>> set_auto_bind(True)
+    >>> set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> import datetime
+    >>> class Test(Model):
+    ...     file = Field(file)
+    >>> import StringIO
+    >>> buf = StringIO.StringIO('hello uliweb')
+    >>> a = Test(file=buf).save()
+    >>> Test.get(1).file.read()
+    'hello uliweb'
+    """

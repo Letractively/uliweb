@@ -155,9 +155,8 @@ _log()
 
 def check_apps_dir(apps_dir):
     if not os.path.exists(apps_dir):
-        log.error("Can't find the apps_dir [%s], please check it out", apps_dir)
+        log.error("Error: Can't find the apps_dir [%s], please check it out", apps_dir)
         sys.exit(1)
-
 
 if __name__ == '__main__':
     log.info('Info: info')

@@ -100,7 +100,7 @@ def export(outputdir=('o', ''), verbose=('v', False), exact=('e', False), appnam
     from uliweb.utils.common import copy_dir
     
     if not outputdir:
-        log.error("outputdir should be a directory and can't be empty")
+        log.error("Error: outputdir should be a directory and can't be empty")
         sys.exit(0)
 
     if not os.path.exists(outputdir):
@@ -140,7 +140,7 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     from uliweb.utils.common import copy_dir_with_check
 
     if not outputdir:
-        log.error("outputdir should be a directory and can't be empty")
+        log.error("Error: outputdir should be a directory and can't be empty")
         sys.exit(0)
 
     application = make_application(False, apps_dir)
