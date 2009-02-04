@@ -945,6 +945,7 @@ _fields_mapping = {
     file:FileProperty,
     int:IntegerProperty,
     float:FloatProperty,
+    bool:BooleanProperty,
     datetime.datetime:DateTimeProperty,
     datetime.date:DateProperty,
     datetime.time:TimeProperty,
