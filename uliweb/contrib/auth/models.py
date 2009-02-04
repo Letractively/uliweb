@@ -39,9 +39,9 @@ def check_password(raw_password, enc_password):
     return hsh == get_hexdigest(algo, salt, raw_password)
 
 class User(Model):
-    username = Field(str, max_length=30, unique=True, index=True)
+    username = Field(str, max_length=30, unique=True, index=True, nullable=False)
     email = Field(str, max_length=40)
-    password = Field(str, max_length=128)
+    password = Field(str, max_length=128, nullable=False)
     is_superuser = Field(bool)
     last_login = Field(datetime.datetime, auto_now=True)
     date_join = Field(datetime.datetime, auto_now_add=True)

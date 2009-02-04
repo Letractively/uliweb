@@ -2,8 +2,10 @@
 # easy_install nose
 # cd test
 # nosetests test_form.py --with-doctest
+import time, sys
+sys.path.insert(0, '../uliweb/lib')
 
-from uliweb.lib.webob import Request
+from webob import Request
 from uliweb.form import *
 
 def test_form():
