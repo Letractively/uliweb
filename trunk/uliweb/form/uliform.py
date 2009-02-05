@@ -132,7 +132,7 @@ class Tag(Buf):
 
     def html(self):
         if not self.tag.endswith('/'):
-            b = '\n'.join([_str(x) for x in self.buf])
+            b = ''.join([_str(x) for x in self.buf])
             if not b:
                 s = [self.begin+self.end]
             else:
@@ -238,7 +238,7 @@ class FieldProxy(object):
         
     @property
     def label(self):
-        return self.field.get_label()
+        return self.field.get_label(_class='field')
     
     @property
     def help_string(self):
@@ -559,7 +559,8 @@ class BooleanField(BaseField):
     
     """
     default_build = Checkbox
-
+    field_css_class = 'checkbox'
+    
     def __init__(self, label='', default=False, name='', html_attrs=None, help_string='', build=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=False, validators=None, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
 
@@ -866,14 +867,18 @@ class TableLayout(Layout):
         return tr
 
     def buttons_line(self, buttons):
-        tr = Tag('tr')
-        tr << Tag('td', buttons, colspan=3, _class="buttons")
+        tr = Tag('tr', align='center', _class="buttons")
+        tr << Tag('td', buttons, colspan=3)
         return tr
         
     def html(self):
         buf = Buf()
         buf << self.form.form_begin
-        table = buf << Tag('table')
+        
+        p = buf << Tag('fieldset')
+        if 'title' in self.form.kwargs:
+            p << Tag('legend', self.form.kwargs['title'])
+        table = p << Tag('table')
         tbody = table << Tag('tbody')
 
         for name, obj in self.form.fields_list:
@@ -992,7 +997,10 @@ class Form(object):
         args = self.html_attrs.copy()
         args['action'] = self.action
         args['method'] = self.method
-        args['enctype'] = "multipart/form-data"
+        for field_name, field in self.fields.items():
+            if isinstance(field, FileField):
+                args['enctype'] = "multipart/form-data"
+                break
         form = Tag('form', **args)
         return form.begin
     
@@ -1004,7 +1012,7 @@ class Form(object):
     def buttons(self):
         if self._buttons == 'default':
             b = Buf()
-            b << [Submit(value='Submit'), Reset(value='Reset')]
+            b << [Submit(value='Submit', _class="button")]
         else:
             b = self._buttons
         return str(b)
@@ -1028,40 +1036,37 @@ class Form(object):
 
 class CSSLayout(Layout):
     def line(self, obj, label, input, help_string='', error=None):
-        div = Tag('div', _class='field')
-        if isinstance(obj, BooleanField):
-            div << input
-            div << label
-        else:
-            div << label
-            div << input
+        div = Buf()
+        div << label
+        div << input
         if error:
             div << Tag('span', error, _class='error')
-        return div
-
-    def single_line(self, element):
-        div = Tag('div')
-        div << element
+        div << Tag('br/')
         return div
 
     def buttons_line(self, buttons):
-        div = Tag('div', _class="buttons")
+        div = Buf()
+        div << Tag('label', '&nbsp;', _class='field')
         div << buttons
+        div << Tag('br/')
         return div
 
     def html(self):
         buf = Buf()
         buf << self.form.form_begin
-        root = buf
+        
+        form = buf << Tag('fieldset')
+        if 'title' in self.form.kwargs:
+            form << Tag('legend', self.form.kwargs['title'])
     
         for name, obj in self.form.fields_list:
             f = getattr(self.form, name)
             if isinstance(obj, HiddenField):
-                root << f
+                form << f
             else:
-                root << self.line(obj, f.label, f, f.help_string, f.error)
+                form << self.line(obj, f.label, f, f.help_string, f.error)
         
-        root << self.buttons_line(self.form.buttons)
+        form << self.buttons_line(self.form.buttons)
         buf << self.form.form_end
         return str(buf)
     

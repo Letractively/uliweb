@@ -6,7 +6,7 @@
     Quite often you want to unittest your application or just check the output
     from an interactive python session.  In theory that is pretty simple because
     you can fake a WSGI environment and call the application with a dummy
-    start_response and iterate over the application iterator but there are
+    `start_response` and iterate over the application iterator but there are
     argumentably better ways to interact with an application.
 
     Werkzeug provides an object called `Client` which you can pass a WSGI
@@ -19,6 +19,19 @@
     you can use them as response wrapper, ideally by subclassing them and hooking
     in test functionality.
 
+    Diving In
+    =========
+
+    Werkzeug provides a `Client` object which you can pass a WSGI application (and
+    optionally a response wrapper) which you can use to send virtual requests to
+    the application.
+
+    A response wrapper is a callable that takes three arguments: the application
+    iterator, the status and finally a list of headers.  The default response
+    wrapper returns a tuple.  Because response objects have the same signature,
+    you can use them as response wrapper, ideally by subclassing them and hooking
+    in test functionality.
+
     >>> from werkzeug import Client, BaseResponse, test_app
     >>> c = Client(test_app, BaseResponse)
     >>> resp = c.get('/')
@@ -26,13 +39,12 @@
     200
     >>> resp.headers
     Headers([('Content-Type', 'text/html; charset=utf-8')])
-    >>> resp.response_body.splitlines()[:2]
+    >>> resp.data.splitlines()[:2]
     ['<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"',
      '  "http://www.w3.org/TR/html4/loose.dtd">']
 
-    Or here without wrapper defined:
+    Or without a wrapper defined:
 
-    >>> from werkzeug import Client, test_app
     >>> c = Client(test_app)
     >>> app_iter, status, headers = c.get('/')
     >>> status
@@ -43,16 +55,17 @@
     ['<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"',
      '  "http://www.w3.org/TR/html4/loose.dtd">']
 
-    :copyright: 2007 by Armin Ronacher.
+    :copyright: (c) 2009 by the Werkzeug Team, see AUTHORS for more details.
     :license: BSD, see LICENSE for more details.
 """
 from time import time
 from random import random
 from urllib import urlencode
 from cStringIO import StringIO
+from cookielib import CookieJar
 from mimetypes import guess_type
-from werkzeug.wrappers import BaseResponse
-from werkzeug.utils import create_environ, run_wsgi_app
+from urllib2 import Request as U2Request
+from werkzeug.utils import create_environ, run_wsgi_app, get_current_url
 
 
 def encode_multipart(values):
@@ -65,7 +78,7 @@ def encode_multipart(values):
 
     This method does not accept unicode strings!
     """
-    boundary = '-----------=_Part_%s%s' (time(), random())
+    boundary = '-----------=_Part_%s%s' % (time(), random())
     lines = []
     for key, value in values.iteritems():
         if isinstance(value, File):
@@ -109,11 +122,11 @@ class File(object):
                     raise ValueError('no filename for provided')
                 filename = fd.name
         if mimetype is None:
-            mimetype = guess_type(filename)
-        self.filename = fileanme
+            mimetype = guess_type(filename)[0]
+        self.filename = filename
         self.mimetype = mimetype or 'application/octet-stream'
 
-    def getattr(self, name):
+    def __getattr__(self, name):
         return getattr(self.stream, name)
 
     def __repr__(self):
@@ -123,31 +136,96 @@ class File(object):
         )
 
 
-class Client(object):
-    """This class allows to send requests to a wrapped application."""
+class _TestCookieHeaders(object):
+    """A headers adapter for cookielib
+    """
 
-    def __init__(self, application, response_wrapper=None):
-        """The response wrapper can be a class or factory function that takes
-        three arguments: app_iter, status and headers.  The default response
-        wrapper just returns a tuple.
+    def __init__(self, headers):
+        self.headers = headers
 
-        Example::
+    def getheaders(self, name):
+        headers = []
+        for k, v in self.headers:
+            if k == name:
+                headers.append(v)
+        return headers
 
-            class ClientResponse(BaseResponse):
-                ...
 
-            client = Client(MyApplication(), response_wrapper=ClientResponse)
+class _TestCookieResponse(object):
+    """Something that looks like a httplib.HTTPResponse, but is actually just an
+    adapter for our test responses to make them available for cookielib.
+    """
+
+    def __init__(self, headers):
+        self.headers = _TestCookieHeaders(headers)
+
+    def info(self):
+        return self.headers
+
+
+class _TestCookieJar(CookieJar):
+    """A cookilib.CookiJar modified to inject and read cookie headers from
+    and to wsgi environments, and wsgi application responses.
+    """
+
+    def inject_wsgi(self, environ):
+        """Inject the cookies as client headers into the server's wsgi
+        environment.
         """
+        cvals = []
+        for cookie in self:
+            cvals.append('%s=%s' % (cookie.name, cookie.value))
+        if cvals:
+            environ['HTTP_COOKIE'] = ','.join(cvals)
+
+    def extract_wsgi(self, environ, headers):
+        """Extract the server's set-cookie headers as cookies into the
+        cookie jar.
+        """
+        self.extract_cookies(
+            _TestCookieResponse(headers),
+            U2Request(get_current_url(environ)),
+        )
+
+
+class Client(object):
+    """This class allows to send requests to a wrapped application.
+
+    The response wrapper can be a class or factory function that takes
+    three arguments: app_iter, status and headers.  The default response
+    wrapper just returns a tuple.
+
+    Example::
+
+        class ClientResponse(BaseResponse):
+            ...
+
+        client = Client(MyApplication(), response_wrapper=ClientResponse)
+
+    The use_cookies parameter indicates whether cookies should be stored and
+    sent for subsequent requests. This is True by default, but passing False
+    will disable this behaviour.
+
+    .. versionadded:: 0.5
+       `use_cookies` is new in this version.  Older versions did not provide
+       builtin cookie support.
+    """
+
+    def __init__(self, application, response_wrapper=None, use_cookies=True):
         self.application = application
         if response_wrapper is None:
             response_wrapper = lambda a, s, h: (a, s, h)
         self.response_wrapper = response_wrapper
+        if use_cookies:
+            self.cookie_jar = _TestCookieJar()
+        else:
+            self.cookie_jar = None
 
     def open(self, path='/', base_url=None, query_string=None, method='GET',
              data=None, input_stream=None, content_type=None,
              content_length=0, errors_stream=None, multithread=False,
              multiprocess=False, run_once=False, environ_overrides=None,
-             as_tuple=False):
+             as_tuple=False, buffered=False):
         """Takes the same arguments as the `create_environ` function from the
         utility module with some additions.
 
@@ -159,54 +237,39 @@ class Client(object):
         If the `path` contains a query string it will be used, even if the
         `query_string` parameter was given.  If it does not contain one
         the `query_string` parameter is used as querystring.  In that case
-        it can either be a dict, MultiDict or string.
+        it can either be a dict, :class:`MultiDict` or string.
 
-        The following options exist:
+        A file object for this method is either a file descriptor with an
+        additional `name` attribute (like a file descriptor returned by the
+        `open` / `file` function), a tuple in the form
+        ``(fd, filename, mimetype)`` (all arguments except fd optional) or
+        as dict with those keys and values.  They can be specified for the
+        `data` argument.
 
-        `method`
-            The request method.  Defaults to `GET`
+        Additionally you can instanciate the
+        :class:`~werkzeug.test.File` object (or a subclass of it)
+        and pass it as value.
 
-        `input_stream`
-            The input stream.  Defaults to an empty read only stream.
-
-        `data`
-            The data you want to transmit.  You can set this to a string and
-            define a content type instead of specifying an input stream.
-            Additionally you can pass a dict with the form data.  The values
-            could then be strings (no unicode objects!) which are then url
-            encoded or file objects.
-
-            A file object for this method is either a file descriptor with
-            an additional `name` attribute (like a file descriptor returned
-            by the `open` / `file` function), a tuple in the form
-            ``(fd, filename, mimetype)`` (all arguments except fd optional)
-            or as dict with those keys and values.
-
-            Additionally you can instanciate the `werkzeug.test.File` object
-            (or a subclass of it) and pass it as value.
-
-        `content_type`
-            The content type for this request.  Default is an empty content
-            type.
-
-        `content_length`
-            The value for the content length header.  Defaults to 0.
-
-        `errors_stream`
-            The wsgi.errors stream.  Defaults to `sys.stderr`.
-
-        `multithread`
-            The multithreaded flag for the WSGI Environment.  Defaults to
-            `False`.
-
-        `multiprocess`
-            The multiprocess flag for the WSGI Environment.  Defaults to
-            `False`.
-
-        `run_once`
-            The run_once flag for the WSGI Environment.  Defaults to `False`.
+        :param method: The request method.
+        :param input_stream: The input stream.  Defaults to an empty stream.
+        :param data: The data you want to transmit.  You can set this to a
+                     string and define a content type instead of specifying an
+                     input stream.  Additionally you can pass a dict with the
+                     form data.  The values could then be strings (no unicode
+                     objects!) which are then URL encoded or file objects.
+        :param content_type: The content type for this request.  Default is
+                             an empty content type.
+        :param content_length: the value for the content length header.
+        :param errors_stream: the wsgi.errors stream.  Defaults to
+                              `sys.stderr`.
+        :param multithread: the multithreaded flag for the WSGI environment.
+        :param multiprocess: the multiprocess flag for the WSGI environment.
+        :param run_once: the run_once flag for the WSGI environment.
+        :param buffered: set this to true to buffer the application run.
+                         This will automatically close the application for
+                         you as well.
         """
-        if input_stream is None and data and method in ('PUT', 'POST'):
+        if input_stream is None and data is not None and method in ('PUT', 'POST'):
             need_multipart = False
             if isinstance(data, basestring):
                 assert content_type is not None, 'content type required'
@@ -246,34 +309,38 @@ class Client(object):
                                      multiprocess, run_once)
         if environ_overrides:
             environ.update(environ_overrides)
-        rv = run_wsgi_app(self.application, environ)
+        if self.cookie_jar is not None:
+            self.cookie_jar.inject_wsgi(environ)
+        rv = run_wsgi_app(self.application, environ, buffered=buffered)
+        if self.cookie_jar is not None:
+            self.cookie_jar.extract_wsgi(environ, rv[2])
         response = self.response_wrapper(*rv)
         if as_tuple:
             return environ, response
         return response
 
     def get(self, *args, **kw):
-        """Like open but method is enforced to GET"""
+        """Like open but method is enforced to GET."""
         kw['method'] = 'GET'
         return self.open(*args, **kw)
 
     def post(self, *args, **kw):
-        """Like open but method is enforced to POST"""
+        """Like open but method is enforced to POST."""
         kw['method'] = 'POST'
         return self.open(*args, **kw)
 
     def head(self, *args, **kw):
-        """Like open but method is enforced to HEAD"""
+        """Like open but method is enforced to HEAD."""
         kw['method'] = 'HEAD'
         return self.open(*args, **kw)
 
     def put(self, *args, **kw):
-        """Like open but method is enforced to PUT"""
+        """Like open but method is enforced to PUT."""
         kw['method'] = 'PUT'
         return self.open(*args, **kw)
 
     def delete(self, *args, **kw):
-        """Like open but method is enforced to DELETE"""
+        """Like open but method is enforced to DELETE."""
         kw['method'] = 'DELETE'
         return self.open(*args, **kw)
 

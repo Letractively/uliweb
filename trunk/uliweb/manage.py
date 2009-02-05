@@ -10,42 +10,23 @@ sys.path.insert(0, os.path.join(workpath, 'lib'))
 from werkzeug import script
 from uliweb.core import SimpleFrame
 
-def make_application(debug=None, apps_dir='apps', wrap_wsgi=None, include_apps=None):
+def make_application(debug=None, apps_dir='apps', include_apps=None):
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
         
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps)
     debug_flag = app.settings.GLOBAL.DEBUG
-    if wrap_wsgi:
-        for p in wrap_wsgi:
-            modname, clsname = p.rsplit('.', 1)
-            mod = __import__(modname, {}, {}, [''])
-            c = getattr(mod, clsname)
-            application = c(application)
-#    from uliweb.wsgi.profile import ProfileApplication
-#    application = ProfileApplication(app)
-    if debug or (debug is None and debug_flag):
+#    if wrap_wsgi:
+#        for p in wrap_wsgi:
+#            modname, clsname = p.rsplit('.', 1)
+#            mod = __import__(modname, {}, {}, [''])
+#            c = getattr(mod, clsname)
+#            application = c(application)
+    if debug or debug_flag:
         log.info(' * Loading DebuggedApplication...')
         from werkzeug.debug import DebuggedApplication
-        application = DebuggedApplication(application)
+        application = DebuggedApplication(application, True)
     return application
-
-def _make_application(debug=None, apps_dir='apps', wrap_wsgi=None):
-    def action():
-        check_apps_dir(apps_dir)
-        log.info('APPS_DIR = %s', os.path.abspath(apps_dir))
-        
-        return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi)
-    return action
-
-def _make_admin(debug=None, apps_dir='apps', wrap_wsgi=None):
-    def action():
-        check_apps_dir(apps_dir)
-        log.info('APPS_DIR = %s', os.path.abspath(apps_dir))
-        
-        return make_application(debug=debug, apps_dir=apps_dir, wrap_wsgi=wrap_wsgi, 
-            include_apps=['uliweb.contrib.admin'])
-    return action
 
 def make_app(appname=''):
     """create a new app according the appname parameter"""
@@ -182,38 +163,35 @@ def collect_files():
     f(apps_dir)
     return files
         
-def runserver(app_factory, hostname='localhost', port=5000,
-                   use_reloader=False, use_debugger=False, use_evalex=True,
-                   threaded=False, processes=1):
+def runserver(apps_dir, hostname='localhost', port=5000, use_debugger=False, 
+            threaded=False, processes=1, admin=False):
     """Returns an action callback that spawns a new wsgiref server."""
-    def action(hostname=('h', hostname), port=('p', port),
-               reloader=use_reloader, debugger=use_debugger,
-               evalex=use_evalex, threaded=threaded, processes=processes):
+    def action(hostname=('h', hostname), port=('p', port), debugger=use_debugger,
+               threaded=threaded, processes=processes):
         """Start a new development server."""
         check_apps_dir(apps_dir)
 
         from werkzeug.serving import run_simple
-        app = app_factory()
+        if admin:
+            app = make_application(use_debugger, apps_dir, 
+                        include_apps=['uliweb.contrib.admin'])
+        else:
+            app = make_application(use_debugger, apps_dir)
         extra_files = collect_files()
-        run_simple(hostname, port, app, reloader, debugger, evalex,
+        run_simple(hostname, port, app, True, debugger, True,
                    extra_files, 1, threaded, processes)
     return action
 
     
 def main():
     global apps_dir
-    prompt = """usage: %s [-d project_directory] <action> [<options>]
-       %s --help""" % ('uliweb', 'uliweb')
 
     apps_dir = os.path.join(os.getcwd(), apps_dir)
     if os.path.exists(apps_dir):
         sys.path.insert(0, apps_dir)
             
-    action_runserver = runserver(_make_application(None, apps_dir), 
-        port=8000, use_reloader=True, use_debugger=True)
-    action_runadmin = runserver(_make_admin(None, apps_dir), 
-        port=8000, use_reloader=True, use_debugger=True)
-
+    action_runserver = runserver(apps_dir, port=8000, use_debugger=True)
+    action_runadmin = runserver(apps_dir, port=8000, use_debugger=True, admin=True)
     action_makeapp = make_app
     action_export = export
     action_exportstatic = exportstatic
@@ -225,7 +203,7 @@ def main():
     #process app's commands.py
     locals().update(collcet_commands())
 
-    script.run(prompt=prompt)
+    script.run()
 
 if __name__ == '__main__':
     main()

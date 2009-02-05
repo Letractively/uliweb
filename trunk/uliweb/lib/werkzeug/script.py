@@ -61,7 +61,7 @@ r'''
     or as named parameters, pretty much like Python function calls.
 
 
-    :copyright: 2007-2008 by Armin Ronacher, Thomas Johansson.
+    :copyright: (c) 2009 by the Werkzeug Team, see AUTHORS for more details.
     :license: BSD, see LICENSE for more details.
 '''
 import sys
@@ -90,7 +90,7 @@ converters = {
 }
 
 
-def run(namespace=None, action_prefix='action_', args=None, prompt=None):
+def run(namespace=None, action_prefix='action_', args=None):
     """Run the script.  Participating actions are looked up in the callers
     namespace if no namespace is given, otherwise in the dict provided.
     Only items that start with action_prefix are processed as actions.  If
@@ -103,7 +103,7 @@ def run(namespace=None, action_prefix='action_', args=None, prompt=None):
     if args is None:
         args = sys.argv[1:]
     if not args or args[0] in ('-h', '--help'):
-        return print_usage(actions, prompt=prompt)
+        return print_usage(actions)
     elif args[0] not in actions:
         fail('Unknown action \'%s\'' % args[0])
 
@@ -179,15 +179,12 @@ def find_actions(namespace, action_prefix):
     return actions
 
 
-def print_usage(actions, prompt=None):
+def print_usage(actions):
     """Print the usage information.  (Help screen)"""
     actions = actions.items()
     actions.sort()
-    if not prompt:
-        print 'usage: %s <action> [<options>]' % basename(sys.argv[0])
-        print '       %s --help' % basename(sys.argv[0])
-    else:
-        print prompt
+    print 'usage: %s <action> [<options>]' % basename(sys.argv[0])
+    print '       %s --help' % basename(sys.argv[0])
     print
     print 'actions:'
     for name, (func, doc, arguments) in actions:

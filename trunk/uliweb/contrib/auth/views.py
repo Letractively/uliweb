@@ -4,8 +4,10 @@ from uliweb.core.SimpleFrame import expose
 def login():
     from uliweb.contrib.auth import authenticate, login
     from forms import LoginForm
+    from uliweb.form import CSSLayout
     
-    form = LoginForm()
+    form = LoginForm(title='Login')
+    form.layout_class = CSSLayout
     
     if request.method == 'GET':
         form.next.data = request.GET.get('next', '/')
@@ -27,8 +29,10 @@ def login():
 def register():
     from uliweb.contrib.auth import create_user, logined
     from forms import RegisterForm
+    from uliweb.form import CSSLayout
     
-    form = RegisterForm()
+    form = RegisterForm(title='Register')
+    form.layout_class = CSSLayout
     
     if request.method == 'GET':
         form.next.data = request.GET.get('next', '/')

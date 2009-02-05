@@ -11,7 +11,7 @@
     library.
 
 
-    :copyright: 2007-2008 by Armin Ronacher.
+    :copyright: (c) 2009 by the Werkzeug Team, see AUTHORS for more details.
     :license: BSD, see LICENSE for more details.
 """
 from types import ModuleType
@@ -47,12 +47,12 @@ all_by_module = {
                              'parse_date', 'parse_cache_control_header',
                              'is_resource_modified', 'parse_accept_header',
                              'parse_set_header', 'quote_etag', 'unquote_etag',
-                             'generate_etag', 'dump_header',
+                             'generate_etag', 'dump_header', 'CharsetAccept',
                              'parse_list_header', 'parse_dict_header',
                              'HeaderSet', 'parse_authorization_header',
-                             'parse_www_authenticate_header',
+                             'parse_www_authenticate_header', 'MIMEAccept',
                              'WWWAuthenticate', 'Authorization',
-                             'HTTP_STATUS_CODES'],
+                             'remove_entity_headers', 'HTTP_STATUS_CODES'],
     'werkzeug.wrappers':    ['BaseResponse', 'BaseRequest', 'Request',
                              'Response', 'AcceptMixin', 'ETagRequestMixin',
                              'ETagResponseMixin', 'ResponseStreamMixin',
