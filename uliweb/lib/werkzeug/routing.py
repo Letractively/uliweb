@@ -13,22 +13,21 @@
     build URLs.
 
     Here a simple example that creates an URL map for an application with
-    two subdomains (www and kb) and some URL rules::
+    two subdomains (www and kb) and some URL rules:
 
-        m = Map([
-            # Static URLs
-            Rule('/', endpoint='static/index'),
-            Rule('/about', endpoint='static/about'),
-            Rule('/help', endpoint='static/help'),
-
-            # Knowledge Base
-            Subdomain('kb', [
-                Rule('/', endpoint='kb/index'),
-                Rule('/browse/', endpoint='kb/browse'),
-                Rule('/browse/<int:id>/', endpoint='kb/browse'),
-                Rule('/browse/<int:id>/<int:page>', endpoint='kb/browse')
-            ])
-        ], default_subdomain='www')
+    >>> m = Map([
+    ...     # Static URLs
+    ...     Rule('/', endpoint='static/index'),
+    ...     Rule('/about', endpoint='static/about'),
+    ...     Rule('/help', endpoint='static/help'),
+    ...     # Knowledge Base
+    ...     Subdomain('kb', [
+    ...         Rule('/', endpoint='kb/index'),
+    ...         Rule('/browse/', endpoint='kb/browse'),
+    ...         Rule('/browse/<int:id>/', endpoint='kb/browse'),
+    ...         Rule('/browse/<int:id>/<int:page>', endpoint='kb/browse')
+    ...     ])
+    ... ], default_subdomain='www')
 
     If the application doesn't use subdomains it's perfectly fine to not set
     the default subdomain and use the `Subdomain` rule factory.  The endpoint
@@ -48,11 +47,13 @@
     >>> c.build("kb/browse", dict(id=42, page=3))
     'http://kb.example.com/browse/42/3'
     >>> c.build("static/about")
-    u'/about'
-    >>> c.build("static/about", subdomain="kb")
-    'http://www.example.com/about'
+    '/about'
     >>> c.build("static/index", force_external=True)
     'http://www.example.com/'
+
+    >>> c = m.bind('example.com', subdomain='kb')
+    >>> c.build("static/about")
+    'http://www.example.com/about'
 
     The first argument to bind is the server name *without* the subdomain.
     Per default it will assume that the script is mounted on the root, but
@@ -91,11 +92,10 @@
     method is raised.
 
 
-    :copyright: 2007-2008 by Armin Ronacher, Leif K-Brooks,
+    :copyright: (c) 2009 by the Werkzeug Team, see AUTHORS for more details.
                              Thomas Johansson.
     :license: BSD, see LICENSE for more details.
 """
-import sys
 import re
 from urlparse import urljoin
 from itertools import izip
@@ -609,7 +609,9 @@ class Rule(RuleFactory):
         for key in set(values) - processed:
             query_vars[key] = unicode(values[key])
         if query_vars:
-            url += '?' + url_encode(query_vars, self.map.charset)
+            url += '?' + url_encode(query_vars, self.map.charset,
+                                    sort=self.map.sort_parameters,
+                                    key=self.map.sort_key)
 
         return subdomain, url
 
@@ -763,6 +765,13 @@ class UnicodeConverter(BaseConverter):
       than 1.
     - `maxlength` - the maximum length of the string.
     - `length` - the exact length of that string.
+
+    Example::
+
+        Rule('/pages/<page>'),
+        Rule('/<string(length=2):lang_code>')
+
+    This is the default validator.
     """
 
     def __init__(self, map, minlength=1, maxlength=None, length=None):
@@ -794,7 +803,12 @@ class AnyConverter(BaseConverter):
 
 
 class PathConverter(BaseConverter):
-    """Like the default string converter, but it also matches slashes."""
+    """Like the default string converter, but it also matches slashes.  This
+    is useful for Wikis::
+
+        Rule('/<path:wikipage>')
+        Rule('/<path:wikipage>/edit')
+    """
     regex = '[^/].*?'
     is_greedy = True
     weight = 50
@@ -841,6 +855,8 @@ class IntegerConverter(NumberConverter):
       variable length.
     - `min` - the minimal value.
     - `max` - the maximal value.
+
+    This converter does not support negative values.
     """
     regex = r'\d+'
     num_convert = int
@@ -855,6 +871,8 @@ class FloatConverter(NumberConverter):
 
     - `min` - the minimal value.
     - `max` - the maximal value.
+
+    This converter does not support negative values.
     """
     regex = r'\d+\.\d+'
     num_convert = float
@@ -873,7 +891,7 @@ class Map(object):
 
     def __init__(self, rules=None, default_subdomain='', charset='utf-8',
                  strict_slashes=True, redirect_defaults=True,
-                 converters=None):
+                 converters=None, sort_parameters=False, sort_key=None):
         """Initializes the new URL map.
 
         :param rules: sequence of url rules for this map.
@@ -887,6 +905,11 @@ class Map(object):
         :param converters: A dict of converters that adds additional converters
                            to the list of converters. If you redefine one
                            converter this will override the original one.
+        :param sort_parameters: If set to `True` the url parameters are sorted.
+                                See `url_encode` for more details.
+        :param sort_key: The sort key function for `url_encode`.
+
+        *new in Werkzeug 0.5* `sort_parameters` and `sort_key` was added.
         """
         self._rules = []
         self._rules_by_endpoint = {}
@@ -900,6 +923,9 @@ class Map(object):
         self.converters = DEFAULT_CONVERTERS.copy()
         if converters:
             self.converters.update(converters)
+
+        self.sort_parameters = sort_parameters
+        self.sort_key = sort_key
 
         for rulefactory in rules or ():
             self.add(rulefactory)
@@ -998,7 +1024,8 @@ class Map(object):
                    in (('https', '443'), ('http', '80')):
                     server_name += ':' + environ['SERVER_PORT']
         elif subdomain is None:
-            cur_server_name = environ['SERVER_NAME'].split('.')
+            cur_server_name = environ.get('HTTP_HOST',
+                environ['SERVER_NAME']).split(':', 1)[0].split('.')
             real_server_name = server_name.split(':', 1)[0].split('.')
             offset = -len(real_server_name)
             if cur_server_name[offset:] != real_server_name:
@@ -1116,7 +1143,6 @@ class MapAdapter(object):
 
         Here is a small example for matching:
 
-        >>> from werkzeug.routing import Map, Rule
         >>> m = Map([
         ...     Rule('/', endpoint='index'),
         ...     Rule('/downloads/', endpoint='downloads/index'), 
@@ -1133,11 +1159,11 @@ class MapAdapter(object):
         >>> urls.match("/downloads")
         Traceback (most recent call last):
           ...
-        werkzeug.routing.RequestRedirect: http://example.com/downloads/
+        RequestRedirect: http://example.com/downloads/
         >>> urls.match("/missing")
         Traceback (most recent call last):
           ...
-        werkzeug.routing.NotFound: /missing
+        NotFound: 404 Not Found
         """
         self.map.update()
         if path_info is None:
@@ -1216,12 +1242,14 @@ class MapAdapter(object):
         The `build` function also accepts an argument called `force_external`
         which, if you set it to `True` will force external URLs. Per default
         external URLs (include the server name) will only be used if the
-        target URL is on a
-        different subdomain.
+        target URL is on a different subdomain.
 
-        With the same map as in the example above this code generates some
-        target URLs:
-
+        >>> m = Map([
+        ...     Rule('/', endpoint='index'),
+        ...     Rule('/downloads/', endpoint='downloads/index'), 
+        ...     Rule('/downloads/<int:id>', endpoint='downloads/show')
+        ... ])
+        >>> urls = m.bind("example.com", "/")
         >>> urls.build("index", {})
         '/'
         >>> urls.build("downloads/show", {'id': 42})

@@ -54,7 +54,7 @@
                 return e
 
 
-    :copyright: 2007-2008 by Armin Ronacher.
+    :copyright: (c) 2009 by the Werkzeug Team, see AUTHORS for more details.
     :license: BSD, see LICENSE for more details.
 """
 import sys
@@ -117,7 +117,11 @@ class HTTPException(Exception):
         return [('Content-Type', 'text/html')]
 
     def get_response(self, environ):
-        """Get a response object."""
+        """Get a response object.
+
+        :param environ: the environ for the request.
+        :return: a :class:`BaseResponse` object or a subclass thereof.
+        """
         # lazyly imported for various reasons.  For one can use the exceptions
         # with custom responses (testing exception instances against types) and
         # so we don't ever have to import the wrappers, but also because there
@@ -127,7 +131,12 @@ class HTTPException(Exception):
         return BaseResponse(self.get_body(environ), self.code, headers)
 
     def __call__(self, environ, start_response):
-        """Call the exception as WSGI application."""
+        """Call the exception as WSGI application.
+
+        :param environ: the WSGI environment.
+        :param start_response: the response callable provided by the WSGI
+                               server.
+        """
         response = self.get_response(environ)
         return response(environ, start_response)
 

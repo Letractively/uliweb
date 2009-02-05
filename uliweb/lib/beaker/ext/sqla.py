@@ -4,7 +4,7 @@ from datetime import datetime
 
 from beaker.container import NamespaceManager, Container
 from beaker.exceptions import InvalidCacheBackendError, MissingCacheParameter
-from beaker.synchronization import Synchronizer, _threading
+from beaker.synchronization import file_synchronizer, null_synchronizer
 from beaker.util import verify_directory, SyncDict
 
 try:
@@ -14,9 +14,9 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-class SQLAlchemyNamespaceManager(NamespaceManager):
-    binds = SyncDict(_threading.Lock(), {})
-    tables = SyncDict(_threading.Lock(), {})
+class SqlaNamespaceManager(NamespaceManager):
+    binds = SyncDict()
+    tables = SyncDict()
 
     def __init__(self, namespace, bind, table, data_dir=None, lock_dir=None,
                  **kwargs):
@@ -30,7 +30,7 @@ class SQLAlchemyNamespaceManager(NamespaceManager):
             SQLAlchemy ``Table`` object in which to store namespace data.
             This should usually be something created by ``make_cache_table``.
         """
-        NamespaceManager.__init__(self, namespace, **kwargs)
+        NamespaceManager.__init__(self, namespace)
 
         if lock_dir is not None:
             self.lock_dir = lock_dir
@@ -48,17 +48,13 @@ class SQLAlchemyNamespaceManager(NamespaceManager):
         self._is_new = False
         self.loaded = False
 
-    def do_acquire_read_lock(self):
-        pass
+    def get_access_lock(self):
+        return null_synchronizer()
 
-    def do_release_read_lock(self):
-        pass
-
-    def do_acquire_write_lock(self, wait=True):
-        return True
-
-    def do_release_write_lock(self):
-        pass
+    def get_creation_lock(self, key):
+        return file_synchronizer(
+            identifier ="databasecontainer/funclock/%s" % self.namespace,
+            lock_dir=self.lock_dir)
 
     def do_open(self, flags):
         if self.loaded:
@@ -117,26 +113,8 @@ class SQLAlchemyNamespaceManager(NamespaceManager):
         return self.hash.keys()
 
 
-class SQLAlchemyContainer(Container):
-    def do_init(self, data_dir=None, lock_dir=None, **kwargs):
-        self.funclock = None
-
-    def create_namespace(self, namespace, bind, table, **kwargs):
-        return SQLAlchemyNamespaceManager(namespace, bind, table, **kwargs)
-
-    create_namespace = classmethod(create_namespace)
-
-    def lock_createfunc(self, wait=True):
-        if self.funclock is None:
-            identifier = 'sqlalchemycontainer/funclock/%s' \
-                % self.namespacemanager.namespace
-            self.funclock = Synchronizer(identifier, True,
-                                         self.namespacemanager.lock_dir)
-        return self.funclock.acquire_write_lock(wait)
-
-    def unlock_createfunc(self):
-        self.funclock.release_write_lock()
-
+class SqlaContainer(Container):
+    namespace_manager = SqlaNamespaceManager
 
 def make_cache_table(metadata, table_name='beaker_cache'):
     """Return a ``Table`` object suitable for storing cached values for the

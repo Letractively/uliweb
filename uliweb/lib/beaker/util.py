@@ -1,5 +1,4 @@
-__all__  = ["ThreadLocal", "Registry", "WeakValuedRegistry", "SyncDict", "encoded_path", "verify_directory"]
-
+"""Beaker utilities"""
 try:
     import thread as _thread
     import threading as _threading
@@ -9,15 +8,19 @@ except ImportError:
 
 from datetime import datetime, timedelta
 import os
-import sha
 import string
 import types
 import weakref
+import warnings
 
 try:
     Set = set
 except NameError:
     from sets import Set
+try:
+    from hashlib import sha1
+except ImportError:
+    from sha import sha as sha1
 
 from beaker.converters import asbool
 
@@ -70,6 +73,35 @@ except ImportError:
             # Transform this exception for consistency
             raise TypeError(msg)
 
+try:
+    from threading import local as _tlocal
+except ImportError:
+    try:
+        from dummy_threading import local as _tlocal
+    except ImportError:
+        class _tlocal(object):
+            def __init__(self):
+                self.__dict__['_tdict'] = {}
+
+            def __delattr__(self, key):
+                try:
+                    del self._tdict[(thread.get_ident(), key)]
+                except KeyError:
+                    raise AttributeError(key)
+
+            def __getattr__(self, key):
+                try:
+                    return self._tdict[(thread.get_ident(), key)]
+                except KeyError:
+                    raise AttributeError(key)
+
+            def __setattr__(self, key, value):
+                self._tdict[(thread.get_ident(), key)] = value
+
+
+__all__  = ["ThreadLocal", "Registry", "WeakValuedRegistry", "SyncDict",
+            "encoded_path", "verify_directory"]
+
 
 def verify_directory(dir):
     """verifies and creates a directory.  tries to
@@ -85,109 +117,81 @@ def verify_directory(dir):
                 raise
 
     
-class ThreadLocal(object):
+def deprecated(func, message):
+    def deprecated_method(*args, **kargs):
+        warnings.warn(message, DeprecationWarning, 2)
+        return func(*args, **kargs)
+    try:
+        deprecated_method.__name__ = func.__name__
+    except TypeError: # Python < 2.4
+        pass
+    deprecated_method.__doc__ = "%s\n\n%s" % (message, func.__doc__)
+    return deprecated_method
+
+class ThreadLocal(_tlocal):
     """stores a value on a per-thread basis"""
-    def __init__(self, value = None, default = None, creator = None):
-        self.dict = {}
-        self.default = default
-        self.creator = creator
-        if value:
-            self.put(value)
-
-    def __call__(self, *arg):
-        if len(arg):
-            self.put(arg[0])
-        else:
-            return self.get()
-
-    def __str__(self):
-        return str(self.get())
-    
-    def assign(self, value):
-        self.dict[_thread.get_ident()] = value
     
     def put(self, value):
-        self.assign(value)
+        self.value = value
     
-    def exists(self):
-        return self.dict.has_key(_thread.get_ident())
+    def has(self):
+        return hasattr(self, 'value')
             
-    def get(self, *args, **params):
-        if not self.dict.has_key(_thread.get_ident()):
-            if self.default is not None: 
-                self.put(self.default)
-            elif self.creator is not None: 
-                self.put(self.creator(*args, **params))
-        
-        return self.dict[_thread.get_ident()]
+    def get(self, default=None):
+        return getattr(self, 'value', default)
             
     def remove(self):
-        del self.dict[_thread.get_ident()]
-        
+        del self.value
     
 class SyncDict(object):
     """
-    an efficient/threadsafe singleton map algorithm, a.k.a.
-    "get a value based on this key, and create if not found or not valid" paradigm:
+    An efficient/threadsafe singleton map algorithm, a.k.a.
+    "get a value based on this key, and create if not found or not
+    valid" paradigm:
     
         exists && isvalid ? get : create
 
-    works with weakref dictionaries and the LRUCache to handle items asynchronously 
-    disappearing from the dictionary.  
+    Works with weakref dictionaries and the LRUCache to handle items
+    asynchronously disappearing from the dictionary.  
 
-    use python 2.3.3 or greater !  a major bug was just fixed in Nov. 2003 that
-    was driving me nuts with garbage collection/weakrefs in this section.
-    """
-    
-    def __init__(self, mutex, dictionary):
-        self.mutex = mutex
-        self.dict = dictionary
+    Use python 2.3.3 or greater !  a major bug was just fixed in Nov.
+    2003 that was driving me nuts with garbage collection/weakrefs in
+    this section.
+
+    """    
+    def __init__(self):
+        self.mutex = _thread.allocate_lock()
+        self.dict = {}
         
-    def clear(self):
-        self.dict.clear()
-        
-    def get(self, key, createfunc, isvalidfunc = None):
-        """regular get method.  returns the object asynchronously, if present
-        and also passes the optional isvalidfunc,
-        else defers to the synchronous get method which will create it."""
+    def get(self, key, createfunc, *args, **kwargs):
         try:
             if self.has_key(key):
-                return self._get_obj(key, createfunc, isvalidfunc)
+                return self.dict[key]
             else:
-                return self.sync_get(key, createfunc, isvalidfunc)
+                return self.sync_get(key, createfunc, *args, **kwargs)
         except KeyError:
-            return self.sync_get(key, createfunc, isvalidfunc)
+            return self.sync_get(key, createfunc, *args, **kwargs)
 
-    def sync_get(self, key, createfunc, isvalidfunc = None):
+    def sync_get(self, key, createfunc, *args, **kwargs):
         self.mutex.acquire()
         try:
             try:
                 if self.has_key(key):
-                    return self._get_obj(key, createfunc, isvalidfunc, create = True)
+                    return self.dict[key]
                 else:
-                    return self._create(key, createfunc)
+                    return self._create(key, createfunc, *args, **kwargs)
             except KeyError:
-                return self._create(key, createfunc)
+                return self._create(key, createfunc, *args, **kwargs)
         finally:
             self.mutex.release()
 
-    def _get_obj(self, key, createfunc, isvalidfunc, create = False):
-        obj = self[key]
-        if isvalidfunc is not None and not isvalidfunc(obj):
-            if create:
-                return self._create(key, createfunc)
-            else:
-                return self.sync_get(key, createfunc, isvalidfunc)
-        else:
-            return obj
-    
-    def _create(self, key, createfunc):
-        obj = createfunc()
-        self[key] = obj
+    def _create(self, key, createfunc, *args, **kwargs):
+        self[key] = obj = createfunc(*args, **kwargs)
         return obj
 
     def has_key(self, key):
         return self.dict.has_key(key)
+        
     def __contains__(self, key):
         return self.dict.__contains__(key)
     def __getitem__(self, key):
@@ -196,32 +200,24 @@ class SyncDict(object):
         self.dict.__setitem__(key, value)
     def __delitem__(self, key):
         return self.dict.__delitem__(key)
-    
+    def clear(self):
+        self.dict.clear()
 
-class Registry(SyncDict):
-    """a registry object."""
-    def __init__(self):
-        SyncDict.__init__(self, _threading.Lock(), {})
 
 class WeakValuedRegistry(SyncDict):
-    """a registry that stores objects only as long as someone has a reference to them."""
     def __init__(self):
-        # weakrefs apparently can trigger the __del__ method of other
-        # unreferenced objects, when you create a new reference.  this can occur
-        # when you place new items into the WeakValueDictionary.  if that __del__
-        # method happens to want to access this same registry, well, then you need
-        # the RLock instead of a regular lock, since at the point of dictionary
-        # insertion, we are already inside the lock.
-        SyncDict.__init__(self, _threading.RLock(), weakref.WeakValueDictionary())
+        self.mutex = _threading.RLock()
+        self.dict = weakref.WeakValueDictionary()
 
             
-def encoded_path(root, identifiers, extension = ".enc", depth = 3, digest = True):
-    """generate a unique file-accessible path from the given list of identifiers
-    starting at the given root directory."""
+def encoded_path(root, identifiers, extension = ".enc", depth = 3,
+                 digest_filenames=True):
+    """Generate a unique file-accessible path from the given list of
+    identifiers starting at the given root directory."""
     ident = string.join(identifiers, "_")
 
-    if digest:
-        ident = sha.new(ident).hexdigest()
+    if digest_filenames:
+        ident = sha1(ident).hexdigest()
     
     ident = os.path.basename(ident)
 
@@ -233,6 +229,7 @@ def encoded_path(root, identifiers, extension = ".enc", depth = 3, digest = True
     verify_directory(dir)
     
     return os.path.join(dir, ident + extension)
+
 
 def verify_options(opt, types, error):
     if not isinstance(opt, types):
@@ -253,33 +250,46 @@ def verify_options(opt, types, error):
             raise Exception(error)
     return opt
 
+
 def verify_rules(params, ruleset):
     for key, types, message in ruleset:
         if key in params:
             params[key] = verify_options(params[key], types, message)
     return params
 
+
 def coerce_session_params(params):
     rules = [
-        ('data_dir', (str, types.NoneType), "data_dir must be a string referring to a directory."),
-        ('lock_dir', (str,), "lock_dir must be a string referring to a directory."),
+        ('data_dir', (str, types.NoneType), "data_dir must be a string "
+         "referring to a directory."),
+        ('lock_dir', (str,), "lock_dir must be a string referring to a "
+         "directory."),
         ('type', (str, types.NoneType), "Session type must be a string."),
-        ('cookie_expires', (bool, datetime, timedelta), "Cookie expires was not a boolean, datetime, or timedelta instance."),
-        ('cookie_domain', (str, types.NoneType), "Cookie domain must be a string."),
+        ('cookie_expires', (bool, datetime, timedelta), "Cookie expires was "
+         "not a boolean, datetime, or timedelta instance."),
+        ('cookie_domain', (str, types.NoneType), "Cookie domain must be a "
+         "string."),
         ('id', (str,), "Session id must be a string."),
         ('key', (str,), "Session key must be a string."),
         ('secret', (str, types.NoneType), "Session secret must be a string."),
-        ('validate_key', (str, types.NoneType), "Session encrypt_key must be a string."),
-        ('encrypt_key', (str, types.NoneType), "Session validate_key must be a string."),
+        ('validate_key', (str, types.NoneType), "Session encrypt_key must be "
+         "a string."),
+        ('encrypt_key', (str, types.NoneType), "Session validate_key must be "
+         "a string."),
         ('secure', (bool, types.NoneType), "Session secure must be a boolean."),
-        ('timeout', (int, types.NoneType), "Session timeout must be an integer."),
+        ('timeout', (int, types.NoneType), "Session timeout must be an "
+         "integer."),
+        ('auto', (bool, types.NoneType), "Session is created if accessed."),
     ]
     return verify_rules(params, rules)
 
+
 def coerce_cache_params(params):
     rules = [
-        ('data_dir', (str, types.NoneType), "data_dir must be a string referring to a directory."),
-        ('lock_dir', (str,), "lock_dir must be a string referring to a directory."),
+        ('data_dir', (str, types.NoneType), "data_dir must be a string "
+         "referring to a directory."),
+        ('lock_dir', (str,), "lock_dir must be a string referring to a "
+         "directory."),
         ('type', (str,), "Session type must be a string."),
     ]
     return verify_rules(params, rules)

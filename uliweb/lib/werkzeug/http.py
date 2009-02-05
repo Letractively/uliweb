@@ -13,11 +13,12 @@
     module.
 
 
-    :copyright: 2007-2008 by Armin Ronacher.
+    :copyright: (c) 2009 by the Werkzeug Team, see AUTHORS for more details.
     :license: BSD, see LICENSE for more details.
 """
 import re
 import rfc822
+import codecs
 from urllib2 import parse_http_list as _parse_list_header
 from datetime import datetime
 try:
@@ -29,7 +30,7 @@ try:
     frozenset = frozenset
 except NameError:
     from sets import Set as set, ImmutableSet as frozenset
-from werkzeug._internal import _patch_wrapper, _UpdateDict, HTTP_STATUS_CODES
+from werkzeug._internal import _UpdateDict, HTTP_STATUS_CODES
 
 
 _accept_re = re.compile(r'([^\s;,]+)(?:[^,]*?;\s*q=(\d*(?:\.\d+)?))?')
@@ -37,9 +38,15 @@ _token_chars = frozenset("!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                          '^_`abcdefghijklmnopqrstuvwxyz|~')
 _etag_re = re.compile(r'([Ww]/)?(?:"(.*?)"|(.*?))(?:\s*,\s*|$)')
 
+_entity_headers = frozenset([
+    'allow', 'content-encoding', 'content-language', 'content-length',
+    'content-location', 'content-md5', 'content-range', 'content-type',
+    'expires', 'last-modified'
+])
+
 
 class Accept(list):
-    """An `Accept` object is just a list subclass for lists of
+    """An :class:`Accept` object is just a list subclass for lists of
     ``(value, quality)`` tuples.  It is automatically sorted by quality.
     """
 
@@ -54,65 +61,140 @@ class Accept(list):
             values.reverse()
             list.__init__(self, [(a, b) for b, a in values])
 
+    def _value_matches(self, value, item):
+        """Check if a value matches a given accept item."""
+        return item == '*' or item.lower() == value.lower()
+
     def __getitem__(self, key):
         """Beside index lookup (getting item n) you can also pass it a string
         to get the quality for the item.  If the item is not in the list, the
         returned quality is ``0``.
         """
         if isinstance(key, basestring):
-            for value in self:
-                if value[0] == key:
-                    return value[1]
+            for item, quality in self:
+                if self._value_matches(key, item):
+                    return quality
             return 0
         return list.__getitem__(self, key)
 
-    def __contains__(self, key):
-        return self.find(key) > -1
+    def __contains__(self, value):
+        for item, quality in self:
+            if self._value_matches(value, item):
+                return True
+        return False
 
     def __repr__(self):
-        return '%s(%s)' % (
+        return '%s([%s])' % (
             self.__class__.__name__,
-            list.__repr__(self)
+            ', '.join('(%r, %s)' % (x, y) for x, y in self)
         )
 
     def index(self, key):
-        """Get the position of en entry or raise `IndexError`."""
+        """Get the position of en entry or raise :exc:`IndexError`.
+
+        :param key: The key to be looked up.
+        """
         rv = self.find(key)
         if rv < 0:
             raise IndexError(key)
-        return key
+        return rv
 
     def find(self, key):
-        """Get the position of an entry or return -1"""
+        """Get the position of an entry or return -1.
+
+        :param key: The key to be looked up.
+        """
         if isinstance(key, basestring):
-            for idx, value in enumerate(self):
-                if value[0] == key:
+            for idx, (item, quality) in enumerate(self):
+                if self._value_matches(key, item):
                     return idx
             return -1
         return list.find(self, key)
 
     def values(self):
         """Return a list of the values, not the qualities."""
-        return [x[0] for x in self]
+        return list(self.itervalues())
 
     def itervalues(self):
         """Iterate over all values."""
         for item in self:
             yield item[0]
 
+    @property
     def best(self):
         """The best match as value."""
-        return self and self[0][0] or None
-    best = property(best)
+        if self:
+            return self[0][0]
+
+
+class MIMEAccept(Accept):
+    """Like :class:`Accept` but with special methods and behavior for
+    mimetypes.
+    """
+
+    def _value_matches(self, value, item):
+        def _normalize(x):
+            x = x.lower()
+            return x == '*' and ('*', '*') or x.split('/', 1)
+
+        # this is from the application which is trusted.  to avoid developer
+        # frustration we actually check these for valid values
+        if '/' not in value:
+            raise ValueError('invalid mimetype %r' % value)
+        value_type, value_subtype = _normalize(value)
+        if value_type == '*' and value_subtype != '*':
+            raise ValueError('invalid mimetype %r' % value)
+
+        if '/' not in item:
+            return False
+        item_type, item_subtype = _normalize(item)
+        if item_type == '*' and item_subtype != '*':
+            return False
+        return (
+            (item_type == item_subtype == '*' or
+             value_type == value_subtype == '*') or
+            (item_type == value_type and (item_subtype == '*' or
+                                          value_subtype == '*' or
+                                          item_subtype == value_subtype))
+        )
+
+    @property
+    def accept_html(self):
+        """True if this object accepts HTML."""
+        return (
+            'text/html' in self or
+            'application/xhtml+xml' in self or
+            self.accept_xhtml
+        )
+
+    @property
+    def accept_xhtml(self):
+        """True if this object accepts XHTML."""
+        return (
+            'application/xhtml+xml' in self or
+            'application/xml' in self
+        )
+
+
+class CharsetAccept(Accept):
+    """Like :class:`Accept` but with normalization for charsets."""
+
+    def _value_matches(self, value, item):
+        def _normalize(name):
+            try:
+                return codecs.lookup(name).name
+            except LookupError:
+                return name.lower()
+        return item == '*' or _normalize(value) == _normalize(item)
 
 
 class HeaderSet(object):
-    """Similar to the `ETags` class this implements a set like structure.
-    Unlike `ETags` this is case insensitive and used for vary, allow, and
+    """Similar to the :class:`ETags` class this implements a set like structure.
+    Unlike :class:`ETags` this is case insensitive and used for vary, allow, and
     content-language headers.
 
-    If not constructed using the `parse_set_header` function the instanciation
-    works like this:
+    If not constructed using the :func:`parse_set_header` function the
+    instanciation works like this:
 
     >>> hs = HeaderSet(['foo', 'bar', 'baz'])
     >>> hs
@@ -129,11 +211,18 @@ class HeaderSet(object):
         self.update((header,))
 
     def remove(self, header):
-        """Remove a layer from the set.  This raises an `IndexError` if the
-        header is not in the set."""
+        """Remove a layer from the set.  This raises an :exc:`KeyError` if the
+        header is not in the set.
+
+        .. versionchanged:: 0.5
+            In older version a :exc:`IndexError` was raised instead of an
+            :exc:`KeyError` if the object was missing.
+
+        :param header: the header to be removed.
+        """
         key = header.lower()
         if key not in self._set:
-            raise IndexError(header)
+            raise KeyError(header)
         self._set.remove(key)
         for idx, key in enumerate(self._headers):
             if key.lower() == header:
@@ -143,7 +232,10 @@ class HeaderSet(object):
             self.on_update(self)
 
     def update(self, iterable):
-        """Add all the headers from the iterable to the set."""
+        """Add all the headers from the iterable to the set.
+
+        :param iterable: updates the set with the items from the iterable.
+        """
         inserted_any = False
         for header in iterable:
             key = header.lower()
@@ -155,14 +247,20 @@ class HeaderSet(object):
             self.on_update(self)
 
     def discard(self, header):
-        """Like remove but ignores errors."""
+        """Like :meth:`remove` but ignores errors.
+
+        :param header: the header to be discarded.
+        """
         try:
             return self.remove(header)
-        except IndexError:
+        except KeyError:
             pass
 
     def find(self, header):
-        """Return the index of the header in the set or return -1 if not found."""
+        """Return the index of the header in the set or return -1 if not found.
+
+        :param header: the header to be looked up.
+        """
         header = header.lower()
         for idx, item in enumerate(self._headers):
             if item.lower() == header:
@@ -170,7 +268,11 @@ class HeaderSet(object):
         return -1
 
     def index(self, header):
-        """Return the index of the headerin the set or raise an `IndexError`."""
+        """Return the index of the headerin the set or raise an
+        :exc:`IndexError`.
+
+        :param header: the header to be looked up.
+        """
         rv = self.find(header)
         if rv < 0:
             raise IndexError(header)
@@ -187,9 +289,10 @@ class HeaderSet(object):
         """Return the set as real python set structure.  When calling this
         all the items are converted to lowercase and the ordering is lost.
 
-        If `preserve_casing` is `True` the items in the set returned will
-        have the original case like in the `HeaderSet`, otherwise they will
-        be lowercase.
+        :param preserve_casing: if set to `True` the items in the set returned
+                                will have the original case like in the
+                                :class:`HeaderSet`, otherwise they will
+                                be lowercase.
         """
         if preserve_casing:
             return set(self._headers)
@@ -246,8 +349,8 @@ class CacheControl(_UpdateDict):
     Because the cache-control directives in the HTTP header use dashes the
     python descriptors use underscores for that.
 
-    To get a header of the `CacheControl` object again you can convert the
-    object into a string or call the `to_header()` function.  If you plan
+    To get a header of the :class:`CacheControl` object again you can convert
+    the object into a string or call the :meth:`to_header` method.  If you plan
     to subclass it and add your own items have a look at the sourcecode for
     that class.
 
@@ -255,16 +358,33 @@ class CacheControl(_UpdateDict):
 
     `no_cache`, `no_store`, `max_age`, `max_stale`, `min_fresh`,
     `no_transform`, `only_if_cached`, `public`, `private`, `must_revalidate`,
-    `proxy_revalidate`, and `s_maxage`"""
+    `proxy_revalidate`, and `s_maxage`
 
-    def cache_property(key, default, type):
+    .. versionchanged:: 0.4
+
+       setting `no_cache` or `private` to boolean `True` will set the implicit
+       none-value which is ``*``:
+
+       >>> cc = CacheControl()
+       >>> cc.no_cache = True
+       >>> cc
+       <CacheControl 'no-cache'>
+       >>> cc.no_cache
+       '*'
+       >>> cc.no_cache = None
+       >>> cc
+       <CacheControl ''>
+    """
+
+    def cache_property(key, empty, type):
         """Return a new property object for a cache header.  Useful if you
         want to add support for a cache extension in a subclass."""
-        return property(lambda x: x._get_cache_value(key, default, type),
+        return property(lambda x: x._get_cache_value(key, empty, type),
                         lambda x, v: x._set_cache_value(key, v, type),
+                        lambda x: x._del_cache_value(key),
                         'accessor for %r' % key)
 
-    no_cache = cache_property('no-cache', '*', bool)
+    no_cache = cache_property('no-cache', '*', None)
     no_store = cache_property('no-store', None, bool)
     max_age = cache_property('max-age', -1, int)
     max_stale = cache_property('max-stale', '*', int)
@@ -281,14 +401,14 @@ class CacheControl(_UpdateDict):
         _UpdateDict.__init__(self, values or (), on_update)
         self.provided = values is not None
 
-    def _get_cache_value(self, key, default, type):
+    def _get_cache_value(self, key, empty, type):
         """Used internally be the accessor properties."""
         if type is bool:
             return key in self
         if key in self:
             value = self[key]
             if value is None:
-                return default
+                return empty
             elif type is not None:
                 try:
                     value = type(value)
@@ -304,10 +424,16 @@ class CacheControl(_UpdateDict):
             else:
                 self.pop(key, None)
         else:
-            if value is not None:
-                self[key] = value
+            if value is None:
+                self.pop(key)
+            elif value is True:
+                self[key] = None
             else:
-                self.pop(key, None)
+                self[key] = value
+
+    def _del_cache_value(self, key):
+        if key in self:
+            del self[key]
 
     def to_header(self):
         """Convert the stored values into a cache control header."""
@@ -453,7 +579,7 @@ class Authorization(dict):
         """Indicates what "quality of protection" the client has applied to
         the message for HTTP digest auth."""
         def on_update(header_set):
-            if not header_set and name in self:
+            if not header_set and 'qop' in self:
                 del self['qop']
             elif header_set:
                 self['qop'] = header_set.to_header()
@@ -519,6 +645,15 @@ class WWWAuthenticate(_UpdateDict):
         )
 
     def auth_property(name, doc=None):
+        """A static helper function for subclasses to add extra authentication
+        system properites onto a class::
+
+            class FooAuthenticate(WWWAuthenticate):
+                special_realm = auth_property('special_realm')
+
+        For more information have a look at the sourcecode to see how the
+        regular properties (:attr:`realm` etc. are implemented).
+        """
         def _set_value(self, value):
             if value is None:
                 self.pop(name, None)
@@ -586,7 +721,13 @@ class WWWAuthenticate(_UpdateDict):
 
 
 def quote_header_value(value, extra_chars='', allow_token=True):
-    """Quote a header value if necessary."""
+    """Quote a header value if necessary.
+
+    :param value: the value to quote.
+    :param extra_chars: a list of extra characters to skip quoting.
+    :param allow_token: if this is enabled token values are returned
+                        unchanged.
+    """
     value = str(value)
     if allow_token:
         token_chars = _token_chars | set(extra_chars)
@@ -597,12 +738,13 @@ def quote_header_value(value, extra_chars='', allow_token=True):
 
 def dump_header(iterable, allow_token=True):
     """Dump an HTTP header again.  This is the reversal of
-    `parse_list_header`, `parse_set_header` and `parse_dict_header`.  This
-    also quotes strings that include an equals sign unless you pass it as dict
-    of key, value pairs.
+    :func:`parse_list_header`, :func:`parse_set_header` and
+    :func:`parse_dict_header`.  This also quotes strings that include an
+    equals sign unless you pass it as dict of key, value pairs.
 
-    The `allow_token` parameter can be set to `False` to disallow tokens as
-    values.  If this is enabled all values are quoted.
+    :param iterable: the iterable or dict of values to quote.
+    :param allow_token: if set to `False` tokens as values are sallowed.
+                        See :func:`quote_header_value` for more details.
     """
     if isinstance(iterable, dict):
         items = []
@@ -627,6 +769,9 @@ def parse_list_header(value):
     the list may include quoted-strings.  A quoted-string could
     contain a comma.  A non-quoted string could have quotes in the
     middle.  Quotes are removed automatically after parsing.
+
+    :param value: a string with a list header.
+    :return: list
     """
     result = []
     for item in _parse_list_header(value):
@@ -640,6 +785,9 @@ def parse_dict_header(value):
     """Parse lists of key, value paits as described by RFC 2068 Section 2 and
     convert them into a python dict.  If there is no value for a key it will
     be `None`.
+
+    :param value: a string with a dict header.
+    :return: dict
     """
     result = {}
     for item in _parse_list_header(value):
@@ -653,16 +801,24 @@ def parse_dict_header(value):
     return result
 
 
-def parse_accept_header(value):
+def parse_accept_header(value, cls=Accept):
     """Parses an HTTP Accept-* header.  This does not implement a complete
     valid algorithm but one that supports at least value and quality
     extraction.
 
-    Returns a new `Accept` object (basicly a list of ``(value, quality)``
+    Returns a new :class:`Accept` object (basicly a list of ``(value, quality)``
     tuples sorted by the quality with some additional accessor methods).
+
+    The second parameter can be a subclass of :class:`Accept` that is created
+    with the parsed values and returned.
+
+    :param value: the accept header string to be parsed.
+    :param cls: the wrapper class for the return value (can be
+                :class:`Accept` or a subclass thereof)
+    :return: an instance of `cls`.
     """
     if not value:
-        return Accept(None)
+        return cls(None)
     result = []
     for match in _accept_re.finditer(value):
         quality = match.group(2)
@@ -671,13 +827,18 @@ def parse_accept_header(value):
         else:
             quality = max(min(float(quality), 1), 0)
         result.append((match.group(1), quality))
-    return Accept(result)
+    return cls(result)
 
 
 def parse_cache_control_header(value, on_update=None):
     """Parse a cache control header.  The RFC differs between response and
     request cache control, this method does not.  It's your responsibility
     to not use the wrong control statements.
+
+    :param value: a cache control header to be parsed.
+    :param on_update: an optional callable that is called every time a
+                      value on the :class:`CacheControl` object is changed.
+    :return: a :class:`CacheControl` object.
     """
     if not value:
         return CacheControl(None, on_update)
@@ -685,9 +846,14 @@ def parse_cache_control_header(value, on_update=None):
 
 
 def parse_set_header(value, on_update=None):
-    """Parse a set like header and return a `HeaderSet` object.  The return
-    value is an object that treats the items case insensitive and keeps the
-    order of the items.
+    """Parse a set like header and return a :class:`HeaderSet` object.  The
+    return value is an object that treats the items case insensitive and keeps
+    the order of the items.
+
+    :param value: a set header to be parsed.
+    :param on_update: an optional callable that is called every time a
+                      value on the :class:`HeaderSet` object is changed.
+    :return: a :class:`HeaderSet`
     """
     if not value:
         return HeaderSet(None, on_update)
@@ -697,7 +863,10 @@ def parse_set_header(value, on_update=None):
 def parse_authorization_header(value):
     """Parse an HTTP basic/digest authorization header transmitted by the web
     browser.  The return value is either `None` if the header was invalid or
-    not given, otherwise an `Authorization` object.
+    not given, otherwise an :class:`Authorization` object.
+
+    :param value: the authorization header to parse.
+    :return: a :class:`Authorization` object or `None`.
     """
     if not value:
         return
@@ -723,8 +892,14 @@ def parse_authorization_header(value):
 
 
 def parse_www_authenticate_header(value, on_update=None):
-    """Parse an HTTP WWW-Authenticate header into a `WWWAuthenticate`
-    object."""
+    """Parse an HTTP WWW-Authenticate header into a :class:`WWWAuthenticate`
+    object.
+
+    :param value: a WWW-Authenticate header to parse.
+    :param on_update: an optional callable that is called every time a
+                      value on the :class:`WWWAuthenticate` object is changed.
+    :return: a :class:`WWWAuthenticate` object.
+    """
     if not value:
         return WWWAuthenticate(on_update=on_update)
     try:
@@ -737,7 +912,11 @@ def parse_www_authenticate_header(value, on_update=None):
 
 
 def quote_etag(etag, weak=False):
-    """Quote an etag."""
+    """Quote an etag.
+
+    :param etag: the etag to quote.
+    :param weak: set to `True` to tag it "weak".
+    """
     if '"' in etag:
         raise ValueError('invalid etag')
     etag = '"%s"' % etag
@@ -747,7 +926,16 @@ def quote_etag(etag, weak=False):
 
 
 def unquote_etag(etag):
-    """Unquote a single etag.  Return a ``(etag, weak)`` tuple."""
+    """Unquote a single etag:
+
+    >>> unquote_etag('w/"bar"')
+    ('bar', True)
+    >>> unquote_etag('"bar"')
+    ('bar', False)
+
+    :param etag: the etag identifier to unquote.
+    :return: a ``(etag, weak)`` tuple.
+    """
     if not etag:
         return None, None
     etag = etag.strip()
@@ -761,7 +949,11 @@ def unquote_etag(etag):
 
 
 def parse_etags(value):
-    """Parse and etag header.  Returns an `ETags` object."""
+    """Parse an etag header.
+
+    :param value: the tag header to parse
+    :return: an :class:`ETags` object.
+    """
     if not value:
         return ETags()
     strong = []
@@ -800,6 +992,9 @@ def parse_date(value):
         Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
 
     If parsing fails the return value is `None`.
+
+    :param value: a string with a supported date format.
+    :return: a :class:`datetime.datetime` object.
     """
     if value:
         t = rfc822.parsedate_tz(value.strip())
@@ -811,7 +1006,15 @@ def parse_date(value):
 
 
 def is_resource_modified(environ, etag=None, data=None, last_modified=None):
-    """Convenience method for conditional requests."""
+    """Convenience method for conditional requests.
+
+    :param environ: the WSGI environment of the request to be checked.
+    :param etag: the etag for the response for comparision.
+    :param data: or alternatively the data of the response to automatically
+                 generate an etag using :func:`generate_etag`.
+    :param last_modified: an optional date of the last modification.
+    :return: `True` if the resource was modified, otherwise `False`.
+    """
     if etag is None and data is not None:
         etag = generate_etag(data)
     elif data is not None:
@@ -832,3 +1035,13 @@ def is_resource_modified(environ, etag=None, data=None, last_modified=None):
             unmodified = if_none_match.contains_raw(etag)
 
     return not unmodified
+
+
+def remove_entity_headers(headers):
+    """Remove all entity headers from a list or :class:`Headers` object.  This
+    operation works in-place.
+
+    :param headers: a list or :class:`Headers` object.
+    """
+    headers[:] = [(key, value) for key, value in headers if
+                  key.lower() not in _entity_headers]

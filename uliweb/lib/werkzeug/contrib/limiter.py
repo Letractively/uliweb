@@ -3,11 +3,13 @@
     werkzeug.contrib.limiter
     ~~~~~~~~~~~~~~~~~~~~~~~~
 
-    A middleware that limits incoming data.  This works around problems
-    with trac or django because those stream into the memory directly.
+    A middleware that limits incoming data.  This works around problems with
+    Trac_ or Django_ because those directly stream into the memory.
 
+    .. _Trac: http://trac.edgewall.org/
+    .. _Django: http://www.djangoproject.com/
 
-    :copyright: 2007 by Armin Ronacher.
+    :copyright: (c) 2009 by the Werkzeug Team, see AUTHORS for more details.
     :license: BSD, see LICENSE for more details.
 """
 

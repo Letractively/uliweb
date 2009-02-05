@@ -1,8 +1,6 @@
-import sys
-
 from beaker.container import NamespaceManager, Container
 from beaker.exceptions import InvalidCacheBackendError, MissingCacheParameter
-from beaker.synchronization import _threading, Synchronizer
+from beaker.synchronization import file_synchronizer, null_synchronizer
 from beaker.util import verify_directory, SyncDict
 
 try:
@@ -14,11 +12,13 @@ except ImportError:
         raise InvalidCacheBackendError("Memcached cache backend requires either the 'memcache' or 'cmemcache' library")
 
 class MemcachedNamespaceManager(NamespaceManager):
-    clients = SyncDict(_threading.Lock(), {})
+    clients = SyncDict()
     
-    def __init__(self, namespace, url, data_dir=None, lock_dir=None, **params):
-        NamespaceManager.__init__(self, namespace, **params)
-        
+    def __init__(self, namespace, url=None, data_dir=None, lock_dir=None, **params):
+        NamespaceManager.__init__(self, namespace)
+       
+        if not url:
+            raise MissingCacheParameter("url is required") 
         if lock_dir is not None:
             self.lock_dir = lock_dir
         elif data_dir is None:
@@ -29,93 +29,51 @@ class MemcachedNamespaceManager(NamespaceManager):
         verify_directory(self.lock_dir)            
         
         self.mc = MemcachedNamespaceManager.clients.get(url, 
-            lambda: memcache.Client(url.split(';'), debug=0))
+            memcache.Client, url.split(';'), debug=0)
 
-    # memcached does its own locking.  override our own stuff
-    def do_acquire_read_lock(self): pass
-    def do_release_read_lock(self): pass
-    def do_acquire_write_lock(self, wait = True): return True
-    def do_release_write_lock(self): pass
+    def get_access_lock(self):
+        return null_synchronizer()
 
-    # override open/close to do nothing, keep memcache connection open as long
-    # as possible
-    def open(self, *args, **params):pass
-    def close(self, *args, **params):pass
+    def get_creation_lock(self, key):
+        return file_synchronizer(
+            identifier="memcachedcontainer/funclock/%s" % self.namespace,lock_dir = self.lock_dir)
+
+    def open(self, *args, **params):
+        pass
+        
+    def close(self, *args, **params):
+        pass
+
+    def _format_key(self, key):
+        return self.namespace + '_' + key.replace(' ', '\302\267')
 
     def __getitem__(self, key):
-        ns_key = self.namespace + '_' + key.replace(' ', '\302\267')
-        all_key = self.namespace + ':keys'
-        keys = [ns_key, all_key]
-        key_dict = self.mc.get_multi(keys)
-        if ns_key not in key_dict:
-            raise KeyError(key)
-        return key_dict[ns_key]
+        return self.mc.get(self._format_key(key))
 
     def __contains__(self, key):
-        return self.has_key(key)
+        value = self.mc.get(self._format_key(key))
+        return value is not None
 
     def has_key(self, key):
-        ns_key = self.namespace + '_' + key.replace(' ', '\302\267')
-        all_key = self.namespace + ':keys'
-        keys = [ns_key, all_key]
-        key_dict = self.mc.get_multi(keys)
-        return ns_key in key_dict
+        return key in self
+
+    def set_value(self, key, value, expiretime=None):
+        if expiretime:
+            self.mc.set(self._format_key(key), value, time=expiretime)
+        else:
+            self.mc.set(self._format_key(key), value)
 
     def __setitem__(self, key, value):
-        key = key.replace(' ', '\302\267')
-        keys = self.mc.get(self.namespace + ':keys')
-        if keys is None:
-            keys = {}
-        keys[key] = True
-        self.mc.set(self.namespace + ':keys', keys)
-        self.mc.set(self.namespace + "_" + key, value)
-
+        self.set_value(key, value)
+        
     def __delitem__(self, key):
-        cache_key = key.replace(' ', '\302\267')
-        ns_key = self.namespace + '_' + cache_key
-        all_key = self.namespace + ':keys'
-        keys = [ns_key, all_key]
-        key_dict = self.mc.get_multi(keys)
-        if ns_key in key_dict:
-            self.mc.delete(ns_key)
-            mem_keys = key_dict.get(all_key, {})
-            if cache_key in mem_keys:
-                del mem_keys[cache_key]
-                self.mc.set(all_key, mem_keys)
-        else:
-            raise KeyError
+        self.mc.delete(self._format_key(key))
 
     def do_remove(self):
-        keys = self.mc.get(self.namespace + ':keys')
-        if keys is not None:
-            delete_keys = [self.namespace + '_' + x for x in keys]
-            delete_keys.append(self.namespace + ':keys')
-            self.mc.delete_multi(delete_keys)
+        self.mc.flush_all()
     
     def keys(self):
-        keys = self.mc.get(self.namespace + ':keys')
-        if keys is None:
-            return []
-        else:
-            return [x.replace('\302\267', ' ') for x in keys.keys()]
+        raise NotImplementedError("Memcache caching does not support iteration of all cache keys")
 
 class MemcachedContainer(Container):
-
-    def do_init(self, data_dir=None, lock_dir=None, **params):
-        self.funclock = None
-
-    def create_namespace(self, namespace, url, **params):
-        return MemcachedNamespaceManager(namespace, url, **params)
-    create_namespace = classmethod(create_namespace)
-
-    def lock_createfunc(self, wait = True):
-        if self.funclock is None:
-            self.funclock = Synchronizer(identifier =
-"memcachedcontainer/funclock/%s" % self.namespacemanager.namespace,
-use_files = True, lock_dir = self.namespacemanager.lock_dir)
-
-        return self.funclock.acquire_write_lock(wait)
-
-    def unlock_createfunc(self):
-        self.funclock.release_write_lock()
-
+    namespace_class = MemcachedNamespaceManager

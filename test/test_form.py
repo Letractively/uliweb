@@ -8,7 +8,7 @@ sys.path.insert(0, '../uliweb/lib')
 from webob import Request
 from uliweb.form import *
 
-def test_form():
+def test_1():
     """
     >>> class F(Form):
     ...     title = StringField(label='Title:', required=True, help_string='Title help string')
@@ -71,3 +71,26 @@ def test_form():
     '<input class="field" id="field_title" name="title" type="text" value=""></input>'
     """
 
+def test_2():
+    """
+    >>> buf = Buf()
+    >>> buf << Tag('div') << Tag('p', 'hello')
+    >>> print buf
+    <div>
+    <p>
+    hello
+    </p>
+    </div>
+    
+    """
+    
+def test_3():
+    class F(Form):
+        title = StringField(label='Title:', required=True, help_string='Title help string')
+        content = TextField(label='Content:')
+    f = F(title='Test form')
+    f.layout_class = CSSLayout
+    print f
+    
+if __name__ == '__main__':
+    test_3()
