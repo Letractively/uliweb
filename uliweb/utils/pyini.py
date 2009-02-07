@@ -22,6 +22,9 @@ import locale
 import copy
 import tokenize
 import token
+
+__all__ = ['DictMixin', 'Section', 'Ini']
+
 try:
     import set
 except:
@@ -110,61 +113,145 @@ def _uni_prt(a, encoding, beautiful=False, indent=0):
         s.append(str(a))
     return ''.join(s)
 
-class Storage(dict):
-    def __getattr__(self, key): 
-        try: return self[key]
-        except KeyError, k: return None
-    def __setattr__(self, key, value): 
-        self[key] = value
-    def __delattr__(self, key):
-        try: del self[key]
-        except KeyError, k: raise AttributeError, k
-
-class Section(Storage):
-    def __init__(self, name, comments=None, encoding=None):
-        self.name = name
-        if comments:
-            self.comments = copy.copy(comments)
-        else:
-            self.comments = []
-        self.__fields = []
-        self.__field_comments = {}
-        self.encoding = encoding
+class DictMixin(object):
+    def __init__(self):
+        self._dict = {}
+        self._fields = []
             
-    def add(self, name, value, comments=None):
-        if not name in self:
-            self.__fields.append(name)
-        v = self.get(name, None)
+    def __getitem__(self, key):
+        return self._dict[key]
+    
+    def __getattr__(self, key): 
+        try: 
+            return self.__getitem__(key)
+        except KeyError, k: 
+            return None
+        
+    def __setitem__(self, key, value):
+        self._dict[key] = value
+        if key not in self._fields:
+            self._fields.append(key)
+        
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            self.__dict__[key] = value
+        else:
+            self.__setitem__(key, value)
+            
+    def __delitem__(self, key):
+        if key.startswith('_'):
+            del self.__dict__[key]
+        else:
+            del self._dict[key]
+            self._fields.remove(key)
+            
+    def __delattr__(self, key):
+        try: 
+            self.__delitem__(key)
+        except KeyError, k: 
+            raise AttributeError, k
+        
+    def __contains__(self, key):
+        return key in self._dict
+    
+    def keys(self):
+        return self._fields
+    
+    def values(self):
+        return [self._dict[k] for k in self._fields]
+    
+    def iterkeys(self):
+        return iter(self.keys)
+    
+    def itemvalues(self):
+        return (self._dict[k] for k in self._fields)
+        
+    def update(self, value):
+        for k, v in value.iteritems():
+            self.__setitem__(k, v)
+        
+    def items(self):
+        return [(k, self._dict[k]) for k in self._fields]
+    
+    def iteritems(self):
+        return ((k, self._dict[k]) for k in self._fields)
+    
+    def get(self, key, default=None):
+        return self._dict.get(key, default)
+    
+    def pop(self, key, default=None):
+        v = self._dict.pop(key, default)
+        if key in self._fields:
+            self._fields.remove(key)
+        return v
+    
+    def __repr__(self):
+        return '<%s {%s}>' % (self.__class__.__name__, ', '.join(['%r:%r' % (k, v) for k, v in sorted(self.items())]))
+
+    def dict(self):
+        return self._dict.copy()
+    
+class Section(DictMixin):
+    def __init__(self, name, comments=None, encoding=None):
+        super(Section, self).__init__()
+        self._name = name
+        self.add_comment(comments=comments)
+        self._field_comments = {}
+        self._encoding = encoding
+            
+    def add(self, key, value, comments=None):
+        self[key] = value
+        self.add_comment(key, comments)
+        
+    def __setitem__(self, key, value):
+        v = self.get(key)
+        #for mutable object, will merge them but not replace
         if isinstance(v, (list, dict)):
             if isinstance(v, list):
                 value = list(set(v + value))
             else:
-                value = v.update(value)
-            
-        self[name] = value
-        if not comments:
-            comments = []
+                v.update(value)
+                value = v
+        super(Section, self).__setitem__(key, value)
         
-        self.__field_comments[name] = copy.copy(comments)
+    def add_comment(self, key=None, comments=None):
+        comments = comments or []
+        if not isinstance(comments, (tuple, list)):
+            comments = [comments]
+        if not key:
+            self._comments = comments
+        else:
+            self._field_comments[key] = copy.copy(comments)
+        
+    def comment(self, key=None):
+        if not key:
+            return self._comments
+        else:
+            return self._field_comments.get(key, [])
+    
+    def del_comment(self, key=None):
+        self.add_comment(key, None)
         
     def dumps(self, out):
-        if self.comments:
-            print >> out, '\n'.join(self.comments)
-        print >> out, '[%s]' % self.name
-        for f in self.__fields:
-            comments = self.__field_comments.get(f, None)
+        if self._comments:
+            print >> out, '\n'.join(self._comments)
+        print >> out, '[%s]' % self._name
+        for f in self.keys():
+            comments = self.comment(f)
             if comments:
                 print >> out, '\n'.join(comments)
-            buf = f + " = " + _uni_prt(self[f], self.encoding)
+            buf = f + " = " + _uni_prt(self[f], self._encoding)
             if len(buf) > 79:
-                buf = f + " = " + _uni_prt(self[f], self.encoding, True)
+                buf = f + " = " + _uni_prt(self[f], self._encoding, True)
             print >> out, buf
             
+    def __delitem__(self, key):
+        super(Section, self).__delitem__(key)
+        self.del_comment(key)
+        
     def __delattr__(self, key):
         try: 
             del self[key]
-            self.__fields.remove(key)
-            del self.__field_commands[key]
         except KeyError, k: 
             raise AttributeError, k
     
@@ -173,34 +260,25 @@ class Section(Storage):
         self.dumps(buf)
         return buf.getvalue()
     
-class Ini(Storage):
-    def __init__(self, inifile=None, value=None, commentchar='#', encoding='utf-8'):
-        self.inifile = inifile
-        self.value = value
-        self.commentchar = commentchar
-        self.encoding = 'utf-8'
-        self.sections = []
+class Ini(DictMixin):
+    def __init__(self, inifile=None, commentchar='#', encoding='utf-8'):
+        super(Ini, self).__init__()
+        self._inifile = inifile
+#        self.value = value
+        self._commentchar = commentchar
+        self._encoding = 'utf-8'
         
-        if self.inifile:
-            f = open(inifile, 'rb')
-            self.read(f)
-            f.close()
+        if self._inifile:
+            self.read(self._inifile)
         
     def set_filename(self, filename):
-        self.inifile = filename
+        self._inifile = filename
         
     def get_filename(self):
-        return self.inifile
+        return self._inifile
     
     filename = property(get_filename, set_filename)
     
-    def __delattr__(self, key):
-        try: 
-            del self[key]
-            self.sections.remove(key)
-        except KeyError, k: 
-            raise AttributeError, k
-
     def read(self, fobj):
         encoding = None
         
@@ -227,7 +305,7 @@ class Ini(Storage):
             except:
                 encoding = defaultencoding
                 
-        self.encoding = encoding
+        self._encoding = encoding
         
         f = StringIO.StringIO(text)
         f.seek(begin)
@@ -243,11 +321,11 @@ class Ini(Storage):
                 break
             line = line.strip()
             if line:
-                if line.startswith(self.commentchar):
+                if line.startswith(self._commentchar):
                     if lineno == 1: #first comment line
                         b = r_encoding.search(line[1:])
                         if b:
-                            self.encoding = b.groups()[0]
+                            self._encoding = b.groups()[0]
                             continue
                     comments.append(line)
                 elif line.startswith('[') and line.endswith(']'):
@@ -270,7 +348,7 @@ class Ini(Storage):
                     try:
                         if ((value.startswith("u'") and value.endswith("'")) or
                             (value.startswith('u"') and value.endswith('"'))):
-                            v = unicode(value[2:-1], self.encoding)
+                            v = unicode(value[2:-1], self._encoding)
                         else:
                             v = eval(value, {}, section)
                     except Exception, e:
@@ -293,8 +371,8 @@ class Ini(Storage):
             f = filename
             need_close = False
         
-        print >> f, '#coding=%s' % self.encoding
-        for s in self.sections:
+        print >> f, '#coding=%s' % self._encoding
+        for s in self.keys():
             section = self[s]
             section.dumps(f)
 
@@ -318,13 +396,16 @@ class Ini(Storage):
                     continue
                 buf.append(t)
     
+    def __setitem__(self, key, value):
+        if key not in self:
+            super(Ini, self).__setitem__(key, value)
+
     def add(self, sec_name, comments=None):
         if sec_name in self:
             section = self[sec_name]
         else:
-            section = Section(sec_name, comments, self.encoding)
+            section = Section(sec_name, comments, self._encoding)
             self[sec_name] = section
-            self.sections.append(sec_name)
         return section
     
     def __str__(self):     
@@ -332,32 +413,3 @@ class Ini(Storage):
         self.save(buf)
         return buf.getvalue()
     
-if __name__ == '__main__':
-    text = """\
-# coding = utf8
-
-#comment of default section
-[default]
-key1 = 'value'
-key2 = 1
-
-#key3 comment
-key3 = (1,2,3)
-
-key4+ = (
-'a', 'b', 'c'
-)
-key5 = {
-'a':1,
-'b':2
-}
-key6 = u'中\\n文'
-"""
-    f = StringIO.StringIO(text)
-    x = Ini()
-    x.read(f)
-    print '--------------------------'
-    print repr(x)
-    print '--------------------------'
-    print x
-    print x.default.key1, x.default.key2
