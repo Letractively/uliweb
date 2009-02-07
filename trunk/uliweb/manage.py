@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(workpath, 'lib'))
 from werkzeug import script
 from uliweb.core import SimpleFrame
 
-def make_application(debug=None, apps_dir='apps', include_apps=None):
+def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True):
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
         
@@ -47,7 +47,7 @@ def make_application(debug=None, apps_dir='apps', include_apps=None):
     if debug or debug_flag:
         log.info(' * Loading DebuggedApplication...')
         from werkzeug.debug import DebuggedApplication
-        app = DebuggedApplication(app, True)
+        app = DebuggedApplication(app, debug_console)
     return app
 
 def make_app(appname=''):

@@ -23,7 +23,7 @@ from werkzeug.local import Local
 
 
 local = Local()
-
+inspect.getsourcefile = inspect.getfile
 
 class ExceptionRepr(object):
 

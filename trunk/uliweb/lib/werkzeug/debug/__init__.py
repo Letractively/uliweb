@@ -100,7 +100,8 @@ class DebuggedApplication(object):
         except system_exceptions, e:
             raise e
         except:
-            ThreadedStream.install()
+            if self.evalex:
+                ThreadedStream.install()
             exc_info = sys.exc_info()
             try:
                 headers = [('Content-Type', 'text/html; charset=utf-8')]
@@ -234,7 +235,6 @@ class InteractiveDebugger(code.InteractiveInterpreter):
         if isinstance(source, unicode):
             source = source.encode('utf-8')
         source = source.rstrip() + '\n'
-        ThreadedStream.push()
         prompt = self.more and '... ' or '>>> '
         try:
             source_to_eval = ''.join(self.buffer + [source])
@@ -255,6 +255,7 @@ class InteractiveDebugger(code.InteractiveInterpreter):
             self.write(self.middleware.format_exception(sys.exc_info()))
 
     def write(self, data):
+        print 'dddddd', data
         sys.stdout.write(data)
 
     def exec_expr(self, code):
