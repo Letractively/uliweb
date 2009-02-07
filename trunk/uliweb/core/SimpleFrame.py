@@ -129,7 +129,7 @@ def static_serve(app, filename, check=True, dir=None):
         if os.path.exists(fname):
             f = fname
     else:
-        for p in application.apps:
+        for p in app.apps:
             fname = os.path.normpath(os.path.join('static', filename)).replace('\\', '/')
             if check and not fname.startswith('static/'):
                 return Forbidden("You can only visit the files under static directory.")
