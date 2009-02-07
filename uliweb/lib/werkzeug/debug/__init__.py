@@ -255,7 +255,6 @@ class InteractiveDebugger(code.InteractiveInterpreter):
             self.write(self.middleware.format_exception(sys.exc_info()))
 
     def write(self, data):
-        print 'dddddd', data
         sys.stdout.write(data)
 
     def exec_expr(self, code):
