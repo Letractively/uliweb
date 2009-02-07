@@ -119,29 +119,31 @@ def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
         kwargs.setdefault('link', request.url)
     raise HTTPError(errorpage, **kwargs)
 
-def static_serve(request, filename, check=True, dir=None):
+def static_serve(app, filename, check=True, dir=None):
+    from werkzeug.exceptions import Forbidden
     f = None
     if dir:
         fname = os.path.normpath(os.path.join(dir, filename)).replace('\\', '/')
         if check and not fname.startswith(dir):
-            errorpage("You can only visit the files under static directory.")
+            return Forbidden("You can only visit the files under static directory.")
         if os.path.exists(fname):
             f = fname
     else:
-        for p in request.application.apps:
+        for p in application.apps:
             fname = os.path.normpath(os.path.join('static', filename)).replace('\\', '/')
             if check and not fname.startswith('static/'):
-                errorpage("You can only visit the files under static directory.")
+                return Forbidden("You can only visit the files under static directory.")
             
             ff = pkg.resource_filename(p, fname)
             if os.path.exists(ff):
                 f = ff
                 break
+    
     if f:
         from uliweb.core.FileApp import return_file
         return return_file(f)
     
-    raise NotFound("Can't found the file %s" % filename)
+    return NotFound("Can't found the file %s" % filename)
 
 def get_app_dir(app):
     """
@@ -550,8 +552,13 @@ class Dispatcher(object):
                 s = []
                 for middleware in middlewares:
                     try:
+                        order = None
+                        if isinstance(middleware, tuple):
+                            order, middleware = middleware
                         cls = import_func(middleware)
-                        s.append((getattr(cls, 'ORDER', 500), middleware))
+                        if order is None:
+                            order = getattr(cls, 'ORDER', 500)
+                        s.append((order, middleware))
                     except ImportError:
                         import traceback
                         traceback.print_exc()

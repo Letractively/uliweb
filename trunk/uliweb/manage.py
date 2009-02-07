@@ -15,18 +15,40 @@ def make_application(debug=None, apps_dir='apps', include_apps=None):
         sys.path.insert(0, apps_dir)
         
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps)
-    debug_flag = app.settings.GLOBAL.DEBUG
-#    if wrap_wsgi:
-#        for p in wrap_wsgi:
-#            modname, clsname = p.rsplit('.', 1)
-#            mod = __import__(modname, {}, {}, [''])
-#            c = getattr(mod, clsname)
-#            application = c(application)
+    if app.settings.GLOBAL.WSGI_MIDDLEWARES:
+        s = []
+        for w in app.settings.GLOBAL.WSGI_MIDDLEWARES:
+            if not isinstance(w, tuple):
+                s.append((500, w))
+            else:
+                s.append(w)
+        for i in reversed(s):
+            w = i[1]
+            if w in app.settings:
+                args = app.settings[w].dict()
+            else:
+                args = None
+            if args:
+                klass = args.pop('CLASS', None) or args.pop('class', None)
+                if not klass:
+                    log.error('Error: There is no a CLASS option in this WSGI Middleware [%s].' % w)
+                    continue
+                modname, clsname = klass.rsplit('.', 1)
+                try:
+                    mod = __import__(modname, {}, {}, [''])
+                    c = getattr(mod, clsname)
+                    app = c(app, **args)
+                    #set uliweb Dispatcher to every middleware
+                    app.mainapplication = application
+                except Exception, e:
+                    log.exception(e)
+                
+    debug_flag = application.settings.GLOBAL.DEBUG
     if debug or debug_flag:
         log.info(' * Loading DebuggedApplication...')
         from werkzeug.debug import DebuggedApplication
-        application = DebuggedApplication(application, True)
-    return application
+        app = DebuggedApplication(app, True)
+    return app
 
 def make_app(appname=''):
     """create a new app according the appname parameter"""
@@ -165,10 +187,10 @@ def collect_files(apps):
         f(get_app_dir(p))
     return files
         
-def runserver(apps_dir, hostname='localhost', port=5000, use_debugger=False, 
+def runserver(apps_dir, hostname='localhost', port=5000, 
             threaded=False, processes=1, admin=False):
     """Returns an action callback that spawns a new wsgiref server."""
-    def action(hostname=('h', hostname), port=('p', port), debugger=use_debugger,
+    def action(hostname=('h', hostname), port=('p', port), debugger=True,
                threaded=threaded, processes=processes):
         """Start a new development server."""
         check_apps_dir(apps_dir)
@@ -178,13 +200,13 @@ def runserver(apps_dir, hostname='localhost', port=5000, use_debugger=False,
 
         if admin:
             include_apps = ['uliweb.contrib.admin']
-            app = make_application(use_debugger, apps_dir, 
+            app = make_application(debugger, apps_dir, 
                         include_apps=include_apps)
         else:
-            app = make_application(use_debugger, apps_dir)
+            app = make_application(debugger, apps_dir)
             include_apps = []
         extra_files = collect_files(get_apps(apps_dir)+include_apps)
-        run_simple(hostname, port, app, True, debugger, True,
+        run_simple(hostname, port, app, True, False, True,
                    extra_files, 1, threaded, processes)
     return action
 
@@ -196,8 +218,8 @@ def main():
     if os.path.exists(apps_dir):
         sys.path.insert(0, apps_dir)
             
-    action_runserver = runserver(apps_dir, port=8000, use_debugger=True)
-    action_runadmin = runserver(apps_dir, port=8000, use_debugger=True, admin=True)
+    action_runserver = runserver(apps_dir, port=8000)
+    action_runadmin = runserver(apps_dir, port=8000, admin=True)
     action_makeapp = make_app
     action_export = export
     action_exportstatic = exportstatic

@@ -12,5 +12,5 @@ def prepare_template_env(sender, env):
     env['url_for_static'] = url_for_static
     
     from views import static
-
-    expose('%s/<path:filename>' % sender.settings.GLOBAL.STATIC_MEDIA, static=True)(static)
+    url = sender.settings.staticfiles.STATIC_URL.rstrip('/')
+    expose('%s/<path:filename>' % url, static=True)(static)
