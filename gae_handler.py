@@ -4,5 +4,6 @@ from uliweb.manage import make_application
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-application = make_application(False, os.path.join(os.path.dirname(__file__), 'apps'))
+application = make_application(False, os.path.join(os.path.dirname(__file__), 'apps'),
+    debug_console=False)
 wsgiref.handlers.CGIHandler().run(application)

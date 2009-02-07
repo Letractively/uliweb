@@ -11,14 +11,15 @@
 import pprint
 from os.path import dirname, join
 
-from werkzeug.templates import Template
+#from werkzeug.templates import Template
+from uliweb.core.template import template_file
 from werkzeug.debug.util import Namespace
 
 
 def get_template(name):
-    return Template.from_file(join(dirname(__file__), 'shared', name),
-                              unicode_mode=False)
-
+    def render(vars, name=name):
+        return template_file(join(dirname(__file__), 'shared', name), vars)
+    return render
 
 def load_resource(res):
     try:
@@ -54,7 +55,7 @@ def code_table(frame):
         lines.append(Namespace(mode='cur', lineno=1,
                                code='Sourcecode not available'))
 
-    return t_codetable.render(lines=lines)
+    return t_codetable(dict(lines=lines))
 
 
 def var_table(var):
@@ -93,11 +94,11 @@ def var_table(var):
         typ = 'simple'
         value = repr(var)
 
-    return t_vartable.render(type=typ, value=value)
+    return t_vartable(dict(type=typ, value=value))
 
 
 def debug_page(context):
     tc = context.to_dict()
     tc['var_table'] = var_table
     tc['code_table'] = code_table
-    return t_body.render(tc)
+    return t_body(tc)
