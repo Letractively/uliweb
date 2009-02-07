@@ -61,6 +61,10 @@ CGI_OPTIONS = {
     'errfile':None,
     }
 
+path = os.path.dirname(__file__)
+if path not in sys.path:
+    sys.path.insert(0, path)
+apps_dir = os.path.join(path, 'apps')
 
 def run(args=[],**kwargs):
     options = CGI_OPTIONS.copy()
@@ -105,7 +109,7 @@ def run(args=[],**kwargs):
     pidfile = options.get('pidfile',None)
     if pidfile:
         open(pidfile,'w').write('%d\n' % os.getpid())
-    application = manage.make_application()
+    application = manage.make_application(apps_dir=apps_dir)
     if options['protocol'] == 'cgi':
         os.environ['SCRIPT_NAME'] = ''
         WSGIServer(application).run()
