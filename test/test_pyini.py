@@ -1,14 +1,14 @@
 from uliweb.utils.pyini import *
 
-def test_dictmixin():
+def test_sorteddict():
     """
-    >>> d = DictMixin()
+    >>> d = SortedDict()
     >>> d
-    <DictMixin {}>
+    <SortedDict {}>
     >>> d.name = 'limodou'
     >>> d['class'] = 'py'
     >>> d
-    <DictMixin {'class':'py', 'name':'limodou'}>
+    <SortedDict {'class':'py', 'name':'limodou'}>
     >>> d.keys()
     ['name', 'class']
     >>> d.values()
@@ -35,17 +35,17 @@ def test_dictmixin():
     >>> del d['class']
     >>> del d['name']
     >>> d
-    <DictMixin {}>
+    <SortedDict {}>
     >>> d['name'] = 'limodou'
     >>> d.pop('other', 'default')
     'default'
     >>> d.pop('name')
     'limodou'
     >>> d
-    <DictMixin {}>
+    <SortedDict {}>
     >>> d.update({'class':'py', 'attribute':'border'})
     >>> d
-    <DictMixin {'attribute':'border', 'class':'py'}>
+    <SortedDict {'attribute':'border', 'class':'py'}>
     """
 def test_section():
     """
@@ -88,8 +88,8 @@ def test_ini():
     >>> x.default.list = ['cde'] #for mutable object will merge the data, including dict type
     >>> print x.default.list
     ['cde', 'abc']
-    >>> x.default.dict = {'a':'a'}
-    >>> x.default.dict = {'b':'b'}
-    >>> print x.default.dict
+    >>> x.default.d = {'a':'a'}
+    >>> x.default.d = {'b':'b'}
+    >>> print x.default.d
     {'a': 'a', 'b': 'b'}
     """  

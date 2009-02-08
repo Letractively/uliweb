@@ -158,6 +158,16 @@ def check_apps_dir(apps_dir):
         log.error("Error: Can't find the apps_dir [%s], please check it out", apps_dir)
         sys.exit(1)
 
+def is_pyfile_exist(dir, pymodule):
+    path = os.path.join(dir, '%s.py' % pymodule)
+    if not os.path.exists(path):
+        path = os.path.join(dir, '%s.pyc' % pymodule)
+        if not os.path.exists(path):
+            path = os.path.join(dir, '%s.pyo' % pymodule)
+            if not os.path.exists(path):
+                return False
+    return True
+    
 if __name__ == '__main__':
     log.info('Info: info')
     try:

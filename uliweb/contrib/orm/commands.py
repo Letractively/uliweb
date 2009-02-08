@@ -1,5 +1,5 @@
 import os
-from uliweb.utils.common import log, check_apps_dir
+from uliweb.utils.common import log, check_apps_dir, is_pyfile_exist
 
 def action_syncdb(apps_dir):
     def action():
@@ -15,13 +15,8 @@ def action_syncdb(apps_dir):
         
         models = []
         for p in get_apps(apps_dir):
-            path = os.path.join(get_app_dir(p), 'models.py')
-            if not os.path.exists(path):
-                path = os.path.join(get_app_dir(p), 'models.pyc')
-                if not os.path.exists(path):
-                    path = os.path.join(get_app_dir(p), 'models.pyc')
-                    if not os.path.exists(path):
-                        continue
+            if not is_pyfile_exist(os.path.join(get_app_dir(p), 'models')):
+                continue
             m = '%s.models' % p
             try:
                 mod = __import__(m, {}, {}, [''])
@@ -50,13 +45,8 @@ def action_reset(apps_dir):
         orm.set_auto_create(False)
         db = orm.get_connection(app.settings.ORM.CONNECTION)
 
-        path = os.path.join(get_app_dir(appname), 'models.py')
-        if not os.path.exists(path):
-            path = os.path.join(get_app_dir(appname), 'models.pyc')
-            if not os.path.exists(path):
-                path = os.path.join(get_app_dir(appname), 'models.pyc')
-                if not os.path.exists(path):
-                    return
+        if not is_pyfile_exist(os.path.join(get_app_dir(appname), 'models')):
+            return
         m = '%s.models' % appname
         try:
             mod = __import__(m, {}, {}, [''])
@@ -100,13 +90,8 @@ def action_sql(apps_dir):
             if p not in apps:
                 log.error('Error: Appname %s is not a valid app' % p)
                 continue
-            path = os.path.join(get_app_dir(p), 'models.py')
-            if not os.path.exists(path):
-                path = os.path.join(get_app_dir(p), 'models.pyc')
-                if not os.path.exists(path):
-                    path = os.path.join(get_app_dir(p), 'models.pyc')
-                    if not os.path.exists(path):
-                        continue
+            if not is_pyfile_exist(os.path.join(get_app_dir(p), 'models')):
+                continue
             m = '%s.models' % p
             try:
                 mod = __import__(m, {}, {}, [''])
