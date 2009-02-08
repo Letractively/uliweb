@@ -5,7 +5,8 @@
 
 #defautl global settings
 
-__all__ = ['expose', 'Dispatcher', 'url_for', 'get_app_dir', 'redirect', 'static_serve']
+__all__ = ['expose', 'Dispatcher', 'url_for', 'get_apps', 'get_app_dir', 
+    'redirect', 'static_serve']
 
 import os, cgi
 from webob import Request, Response
@@ -215,7 +216,7 @@ class Loader(object):
         if self.notest:
             return True
         return filename.endswith('.html')
-
+    
 class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir=APPS_DIR, use_urls=None, include_apps=None, start=True):
@@ -261,6 +262,7 @@ class Dispatcher(object):
             Dispatcher.url_infos = []
         self.install_settings(self.modules['settings'])
         Dispatcher.template_dirs = self.get_template_dirs()
+#        Dispatcher.templateplugins_dirs = self.get_templateplugins_dirs()
         Dispatcher.env = self._prepare_env()
         Dispatcher.settings = settings
         self.debug = settings.GLOBAL.get('DEBUG', False)
@@ -311,15 +313,18 @@ class Dispatcher(object):
         env = self.get_template_env(env)
         if request:
             dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
+        handlers = execplugin(self, 'get_template_tag_handlers')
         if self.debug:
             def _compile(code, filename, action):
                 __loader__ = Loader(filename, vars, env, dirs, notest=True)
                 return compile(code, filename, 'exec')
-            fname, code = template.render_file(filename, vars, env, dirs, default_template=default_template)
+            
             out = template.Out()
             e = template._prepare_run(vars, env, out)
-            #user can insert new local environment variables to env variable
             callplugin(self, 'before_render_template', e, out)
+            fname, code = template.render_file(filename, vars, env, dirs, 
+                default_template=default_template, handlers=handlers)
+            #user can insert new local environment variables to env variable
             if isinstance(code, (str, unicode)):
                 code = _compile(code, fname, 'exec')
             __loader__ = Loader(fname, vars, env, dirs)
@@ -328,10 +333,11 @@ class Dispatcher(object):
             output = execplugin(self, 'after_render_template', text, vars, e)
             return output or text
         else:
-            fname, code = template.render_file(filename, vars, env, dirs, default_template=default_template)
             out = template.Out()
             e = template._prepare_run(vars, env, out)
             callplugin(self, 'before_render_template', e, out)
+            fname, code = template.render_file(filename, vars, env, dirs, 
+                default_template=default_template, handlers=handlers)
             
             if isinstance(code, (str, unicode)):
                 code = compile(code, fname, 'exec')
@@ -514,6 +520,9 @@ class Dispatcher(object):
         template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in self.apps]
         return template_dirs
     
+    def get_templateplugins_dirs(self):
+        return [os.path.join(get_app_dir(p), 'template_plugins') for p in self.apps]
+    
     def __call__(self, environ, start_response):
         local.application = self
         req = Request(environ)
@@ -560,8 +569,7 @@ class Dispatcher(object):
                             order = getattr(cls, 'ORDER', 500)
                         s.append((order, middleware))
                     except ImportError:
-                        import traceback
-                        traceback.print_exc()
+                        log.exception(e)
                         errorpage("Can't import the middleware %s" % middleware)
                     _clses[middleware] = cls
                 middlewares = [v for k, v in sorted(s)]

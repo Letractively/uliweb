@@ -120,12 +120,13 @@ class Content(BlockNode):
         self.vars = {}
         
 class Lexer(object):
-    def __init__(self, text, vars=None, env=None, dirs=None, writer='out.write'):
+    def __init__(self, text, vars=None, env=None, dirs=None, handlers=None):
         self.text = text
         self.vars = vars
         self.env = env or {}
         self.dirs = dirs
-        self.writer = writer
+        self.writer = 'out.write'
+        self.handlers = handlers or {}
         self.content = Content()
         self.stack = [self.content]
         self.parse(text)
@@ -172,8 +173,11 @@ class Lexer(object):
                     elif name == 'extend':
                         extend = value
                     else:
-                        if line and in_tag:
-                            top.add(line)
+                        if name in self.handlers:
+                            self.handlers[name](value, top, self.stack, self.vars, self.env, self.dirs, self.writer)
+                        else:
+                            if line and in_tag:
+                                top.add(line)
                 else:
                     buf = "\n%s(%r, escape=False)\n" % (self.writer, i)
                     top.add(buf)
@@ -193,7 +197,7 @@ class Lexer(object):
         f = open(fname, 'rb')
         text = f.read()
         f.close()
-        t = Lexer(text, self.vars, self.env, self.dirs)
+        t = Lexer(text, self.vars, self.env, self.dirs, self.handlers)
         self.content.merge(t.content)
         
     def _parse_extend(self, filename):
@@ -205,17 +209,17 @@ class Lexer(object):
         f = open(fname, 'rb')
         text = f.read()
         f.close()
-        t = Lexer(text, self.vars, self.env, self.dirs)
+        t = Lexer(text, self.vars, self.env, self.dirs, self.handlers)
         self.content.clear_content()
         t.content.merge(self.content)
         self.content = t.content
             
-def render_text(text, vars=None, env=None, dirs=None, default_template=None):
+def render_text(text, vars=None, env=None, dirs=None, default_template=None, handlers=None):
     dirs = dirs or ['.']
-    content = Lexer(text, vars, env, dirs)
+    content = Lexer(text, vars, env, dirs, handlers=handlers)
     return reindent(content.output())
 
-def render_file(filename, vars=None, env=None, dirs=None, default_template=None, use_temp=False):
+def render_file(filename, vars=None, env=None, dirs=None, default_template=None, use_temp=False, handlers=None):
     fname = get_templatefile(filename, dirs, default_template)
     if not fname:
         raise Exception, "Can't find the template %s" % filename
@@ -225,7 +229,7 @@ def render_file(filename, vars=None, env=None, dirs=None, default_template=None,
             #todo add var judgement to test exclude variables
             if os.path.getmtime(f) >= os.path.getmtime(fname):
                 return fname, file(f, 'rb').read()
-    text = render_text(file(fname).read(), vars, env, dirs, default_template)
+    text = render_text(file(fname).read(), vars, env, dirs, default_template, handlers)
     if use_temp:
         f = get_temp_template(fname)
         try:
@@ -236,16 +240,16 @@ def render_file(filename, vars=None, env=None, dirs=None, default_template=None,
             pass
     return fname, text
 
-def template_file(filename, vars=None, env=None, dirs=None, default_template=None):
+def template_file(filename, vars=None, env=None, dirs=None, default_template=None, handlers=None):
     vars = vars or {}
     env = env or {}
-    fname, code = render_file(filename, vars, env, dirs, default_template, use_temp=__options['use_temp_dir'])
+    fname, code = render_file(filename, vars, env, dirs, default_template, use_temp=__options['use_temp_dir'], handlers=handlers)
     return _run(code, vars, env, fname)
 
-def template(text, vars=None, env=None, dirs=None, default_template=None):
+def template(text, vars=None, env=None, dirs=None, default_template=None, handlers=None):
     vars = vars or {}
     env = env or {}
-    code = render_text(text, vars, env, dirs, default_template)
+    code = render_text(text, vars, env, dirs, default_template, handlers=handlers)
     return _run(code, vars, env)
 
 import StringIO
@@ -297,6 +301,7 @@ def _prepare_run(locals, env, out):
     e['out'] = out
     e['xml'] = out.noescape
     e['_vars'] = locals
+    e['_env'] = e
     return e
     
 def _run(code, locals={}, env={}, filename='template'):
@@ -325,3 +330,5 @@ def test():
     2009-01-08
     """
 
+if __name__ == '__main__':
+    print template("Hello, {{=name}}", {'name':'uliweb'})

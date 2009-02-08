@@ -22,8 +22,9 @@ import locale
 import copy
 import tokenize
 import token
+from sorteddict import SortedDict
 
-__all__ = ['DictMixin', 'Section', 'Ini']
+__all__ = ['SortedDict', 'Section', 'Ini']
 
 try:
     import set
@@ -41,7 +42,6 @@ try:
     codecs.lookup(defaultencoding)
 except:
     defaultencoding = 'UTF-8'
-
 
 r_encoding = re.compile(r'\s*coding\s*[=:]\s*([-\w.]+)')
 
@@ -113,85 +113,7 @@ def _uni_prt(a, encoding, beautiful=False, indent=0):
         s.append(str(a))
     return ''.join(s)
 
-class DictMixin(object):
-    def __init__(self):
-        self._dict = {}
-        self._fields = []
-            
-    def __getitem__(self, key):
-        return self._dict[key]
-    
-    def __getattr__(self, key): 
-        try: 
-            return self.__getitem__(key)
-        except KeyError, k: 
-            return None
-        
-    def __setitem__(self, key, value):
-        self._dict[key] = value
-        if key not in self._fields:
-            self._fields.append(key)
-        
-    def __setattr__(self, key, value):
-        if key.startswith('_'):
-            self.__dict__[key] = value
-        else:
-            self.__setitem__(key, value)
-            
-    def __delitem__(self, key):
-        if key.startswith('_'):
-            del self.__dict__[key]
-        else:
-            del self._dict[key]
-            self._fields.remove(key)
-            
-    def __delattr__(self, key):
-        try: 
-            self.__delitem__(key)
-        except KeyError, k: 
-            raise AttributeError, k
-        
-    def __contains__(self, key):
-        return key in self._dict
-    
-    def keys(self):
-        return self._fields
-    
-    def values(self):
-        return [self._dict[k] for k in self._fields]
-    
-    def iterkeys(self):
-        return iter(self.keys)
-    
-    def itemvalues(self):
-        return (self._dict[k] for k in self._fields)
-        
-    def update(self, value):
-        for k, v in value.iteritems():
-            self.__setitem__(k, v)
-        
-    def items(self):
-        return [(k, self._dict[k]) for k in self._fields]
-    
-    def iteritems(self):
-        return ((k, self._dict[k]) for k in self._fields)
-    
-    def get(self, key, default=None):
-        return self._dict.get(key, default)
-    
-    def pop(self, key, default=None):
-        v = self._dict.pop(key, default)
-        if key in self._fields:
-            self._fields.remove(key)
-        return v
-    
-    def __repr__(self):
-        return '<%s {%s}>' % (self.__class__.__name__, ', '.join(['%r:%r' % (k, v) for k, v in sorted(self.items())]))
-
-    def dict(self):
-        return self._dict.copy()
-    
-class Section(DictMixin):
+class Section(SortedDict):
     def __init__(self, name, comments=None, encoding=None):
         super(Section, self).__init__()
         self._name = name
@@ -260,7 +182,7 @@ class Section(DictMixin):
         self.dumps(buf)
         return buf.getvalue()
     
-class Ini(DictMixin):
+class Ini(SortedDict):
     def __init__(self, inifile=None, commentchar='#', encoding='utf-8'):
         super(Ini, self).__init__()
         self._inifile = inifile
