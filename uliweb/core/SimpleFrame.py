@@ -203,7 +203,7 @@ class Loader(object):
         self.notest = notest
         
     def get_source(self, exc_type, exc_value, exc_info, tb):
-        f, t = template.render_file(self.tmpfilename, self.vars, self.env, self.dirs)
+        f, t, e = template.render_file(self.tmpfilename, self.vars, self.env, self.dirs)
         if exc_type is SyntaxError:
             import re
             r = re.search(r'line (\d+)', str(exc_value))
@@ -319,29 +319,33 @@ class Dispatcher(object):
                 __loader__ = Loader(filename, vars, env, dirs, notest=True)
                 return compile(code, filename, 'exec')
             
-            out = template.Out()
-            e = template._prepare_run(vars, env, out)
-            callplugin(self, 'before_render_template', e, out)
-            fname, code = template.render_file(filename, vars, env, dirs, 
+            callplugin(self, 'before_render_template', vars, env)
+            fname, code, e = template.render_file(filename, vars, env, dirs, 
                 default_template=default_template, handlers=handlers)
-            #user can insert new local environment variables to env variable
+                
+            #user can insert new local environment variables to e variable
+            #and e will be a Context object
+            callplugin(self, 'before_compile_template', fname, code, vars, e)
+            out = template.Out()
+            new_e = template._prepare_run(vars, e, out)
             if isinstance(code, (str, unicode)):
                 code = _compile(code, fname, 'exec')
             __loader__ = Loader(fname, vars, env, dirs)
-            exec code in e
+            exec code in new_e
             text = out.getvalue()
             output = execplugin(self, 'after_render_template', text, vars, e)
             return output or text
         else:
-            out = template.Out()
-            e = template._prepare_run(vars, env, out)
-            callplugin(self, 'before_render_template', e, out)
-            fname, code = template.render_file(filename, vars, env, dirs, 
+            callplugin(self, 'before_render_template', vars, env)
+            fname, code, e = template.render_file(filename, vars, env, dirs, 
                 default_template=default_template, handlers=handlers)
-            
+                
+            callplugin(self, 'before_compile_template', vars, e)
+            out = template.Out()
+            new_e = template._prepare_run(vars, e, out)
             if isinstance(code, (str, unicode)):
                 code = compile(code, fname, 'exec')
-            exec code in e
+            exec code in new_e
             text = out.getvalue()
             output = execplugin(self, 'after_render_template', text, vars, e)
             return output or text
