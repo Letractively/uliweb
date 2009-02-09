@@ -2,7 +2,10 @@ import os, sys
 import wsgiref.handlers
 from uliweb.manage import make_application
 
-sys.path.insert(0, os.path.dirname(__file__))
+path = os.path.dirname(__file__)
+if path not in sys.path:
+    sys.path.insert(0, path)
+apps_dir = os.path.join(path, 'apps')
 
-application = make_application(False, os.path.join(os.path.dirname(__file__), 'apps'))
+application = make_application(False, apps_dir, debug_console=False)
 wsgiref.handlers.CGIHandler().run(application)
