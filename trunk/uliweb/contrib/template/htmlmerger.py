@@ -3,24 +3,29 @@ import re
 
 r_links = re.compile('<link\s.*?\s+href\s*=\s*"?(.*?)["\s>]|<script\s.*?\s+src\s*=\s*"?(.*?)["\s>]', re.I)
 r_head = re.compile('(?i)<head>(.*?)</head>', re.DOTALL)
+r_top = re.compile('<!--\s*toplinks\s*-->')
+r_bottom = re.compile('<!--\s*bottomlinks\s*-->')
+r_codes = re.compile('<!--\s*codes\s*-->')
 
-def merge(text, collection, vars, env):
+def merge(text, collections, vars, env):
     b = r_head.search(text)
     if b:
-        head = b.group()
         start, end = b.span()
+        head = b.group()
+        p = cal_position(head, start)
         links = []
         for v in r_links.findall(head):
             link = v[0] or v[1]
             links.append(link)
-        result = assemble(_clean_collection(collection, links, vars, env))
+        result = assemble(_clean_collection(collections, links, vars, env))
         if result['toplinks'] or result['bottomlinks'] or result['codes']:
             top = result['toplinks'] or ''
-            bottom = (result['bottomlinks'] or '') + (result['codes'] or '')
-            return (text[:start] + '<head>' + top + head[6:-7] + 
-                bottom + '</head>' + text[end:])
+            bottom = result['bottomlinks'] or ''
+            codes = result['codes'] or ''
+            return (text[:p[0]] + top + text[p[1]:p[2]] + bottom +
+                text[p[3]:p[4]] + codes + text[p[5]:])
     else:
-        result = assemble(_clean_collection(collection, [], vars, env))
+        result = assemble(_clean_collection(collections, [], vars, env))
         if result['toplinks'] or result['bottomlinks'] or result['codes']:
             top = result['toplinks'] or ''
             bottom = (result['bottomlinks'] or '') + (result['codes'] or '')
@@ -28,9 +33,29 @@ def merge(text, collection, vars, env):
         
     return text
 
-def _clean_collection(collection, existlinks, vars, env):
+def cal_position(head, start=0):
+    length = len(head)
+    t = r_top.search(head)
+    if t:
+        top_start, top_end = t.span()
+    else:
+        top_start = top_end = 6
+    t = r_bottom.search(head)
+    if t:
+        bottom_start, bottom_end = t.span()
+    else:
+        bottom_start = bottom_end = length-7
+    t = r_bottom.search(head)
+    if t:
+        codes_start, codes_end = t.span()
+    else:
+        codes_start = codes_end = length-7
+    r = [start+i for i in [top_start, top_end, bottom_start, 
+        bottom_end, codes_start, codes_end]]
+    return r
+def _clean_collection(collections, existlinks, vars, env):
     """
-    >>> collection = {
+    >>> collections = [{
     ...     'form':{
     ...         'toplinks':['js/mootools.js'],
     ...         'bottomlinks':['css/form.css'],
@@ -41,7 +66,7 @@ def _clean_collection(collection, existlinks, vars, env):
     ...         'bottomlinks':['css/form.css'],
     ...         'codes':['code2', '{{=name}}'],
     ...     },
-    ... }
+    ... }]
     >>> vars = {'name':'limodou'}
     >>> sorted(_clean_collection(collection, [], vars, {}).items())
     [('bottomlinks', ['css/form.css']), ('codes', ['code2', 'limodou', 'code']), ('toplinks', ['js/mootools.js'])]
@@ -49,26 +74,27 @@ def _clean_collection(collection, existlinks, vars, env):
     r = {'toplinks':[], 'bottomlinks':[], 'codes':[]}
     links = {}
     codes = {}
-    for i in collection.values():
-        #process links, link could be (order, link) or link
-        for _type in ['toplinks', 'bottomlinks']:
-            t = i.get(_type, [])
+    for collection in collections:
+        for i in collection.values():
+            #process links, link could be (order, link) or link
+            for _type in ['toplinks', 'bottomlinks']:
+                t = i.get(_type, [])
+                if not isinstance(t, (tuple, list)):
+                    t = [t]
+                for link in t:
+                    #link will also be template string
+                    link = template(link, vars, env)
+                    if not link in r[_type] and not link in existlinks:
+                        r[_type].append(link)
+            #process codes, code will not have order
+            t = i.get('codes', [])
             if not isinstance(t, (tuple, list)):
                 t = [t]
-            for link in t:
-                #link will also be template string
-                link = template(link, vars, env)
-                if not link in r[_type] and not link in existlinks:
-                    r[_type].append(link)
-        #process codes, code will not have order
-        t = i.get('codes', [])
-        if not isinstance(t, (tuple, list)):
-            t = [t]
-        for code in t:
-            #code will also be template string
-            code = template(code, vars, env)
-            if not code in r['codes']:
-                r['codes'].append(code)
+            for code in t:
+                #code will also be template string
+                code = template(code, vars, env)
+                if not code in r['codes']:
+                    r['codes'].append(code)
     return r
 
 def assemble(links):
@@ -82,7 +108,7 @@ def assemble(links):
             elif link.endswith('.css'):
                 result.append('<link rel="stylesheet" type="text/css" href="%s"/>' % link)
             else:
-                raise Exception('The link %s should be ended with ".css" or ".js"' % link)
+                result.append(link)
     for code in links['codes']:
         codes.append(code)
     return {'toplinks':'\n'.join(toplinks), 'bottomlinks':'\n'.join(bottomlinks),

@@ -118,12 +118,95 @@ class Content(BlockNode):
     def __init__(self):
         self.nodes = []
         self.vars = {}
+
+class ContextPopException(Exception):
+    "pop() has been called more times than push()"
+    pass
+
+class Context(object):
+    "A stack container for variable context"
+    def __init__(self, dict_=None):
+        dict_ = dict_ or {}
+        self.dicts = [dict_]
+        self.dirty = True
+        self.result = None
+
+    def __repr__(self):
+        return repr(self.dicts)
+
+    def __iter__(self):
+        for d in self.dicts:
+            yield d
+
+    def push(self):
+        d = {}
+        self.dicts = [d] + self.dicts
+        self.dirty = True
+        return d
+
+    def pop(self):
+        if len(self.dicts) == 1:
+            raise ContextPopException
+        return self.dicts.pop(0)
+        self.dirty = True
+
+    def __setitem__(self, key, value):
+        "Set a variable in the current context"
+        self.dicts[0][key] = value
+        self.dirty = True
+
+    def __getitem__(self, key):
+        "Get a variable's value, starting at the current context and going upward"
+        for d in self.dicts:
+            if key in d:
+                return d[key]
+        raise KeyError(key)
+
+    def __delitem__(self, key):
+        "Delete a variable from the current context"
+        del self.dicts[0][key]
+        self.dirty = True
+
+    def has_key(self, key):
+        for d in self.dicts:
+            if key in d:
+                return True
+        return False
+
+    __contains__ = has_key
+
+    def get(self, key, otherwise=None):
+        for d in self.dicts:
+            if key in d:
+                return d[key]
+        return otherwise
+
+    def update(self, other_dict):
+        "Like dict.update(). Pushes an entire dictionary's keys and values onto the context."
+        if not hasattr(other_dict, '__getitem__'): 
+            raise TypeError('other_dict must be a mapping (dictionary-like) object.')
+        self.dicts = [other_dict] + self.dicts
+        self.dirty = True
+        return other_dict
+    
+    def to_dict(self):
+        if not self.dirty:
+            return self.result
+        else:
+            d = {}
+            for i in reversed(self.dicts):
+                d.update(i)
+            self.result = d
+            self.dirty = False
+        return d
         
 class Lexer(object):
     def __init__(self, text, vars=None, env=None, dirs=None, handlers=None):
         self.text = text
-        self.vars = vars
-        self.env = env or {}
+        self.vars = vars or {}
+        if not isinstance(env, Context):
+            env = Context(env)
+        self.env = env
         self.dirs = dirs
         self.writer = 'out.write'
         self.handlers = handlers or {}
@@ -156,7 +239,9 @@ class Lexer(object):
                             name, value = v[0], ''
                         else:
                             name, value = v
-                    if name == 'block':
+                    if name in self.handlers:
+                        self.handlers[name](value, top, self.stack, self.vars, self.env, self.dirs, self.writer)
+                    elif name == 'block':
                         node = BlockNode(name=value.strip())
                         top.add(node)
                         self.stack.append(node)
@@ -173,11 +258,8 @@ class Lexer(object):
                     elif name == 'extend':
                         extend = value
                     else:
-                        if name in self.handlers:
-                            self.handlers[name](value, top, self.stack, self.vars, self.env, self.dirs, self.writer)
-                        else:
-                            if line and in_tag:
-                                top.add(line)
+                        if line and in_tag:
+                            top.add(line)
                 else:
                     buf = "\n%s(%r, escape=False)\n" % (self.writer, i)
                     top.add(buf)
@@ -189,7 +271,7 @@ class Lexer(object):
     def _parse_include(self, filename):
         if not filename.strip():
             return
-        filename = eval(filename, self.env, self.vars)
+        filename = eval(filename, self.env.to_dict(), self.vars)
         fname = get_templatefile(filename, self.dirs)
         if not fname:
             raise Exception, "Can't find the template %s" % filename
@@ -201,7 +283,7 @@ class Lexer(object):
         self.content.merge(t.content)
         
     def _parse_extend(self, filename):
-        filename = eval(filename, self.env, self.vars)
+        filename = eval(filename, self.env.to_dict(), self.vars)
         fname = get_templatefile(filename, self.dirs)
         if not fname:
             raise Exception, "Can't find the template %s" % filename
@@ -209,6 +291,7 @@ class Lexer(object):
         f = open(fname, 'rb')
         text = f.read()
         f.close()
+        self.env.push()
         t = Lexer(text, self.vars, self.env, self.dirs, self.handlers)
         self.content.clear_content()
         t.content.merge(self.content)
@@ -216,8 +299,8 @@ class Lexer(object):
             
 def render_text(text, vars=None, env=None, dirs=None, default_template=None, handlers=None):
     dirs = dirs or ['.']
-    content = Lexer(text, vars, env, dirs, handlers=handlers)
-    return reindent(content.output())
+    content = Lexer(text, vars, Context(env), dirs, handlers=handlers)
+    return reindent(content.output()), content.env
 
 def render_file(filename, vars=None, env=None, dirs=None, default_template=None, use_temp=False, handlers=None):
     fname = get_templatefile(filename, dirs, default_template)
@@ -226,10 +309,9 @@ def render_file(filename, vars=None, env=None, dirs=None, default_template=None,
     if use_temp:
         f = get_temp_template(fname)
         if os.path.exists(f):
-            #todo add var judgement to test exclude variables
             if os.path.getmtime(f) >= os.path.getmtime(fname):
                 return fname, file(f, 'rb').read()
-    text = render_text(file(fname).read(), vars, env, dirs, default_template, handlers)
+    text, e = render_text(file(fname).read(), vars, env, dirs, default_template, handlers)
     if use_temp:
         f = get_temp_template(fname)
         try:
@@ -238,19 +320,15 @@ def render_file(filename, vars=None, env=None, dirs=None, default_template=None,
             fo.close()
         except:
             pass
-    return fname, text
+    return fname, text, e
 
 def template_file(filename, vars=None, env=None, dirs=None, default_template=None, handlers=None):
-    vars = vars or {}
-    env = env or {}
-    fname, code = render_file(filename, vars, env, dirs, default_template, use_temp=__options['use_temp_dir'], handlers=handlers)
-    return _run(code, vars, env, fname)
+    fname, code, e = render_file(filename, vars, env, dirs, default_template, use_temp=__options['use_temp_dir'], handlers=handlers)
+    return _run(code, vars, e, fname)
 
 def template(text, vars=None, env=None, dirs=None, default_template=None, handlers=None):
-    vars = vars or {}
-    env = env or {}
-    code = render_text(text, vars, env, dirs, default_template, handlers=handlers)
-    return _run(code, vars, env)
+    code, e = render_text(text, vars, env, dirs, default_template, handlers=handlers)
+    return _run(code, vars, e)
 
 import StringIO
 import cgi
@@ -296,7 +374,11 @@ class Out(object):
 
 def _prepare_run(locals, env, out):
     e = {}
-    e.update(env)
+    if isinstance(env, Context):
+        new_e = env.to_dict()
+    else:
+        new_e = env
+    e.update(new_e)
     e.update(locals)
     e['out'] = out
     e['xml'] = out.noescape
@@ -304,8 +386,10 @@ def _prepare_run(locals, env, out):
     e['_env'] = e
     return e
     
-def _run(code, locals={}, env={}, filename='template'):
+def _run(code, locals=None, env=None, filename='template'):
     out = Out()
+    locals = locals or {}
+    env = env or {}
     e = _prepare_run(locals, env, out)
     
     if isinstance(code, (str, unicode)):
