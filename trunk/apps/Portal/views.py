@@ -12,8 +12,8 @@ from uliweb.core.SimpleFrame import static_serve
 
 @expose('/favicon.ico', static=True)
 def favicon():
-    return static_serve(request, 'favicon.ico')
+    return static_serve(application, 'favicon.ico')
 
 @expose('/robots.txt', static=True)
 def robots():
-    return static_serve(request, 'robots.txt')
+    return static_serve(application, 'robots.txt')
