@@ -235,6 +235,7 @@ class InteractiveDebugger(code.InteractiveInterpreter):
         if isinstance(source, unicode):
             source = source.encode('utf-8')
         source = source.rstrip() + '\n'
+        ThreadedStream.push()
         prompt = self.more and '... ' or '>>> '
         try:
             source_to_eval = ''.join(self.buffer + [source])

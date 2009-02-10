@@ -704,7 +704,7 @@ class FileField(BaseField):
     
     def to_python(self, data):
         d = D({})
-        d['filename'] = data.filename
+        d['filename'] = os.path.basename(data.filename)
         d['file'] = data.file
         data.file.seek(0, os.SEEK_END)
         d['length'] = data.file.tell()
