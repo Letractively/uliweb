@@ -59,11 +59,12 @@ def reindent(text):
 def get_templatefile(filename, dirs, default_template=None):
     if os.path.exists(filename):
         return filename
-    if dirs:
-        for d in dirs:
-            path = os.path.join(d, filename)
-            if os.path.exists(path):
-                return path
+    if filename:
+        if dirs:
+            for d in dirs:
+                path = os.path.join(d, filename)
+                if os.path.exists(path):
+                    return path
     if default_template:
         if isinstance(default_template, (list, tuple)):
             for i in default_template:

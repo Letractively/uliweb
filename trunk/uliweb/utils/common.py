@@ -141,17 +141,21 @@ def copy_dir_with_check(d, dst, verbose=False, check=True):
                     shutil.copy2(fpath, dst)
 
 log = None
-def _log():
-    """Log into the internal werkzeug logger."""
-    global log
-    if log is None:
-        import logging
-        handler = logging.StreamHandler()
-        log = logging.getLogger('uliweb')
-        log.addHandler(handler)
-        log.setLevel(logging.INFO)
+FORMAT = "%(levelname)-8s %(asctime)-15s %(filename)s,%(lineno)d] %(message)s"
 
-_log()
+def get_logger(format=FORMAT, datafmt=None):
+    global log
+    import logging
+    handler = logging.StreamHandler()
+    fmt = logging.Formatter(format, datafmt)
+    handler.setFormatter(fmt)
+    
+    log = logging.getLogger('uliweb')
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
+    return log
+
+get_logger()
 
 def check_apps_dir(apps_dir):
     if not os.path.exists(apps_dir):

@@ -168,8 +168,8 @@ def collcet_commands():
                 actions[t] = getattr(mod, t)(apps_dir)
     return actions
                 
-def collect_files(apps):
-    files = []
+def collect_files(apps_dir, apps):
+    files = [os.path.join(apps_dir, 'settings.ini')]
     
     def f(path):
         for r in os.listdir(path):
@@ -182,6 +182,7 @@ def collect_files(apps):
                 ext = os.path.splitext(fpath)[1]
                 if ext in ['.py', '.ini']:
                     files.append(fpath)
+    
     from uliweb.core.SimpleFrame import get_app_dir
     for p in apps:
         f(get_app_dir(p))
@@ -205,7 +206,7 @@ def runserver(apps_dir, hostname='localhost', port=5000,
         else:
             app = make_application(debugger, apps_dir)
             include_apps = []
-        extra_files = collect_files(get_apps(apps_dir)+include_apps)
+        extra_files = collect_files(apps_dir, get_apps(apps_dir)+include_apps)
         run_simple(hostname, port, app, True, False, True,
                    extra_files, 1, threaded, processes)
     return action

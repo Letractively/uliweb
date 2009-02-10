@@ -420,7 +420,7 @@ class Dispatcher(object):
         env = env or self.env
         if isinstance(result, dict):
             result = Storage(result)
-            if hasattr(response, 'template') and response.template:
+            if hasattr(response, 'template'):
                 tmpfile = response.template
             else:
                 tmpfile = request.function + settings.GLOBAL.TEMPLATE_SUFFIX
@@ -508,7 +508,9 @@ class Dispatcher(object):
     def install_apps(self):
         for p in self.apps:
             try:
-                __import__(p)
+                __import__(p+'.start')
+            except ImportError, e:
+                pass
             except Exception, e:
                 log.exception(e)
             
