@@ -6,13 +6,13 @@ Extending Uliweb
 .. contents:: 
 .. sectnum::
 
-It is very hard to anticiopate all your needs, that is why Uliweb strives to 
+It is very hard to anticipate all your needs, that is why Uliweb strives to 
 provide a lot of flexibility and extensibility.
 
 Plugin System
 ---------------
 
-Uliweb provides a simple plugin system that consists of three components: plugin Invocation points, 
+Uliweb provides a simple plugin system that consists of three components: plugin invocation points, 
 the plugin collection system and the plugin processing functions. 
 
 Each **Invocation point** will invoke all matching plugin functions, and each 
@@ -23,7 +23,7 @@ when they encounter an invocation point, the first is the ``call`` method, this
 method invokes plugin functions one after the other, the process cannot be stopped 
 in mid-execution, and it does not have a return value. The other method is called
  ``exec``, this method invokes plugin functions also one after the other, but with a difference,
-, if any function returns a value other thann ``None``, the execution will stop and the
+, if any function returns a value other than ``None``, the execution will stop and the
 value will be returned. So you can choose the suitable method that fits your needs.
 
 You can also define the arguments used in this invoking point, for example:
@@ -48,8 +48,8 @@ There are four kinds of function:
   it the next time, it'll return the first return value.
 
 **Plugin collection system** is used the collect all plugin functions. 
-When Uliweb execututes an reaches an Invocation point, it'll look for a mtaching matched plugin
+When Uliweb execution reaches an invocation point, it'll look for a mtaching plugin
 functions from the collection system. But you should define plugin function 
 first. Which places are the mose suitable place to writing the plugin functions?
-The answer is in each settings.py, because they'll be imported automatically
-when the Uliweb started.
+The answer is in each app's ``__init__.py`` or app's ``start.py``, because they'll 
+be imported automatically when the Uliweb started.
