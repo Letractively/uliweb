@@ -8,10 +8,12 @@ Deployment Guide
 GAE(Google Application Engine)
 --------------------------------
 
-GAE is a plaform provided by Google for web applications. Follow the instructions on the GAE main site to create an account. 
+GAE is a plaform provided by Google for web applications. Follow the instructions 
+on the GAE main site to create an account. 
 create a project with your account to deploy your Uliweb project. 
 
-You should test your project code under the GAE SDK development environment first before the final deployment.
+You should test your project code under the GAE SDK development environment first 
+before the final deployment.
 
 #. Using the ``export`` command, export Uliweb to your project directory. You should name
    your project directory using the application name you created in
@@ -23,7 +25,7 @@ You should test your project code under the GAE SDK development environment firs
         python manage.py export "C:\Program Files\Google\google_appengine\myproject"
         
    You would notice that the target directory is quoted by double-quotes,
-   that's because there is space character in the directory. The deployement staep is ready after this step.
+   that's because there is space character in the directory. The deployement is ready after this step.
 
 #. Modify the ``app.yaml`` file, change the value of ``application`` to your project name, 
    for example: ``myproject``.
@@ -69,8 +71,8 @@ mod_wsgi
         Allow from all
         </Directory>
         
-     The code above assumes that the root URL is ``/``, you change change this to suite your project, for 
-     example ``/myproj``.
+     The code above assumes that the root URL is ``/``, you can change this to 
+     suite your project, for example ``/myproj``.
     
      Here is an example of a configuration on the Windows platform:
     
@@ -84,12 +86,17 @@ mod_wsgi
         </Directory>
 
 #. Restart apache
-#. Test it. Startup a web browser, and enter the URL http://localhost/YOURURL to test if eveerything went well.
+#. Test it. Startup a web browser, and enter the URL http://localhost/YOURURL 
+   to test if eveerything went well.
 
 Static files
 ---------------
 
-Uliweb can serve static files, but you may want to use Apache or any other webserver instead because they are mucht faster at doing it. If you decide to let a web server serve your static files, use the exportstatic command to collect all static files from all available apps to target directory, then configure target static directory in your web servers configuration file.
+Uliweb can serve static files, but you may want to use Apache or any other 
+webserver instead because they are much faster at doing it. If you decide to 
+let a web server serve your static files, use the exportstatic command to 
+collect all static files from all available apps to target directory, then 
+configure target static directory in your web servers configuration file.
 
 
  
