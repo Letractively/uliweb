@@ -297,7 +297,7 @@ class Lexer(object):
         self.content.clear_content()
         t.content.merge(self.content)
         self.content = t.content
-            
+ 
 def render_text(text, vars=None, env=None, dirs=None, default_template=None, handlers=None):
     dirs = dirs or ['.']
     content = Lexer(text, vars, Context(env), dirs, handlers=handlers)
@@ -373,17 +373,25 @@ class Out(object):
     def getvalue(self):
         return self.buf.getvalue()
 
-def _prepare_run(locals, env, out):
+def _prepare_run(vars, env, out):
+    def f(_vars, _env):
+        def defined(v):
+            try:
+                return v in _vars or v in _env
+            except:
+                return False
+        return defined
     e = {}
     if isinstance(env, Context):
         new_e = env.to_dict()
     else:
         new_e = env
     e.update(new_e)
-    e.update(locals)
+    e.update(vars)
     e['out'] = out
     e['xml'] = out.noescape
-    e['_vars'] = locals
+    e['_vars'] = vars
+    e['defined'] = f(vars, new_e)
     e['_env'] = e
     return e
     

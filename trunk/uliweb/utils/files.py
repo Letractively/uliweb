@@ -3,7 +3,7 @@ import os
 import sys
 from common import log
 
-def save_file(fname, fobj, path_to=None, replace=False, buffer_size=4096):
+def save_file(fname, fobj, replace=False, buffer_size=4096):
     assert hasattr(fobj, 'read'), "fobj parameter should be a file-like object"
     path = os.path.dirname(fname)
     if not os.path.exists(path):
