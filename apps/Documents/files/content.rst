@@ -11,7 +11,7 @@ pass
 * `License <{{= index('license') }}>`_
 * `Credits <{{= index('credits') }}>`_
 * `Community & Links <{{= index('community') }}>`_
-* `Web sites which use Uliweb <{{= index('sites') }}>`_
+* `Web sites that use Uliweb <{{= index('sites') }}>`_
 
 Installation
 -------------------------
