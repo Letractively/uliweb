@@ -8,29 +8,28 @@ Deployment Guide
 GAE(Google Application Engine)
 --------------------------------
 
-GAE is a web running environment provided by Google, you should require an account
-before you can use it. Then use this account to create your project. 
+GAE is a plaform provided by Google for web applications. Follow the instructions on the GAE main site to create an account. 
+create a project with your account to deploy your Uliweb project. 
 
-You should test your project code under GAE SDK development environment first.
+You should test your project code under the GAE SDK development environment first before the final deployment.
 
-#. Using ``export`` command export Uliweb to your project directory. You should name
-   your project directory as the same as the application name your created in
-   GAE. Say your project name is ``myproject``, and you install GAE SDK in 
-   ``C:\Program Files\Google\google_appengine``, so you can use the command:
+#. Using the ``export`` command, export Uliweb to your project directory. You should name
+   your project directory using the application name you created in
+   GAE. For example, say your project name is ``myproject``, and you installed GAE SDK in 
+   ``C:\Program Files\Google\google_appengine``, you can use the command:
 
    ::
 
         python manage.py export "C:\Program Files\Google\google_appengine\myproject"
         
-   You should notice that the target directory is quoted by double-quotors,
-   that's because there is space character in the directory. So when you
-   finish it, the development directory is ready.
+   You would notice that the target directory is quoted by double-quotes,
+   that's because there is space character in the directory. The deployement staep is ready after this step.
 
-#. Modify ``app.yaml`` file, change the value of ``application`` to your project name, 
+#. Modify the ``app.yaml`` file, change the value of ``application`` to your project name, 
    for example: ``myproject``.
-#. Then you can begin your web development. You can use Uliweb development server
-   first, then switch to GAE development server to test your project.
-#. Upload your project with ``appcfg.py`` tool:
+#. Begin your web development using the Uliweb development server
+   first, switch to the GAE development server for further testing.
+#. Upload your project with the ``appcfg.py`` tool:
 
    ::
 
@@ -42,23 +41,23 @@ Apache
 mod_wsgi
 ~~~~~~~~~~~
 
-#. You should refer `mod_wsgi <http://code.google.com/p/modwsgi/>`_ document, and 
-   install mod_wsgi.so to apache.
+#. You should refer to the `mod_wsgi <http://code.google.com/p/modwsgi/>`_ document, and 
+   install the mod_wsgi.so for Apache.
 
-   * Just copy mod_wsgi.so to apache/modules directory.
+   * Copy mod_wsgi.so to apache/modules directory.
 
-   In windows you can see:
+   For Windows instructions, see:
 
         http://code.google.com/p/modwsgi/wiki/InstallationOnWindows
 
-   In Linux you can see:
+   If you are using Linux, see:
 
         http://code.google.com/p/modwsgi/wiki/InstallationOnLinux
 
 
-#. Modify apache's httpd.conf file
+#. Modify Apache's httpd.conf file
 
-   * Add below code
+   * Add the code below
 
      ::
     
@@ -70,10 +69,10 @@ mod_wsgi
         Allow from all
         </Directory>
         
-     Above assume the root URL is ``/``, you should change it as you want, for 
+     The code above assumes that the root URL is ``/``, you change change this to suite your project, for 
      example ``/myproj``.
     
-     Here is an example, it runs on windows platform:
+     Here is an example of a configuration on the Windows platform:
     
      ::
     
@@ -85,15 +84,13 @@ mod_wsgi
         </Directory>
 
 #. Restart apache
-#. Test it. Startup browser, and enter the URL http://localhost/YOURURL to test
-   whether the visit is right.
+#. Test it. Startup a web browser, and enter the URL http://localhost/YOURURL to test if eveerything went well.
 
 Static files
 ---------------
 
-For now, Uliweb can serve static files already, but you may want to use apache
-for serving static files. You can use exportstatic command to collect all static
-files from all available apps to target directory, then configure target static
-directory in the web server configure file.
+Uliweb can serve static files, but you may want to use Apache or any other webserver instead because they are mucht faster at doing it. If you decide to let a web server serve your static files, use the exportstatic command to collect all static files from all available apps to target directory, then configure target static directory in your web servers configuration file.
+
+
  
     

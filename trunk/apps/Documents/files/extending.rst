@@ -6,41 +6,39 @@ Extending Uliweb
 .. contents:: 
 .. sectnum::
 
-Every framework can't provide everything what you want, so the extending
-ability is very important, and Uliweb also provided such probabilty.
+It is very hard to anticiopate all your needs, that is why Uliweb strives to 
+provide a lot of flexibility and extensibility.
 
 Plugin System
 ---------------
 
-Uliweb provides a simple plugin system. When running at some important points, 
-Uliweb will invoke special function to invoke plugin functions. So plugin 
-system of Uliweb consists with three components: invoking point, plugin collection
-system, plugin process functions. 
+Uliweb provides a simple plugin system that consists of three components: plugin Invocation points, 
+the plugin collection system and the plugin processing functions. 
 
-**Invoking point** will invoke all matched 
-plugin functions, and each invoking point may have several pluging functions at a time.
-And these functions could have priority attribute, so before executing these 
-functions, they will be sorted according the priority value. There are two kinds
-of invoking way, one it ``call``, this way will invoking plugin functions one by one,
-you can't stop it at the middle of execution, and it'll return nothing;
-and the other is ``exec``, this way will invoking plugin functions also one by one,
-but if any function return a value is not ``None``, the execution will stop and the
-value will be returned. So you can choice the suitable way fits your needs.
+Each **Invocation point** will invoke all matching plugin functions, and each 
+invoking point may have several matching plugins functions at a time. These functions can 
+also be assigned execution priority attributes, this ensures that they will be sorted 
+an executed according to a defined. There are two was that plugins are called 
+when they encounter an invocation point, the first is the ``call`` method, this 
+method invokes plugin functions one after the other, the process cannot be stopped 
+in mid-execution, and it does not have a return value. The other method is called
+ ``exec``, this method invokes plugin functions also one after the other, but with a difference,
+, if any function returns a value other thann ``None``, the execution will stop and the
+value will be returned. So you can choose the suitable method that fits your needs.
 
-A invoking point is not only used for invoking plugin functions, it's also defined
-the arguments used in this invoking point, for example, here is a invoking point:
+You can also define the arguments used in this invoking point, for example:
 
 .. code:: python
 
     callplugin(self, 'startup_installed')
     
-All invoking points are just functions, the first arugment of it must be the sender
+All invoking points are just functions, the first argument must be the sender
 object, and you can also use other arguments. And there is a special argument
 ``signal``, is can be just simple type, for example, ``None``, or a string. If the 
 invoking point set this argument, plugin function can match it or just skip it,
 it depends on how do you define your plugin function, will see it below.
 
-There are four kind of function:
+There are four kinds of function:
 
 * callplugin Can't be interrupted and will return nothing, can be executed many times
 * callplugin_once Just like above, but can only be executed once
@@ -49,8 +47,8 @@ There are four kind of function:
 * execplugin_once Just like above, but can only be executed once, and invoke
   it the next time, it'll return the first return value.
 
-**Plugin collection system** will be used for collection all plugin functions. 
-and when Uliweb executing the invoking point, it'll find the matched plugin
+**Plugin collection system** is used the collect all plugin functions. 
+When Uliweb execututes an reaches an Invocation point, it'll look for a mtaching matched plugin
 functions from the collection system. But you should define plugin function 
 first. Which places are the mose suitable place to writing the plugin functions?
 The answer is in each settings.py, because they'll be imported automatically
