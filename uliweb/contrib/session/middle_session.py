@@ -7,6 +7,7 @@ class Session(SessionObject):
         self.save()
         
 class SessionMiddle(Middleware):
+    ORDER = 50
     def __init__(self, application, settings):
         from beaker.util import coerce_session_params
         from datetime import timedelta

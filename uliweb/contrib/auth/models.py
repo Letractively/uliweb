@@ -45,6 +45,7 @@ class User(Model):
     is_superuser = Field(bool)
     last_login = Field(datetime.datetime, auto_now=True)
     date_join = Field(datetime.datetime, auto_now_add=True)
+    image = Field(str, max_length=128)
     
     def set_password(self, raw_password):
         import random

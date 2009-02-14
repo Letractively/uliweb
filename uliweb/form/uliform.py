@@ -11,6 +11,8 @@ DEFAULT_CHARSET = 'utf-8'
 REQUIRED_CAPTION = '(*)'
 REQUIRED_CAPTION_AFTER = True
 
+class ReservedWordError(Exception):pass
+
 __id = 0
 
 def capitalize(s):
@@ -37,6 +39,12 @@ class D(dict):
             del self[key]
         except KeyError, k: 
             raise AttributeError, k
+
+def check_reserved_word(f):
+    if f in dir(Form):
+        raise ReservedWordError(
+            "Cannot define property using reserved word '%s'. " % f
+            )
 
 ##################################################################
 #  HTML Helper
@@ -549,7 +557,7 @@ class BooleanField(BaseField):
     """
     >>> a = BooleanField(name='bool', id='field_bool')
     >>> print a.html('Test')
-    <input checked class="field" id="field_bool" name="bool" type="checkbox"></input>
+    <input checked class="checkbox" id="field_bool" name="bool" type="checkbox"></input>
     >>> print a.validate('on')
     (True, True)
     >>> print a.validate('')
@@ -823,6 +831,7 @@ class FormMetaclass(type):
         fields = {}
         for field_name, obj in dct.items():
             if isinstance(obj, BaseField):
+                check_reserved_word(field_name)
                 fields[field_name] = obj
                 obj.__property_config__(cls, field_name)
                 
@@ -868,7 +877,8 @@ class TableLayout(Layout):
 
     def buttons_line(self, buttons):
         tr = Tag('tr', align='center', _class="buttons")
-        tr << Tag('td', buttons, colspan=3)
+        td = tr << Tag('td', Tag('label', '&nbsp;', _class='field'), colspan=3)
+        td << buttons
         return tr
         
     def html(self):
@@ -876,8 +886,8 @@ class TableLayout(Layout):
         buf << self.form.form_begin
         
         p = buf << Tag('fieldset')
-        if 'title' in self.form.kwargs:
-            p << Tag('legend', self.form.kwargs['title'])
+        if self.form.form_title:
+            p << Tag('legend', self.form.form_title)
         table = p << Tag('table')
         tbody = table << Tag('tbody')
 
@@ -888,36 +898,80 @@ class TableLayout(Layout):
             else:
                 tbody << self.line(f.label, f, f.help_string, f.error)
         
-        tbody << self.buttons_line(self.form.buttons)
+        tbody << self.buttons_line(self.form.get_buttons())
         buf << self.form.form_end
         return str(buf)
     
+class CSSLayout(Layout):
+    def line(self, obj, label, input, help_string='', error=None):
+        div = Buf()
+        div << label
+        div << input
+        if error:
+            div << Tag('span', error, _class='error')
+        div << Tag('br/')
+        return div
+
+    def buttons_line(self, buttons):
+        div = Buf()
+        div << Tag('label', '&nbsp;', _class='field')
+        div << buttons
+        div << Tag('br/')
+        return div
+
+    def html(self):
+        buf = Buf()
+        buf << self.form.form_begin
+        
+        form = buf << Tag('fieldset')
+        if self.form.form_title:
+            form << Tag('legend', self.form.form_title)
+    
+        for name, obj in self.form.fields_list:
+            f = getattr(self.form, name)
+            if isinstance(obj, HiddenField):
+                form << f
+            else:
+                form << self.line(obj, f.label, f, f.help_string, f.error)
+        
+        form << self.buttons_line(self.form.get_buttons())
+        buf << self.form.form_end
+        return str(buf)
+
 class Form(object):
     """
     >>> class F(Form):
     ...     title = StringField(lable='Title:')
     >>> form = F()
     >>> print form.form_begin
-    <form class="form" action="" enctype="multipart/form-data" method="post">
+    <form class="form" action="" method="POST">
+    >>> class F(Form):
+    ...     title = StringField(lable='Title:')
+    ...     file = FileField()
     >>> form = F(action='post')
     >>> print form.form_begin
-    <form class="form" action="post" enctype="multipart/form-data" method="post">
+    <form class="form" action="post" enctype="multipart/form-data" method="POST">
     >>> print form.form_end
     </form>
     """
 
     __metaclass__ = FormMetaclass
 
-    layout_class = TableLayout
+    layout_class = CSSLayout
     layout = None
+    form_action = ''
+    form_method = 'POST'
+    form_buttons = None
+    form_title = None
 
-    def __init__(self, action='', method='post', buttons='default', 
+    def __init__(self, action=None, method=None, buttons=None, 
             validators=None, html_attrs=None, data={}, errors={}, 
-            idtype='name', **kwargs):
-        self.action = action
-        self.method = method
+            idtype='name', title='', **kwargs):
+        self.form_action = action or self.form_action
+        self.form_method = method or self.form_method
+        self.form_title = title or self.form_title
         self.kwargs = kwargs
-        self._buttons = buttons
+        self._buttons = buttons or self.form_buttons
         self.validators = validators or []
         self.html_attrs = html_attrs or {}
         self.idtype = idtype
@@ -995,8 +1049,8 @@ class Form(object):
     @property
     def form_begin(self):
         args = self.html_attrs.copy()
-        args['action'] = self.action
-        args['method'] = self.method
+        args['action'] = self.form_action
+        args['method'] = self.form_method
         for field_name, field in self.fields.items():
             if isinstance(field, FileField):
                 args['enctype'] = "multipart/form-data"
@@ -1008,9 +1062,8 @@ class Form(object):
     def form_end(self):
         return '</form>'
     
-    @property
-    def buttons(self):
-        if self._buttons == 'default':
+    def get_buttons(self):
+        if self._buttons is None:
             b = Buf()
             b << [Submit(value='Submit', _class="button")]
         else:
@@ -1034,42 +1087,6 @@ class Form(object):
         layout = cls(self, self.layout)
         return str(layout)
 
-class CSSLayout(Layout):
-    def line(self, obj, label, input, help_string='', error=None):
-        div = Buf()
-        div << label
-        div << input
-        if error:
-            div << Tag('span', error, _class='error')
-        div << Tag('br/')
-        return div
-
-    def buttons_line(self, buttons):
-        div = Buf()
-        div << Tag('label', '&nbsp;', _class='field')
-        div << buttons
-        div << Tag('br/')
-        return div
-
-    def html(self):
-        buf = Buf()
-        buf << self.form.form_begin
-        
-        form = buf << Tag('fieldset')
-        if 'title' in self.form.kwargs:
-            form << Tag('legend', self.form.kwargs['title'])
-    
-        for name, obj in self.form.fields_list:
-            f = getattr(self.form, name)
-            if isinstance(obj, HiddenField):
-                form << f
-            else:
-                form << self.line(obj, f.label, f, f.help_string, f.error)
-        
-        form << self.buttons_line(self.form.buttons)
-        buf << self.form.form_end
-        return str(buf)
-    
 def test():
     """
     >>> class F(Form):
