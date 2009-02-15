@@ -1016,7 +1016,9 @@ class Model(object):
                 if not isinstance(v, ManyToMany):
                     if isinstance(x, Model):
                         x = x.id
-                    if x is not None:
+                    if isinstance(v, DateTimeProperty) and v.auto_now_add:
+                        d[k] = v.now()
+                    elif x is not None:
                         d[k] = x
         else:
             d = {}
