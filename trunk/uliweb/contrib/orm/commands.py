@@ -1,4 +1,3 @@
-import os
 from uliweb.utils.common import log, check_apps_dir, is_pyfile_exist
 
 def action_syncdb(apps_dir):
@@ -9,13 +8,12 @@ def action_syncdb(apps_dir):
         from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
         from uliweb import orm
         app = Dispatcher(apps_dir=apps_dir, start=False)
-        orm.set_auto_bind(True)
         orm.set_auto_create(False)
         db = orm.get_connection(app.settings.ORM.CONNECTION)
         
         models = []
         for p in get_apps(apps_dir):
-            if not is_pyfile_exist(os.path.join(get_app_dir(p), 'models')):
+            if not is_pyfile_exist(get_app_dir(p), 'models'):
                 continue
             m = '%s.models' % p
             try:
@@ -41,11 +39,10 @@ def action_reset(apps_dir):
         from uliweb.core.SimpleFrame import get_app_dir, Dispatcher
         from uliweb import orm
         app = Dispatcher(apps_dir=apps_dir, start=False)
-        orm.set_auto_bind(True)
         orm.set_auto_create(False)
         db = orm.get_connection(app.settings.ORM.CONNECTION)
 
-        if not is_pyfile_exist(os.path.join(get_app_dir(appname), 'models')):
+        if not is_pyfile_exist(get_app_dir(appname), 'models'):
             return
         m = '%s.models' % appname
         try:
@@ -65,21 +62,17 @@ def action_sql(apps_dir):
         
         from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
         from uliweb import orm
-        
-        app = Dispatcher(apps_dir=apps_dir, start=False)
-        orm.set_auto_bind(True)
-        orm.set_auto_create(False)
-        db = orm.get_connection(app.settings.ORM.CONNECTION)
-
         from StringIO import StringIO
         from sqlalchemy import create_engine
         
-        buf = StringIO()
+        app = Dispatcher(apps_dir=apps_dir, start=False)
+        orm.set_auto_create(False)
         p = app.settings.ORM.CONNECTION
         _engine = p[:p.find('://')+3]
-        db = create_engine(_engine, strategy='mock', executor=lambda s, p='': buf.write(s + p))
-        orm.set_connection(db, debug=True)
-        
+        con = create_engine(_engine, strategy='mock', executor=lambda s, p='': buf.write(s + p))
+        db = orm.get_connection(con)
+
+        buf = StringIO()
         apps = get_apps(apps_dir)
         if appname:
             apps_list = [appname]
@@ -90,7 +83,7 @@ def action_sql(apps_dir):
             if p not in apps:
                 log.error('Error: Appname %s is not a valid app' % p)
                 continue
-            if not is_pyfile_exist(os.path.join(get_app_dir(p), 'models')):
+            if not is_pyfile_exist(get_app_dir(p), 'models'):
                 continue
             m = '%s.models' % p
             try:

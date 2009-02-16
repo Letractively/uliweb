@@ -20,6 +20,9 @@ from storage import Storage
 from plugin import *
 from uliweb.utils.common import pkg, log
 from uliweb.utils.pyini import Ini
+
+class ReversedKeyError(Exception):pass
+
 try:
     set
 except:
@@ -36,6 +39,8 @@ _static_views = []
 __use_urls = False
 __app_dirs = {}
 settings = None
+
+reversed_keys = ['settings', 'redirect', 'application', 'request', 'response', 'error']
 
 def expose(rule=None, **kw):
     """
@@ -56,6 +61,8 @@ def expose(rule=None, **kw):
         args = inspect.getargspec(f)[0]
         if args :
             args = ['<%s>' % x for x in args]
+        if f.__name__ in reversed_keys:
+            raise ReversedKeyError, "The name %s is a reversed key, so please change another one" % f.__name__
         appname = f.__module__.split('.')[1]
         rule = '/' + '/'.join([appname, f.__name__] + args)
         kw['endpoint'] = f.__module__ + '.' + f.__name__
@@ -70,6 +77,8 @@ def expose(rule=None, **kw):
     def decorate(f, rule=rule):
         if __use_urls:
             return f
+        if f.__name__ in reversed_keys:
+            raise ReversedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
         kw['endpoint'] = f.__module__ + '.' + f.__name__
         if callable(rule):
             import inspect

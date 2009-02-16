@@ -375,7 +375,7 @@ class BaseField(object):
     def to_html(self, data):
         return _str(data)
 
-    def validate(self, data):
+    def validate(self, data, request=None):
         if isinstance(data, cgi.FieldStorage):
             if data.file:
                 v = data.filename
@@ -404,7 +404,7 @@ class BaseField(object):
             return False, messages.convert_error % (data, self.__class__.__name__)
         try:
             for v in self.default_validators + self.validators:
-                v(data)
+                v(data, request)
         except ValidationError, e:
             return False, e.message
         return True, data
@@ -975,6 +975,7 @@ class Form(object):
         self.validators = validators or []
         self.html_attrs = html_attrs or {}
         self.idtype = idtype
+        self.request = None
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
         if '_class' in self.html_attrs:
@@ -984,7 +985,6 @@ class Form(object):
             
         self.bind(data, errors)
         self.__init_validators()
-        
         self.ok = True
         
     def __init_validators(self):
@@ -997,14 +997,15 @@ class Form(object):
         if func and callable(func):
             self.validators.append(func)
 
-    def check(self, request):
+    def check(self, data, request=None):
         """
         request should provide get() and getall() functions
         """
+        self.request = request
 
         all_data = {}
         for k, v in self.fields.items():
-            v.parse_data(request, all_data)
+            v.parse_data(data, all_data)
 
         errors = D({})
         new_data = {}
@@ -1016,7 +1017,7 @@ class Form(object):
         #validate and gather the result
         result = D({})
         for field_name, field in self.fields.items():
-            flag, value = field.validate(new_data[field_name])
+            flag, value = field.validate(new_data[field_name], request)
             if not flag:
                 if isinstance(value, dict):
                     errors.update(value)
@@ -1029,7 +1030,7 @@ class Form(object):
             #validate global
             try:
                 for v in self.validators:
-                    v(result)
+                    v(result, request=request)
             except ValidationError, e:
                 errors['_'] = e.message
 

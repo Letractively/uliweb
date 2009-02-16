@@ -50,11 +50,15 @@ def remove_plugin(plugin_name, func):
                 return
 
 def _test(kwargs, plugin):
-    signal = kwargs.get('signal')
+    signal = kwargs.pop('signal', None)
     _signal = plugin.get('signal')
     flag = True
-    if _signal and _signal != signal:
-        flag = False
+    if _signal:
+        if isinstance(_signal, (tuple, list)):
+            if signal not in _signal:
+                flag = False
+        elif _signal!=signal:
+            flag = False
     return flag
         
 def callplugin(sender, name, *args, **kwargs):

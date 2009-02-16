@@ -59,7 +59,10 @@ def get_connection(connection='', metadata=_default_metadata, default=True, debu
     if 'strategy' not in args:
         args['strategy'] = 'threadlocal'
         
-    db = create_engine(connection, **args)
+    if isinstance(connection, (str, unicode)):
+        db = create_engine(connection, **args)
+    else:
+        db = connection
     if default:
         __default_connection__ = db
         
@@ -286,6 +289,9 @@ class Property(object):
 class StringProperty(Property):
     data_type = str
     field_class = String
+    
+    def __init__(self, verbose_name=None, default='', **kwds):
+        super(StringProperty, self).__init__(verbose_name, default=default, **kwds)
     
     def empty(self, value):
         return not value
