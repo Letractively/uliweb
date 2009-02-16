@@ -1,6 +1,5 @@
 from uliweb.core.SimpleFrame import expose
 
-@expose('/login')
 def login():
     from uliweb.contrib.auth import authenticate, login
     from forms import LoginForm
@@ -15,7 +14,7 @@ def login():
         if flag:
             f, d = authenticate(request, username=form.username.data, password=form.password.data)
             if f:
-                login(request, d)
+                login(request, form.username.data)
                 next = request.POST.get('next', '/')
                 return redirect(next)
             else:
@@ -23,9 +22,8 @@ def login():
         message = "Login failed!"
         return {'form':form, 'message':message, 'message_type':'error'}
 
-@expose('/register')
 def register():
-    from uliweb.contrib.auth import create_user, logined
+    from uliweb.contrib.auth import create_user
     from forms import RegisterForm
     
     form = RegisterForm()
@@ -38,7 +36,6 @@ def register():
         if flag:
             f, d = create_user(request, username=form.username.data, password=form.password.data)
             if f:
-                logined(request, d)
                 next = request.POST.get('next', '/')
                 return redirect(next)
             else:
@@ -47,10 +44,23 @@ def register():
         message = "There was something wrong! Please fix them."
         return {'form':form, 'message':message, 'message_type':'error'}
         
-@expose('/logout')
 def logout():
     from uliweb.contrib.auth import logout as out
     out(request)
     next = request.GET.get('next', '/')
     return redirect(next)
     
+def admin():
+    from forms import ChangePasswordForm
+    changepasswordform = ChangePasswordForm()
+    if request.method == 'GET':
+        return {'changepasswordform':changepasswordform}
+    if request.method == 'POST':
+        if request.POST.get('action') == 'changepassword':
+            flag = changepasswordform.check(request.POST, request)
+            if flag:
+                return redirect(request.path)
+            else:
+                message = "There was something wrong! Please fix them."
+                return {'changepasswordform':changepasswordform, 
+                    'message':message}

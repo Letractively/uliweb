@@ -15,43 +15,24 @@ def test_1():
     ...     content = TextField(label='Content:')
     >>> f = F()
     >>> print f
-    <form class="form" action="" enctype="multipart/form-data" method="post">
-    <table>
-    <tbody>
-    <tr>
-    <td>
-    <label for="field_title">
+    <form class="form" action="" method="POST">
+    <fieldset>
+    <label class="field" for="field_title">
     Title:<span class="field_required">
     (*)
     </span>
     </label>
-    </td>
-    <td>
     <input class="field" id="field_title" name="title" type="text" value=""></input>
-    </td>
-    <td>
-    Title help string
-    </td>
-    </tr>
-    <tr>
-    <td>
-    <label for="field_content">
+    <br/><label class="field" for="field_content">
     Content:
     </label>
-    </td>
-    <td>
     <textarea class="field" cols="40" id="field_content" name="content" rows="5"></textarea>
-    </td>
-    <td></td>
-    </tr>
-    <tr>
-    <td class="buttons" colspan="3">
-    <input type="submit" value="Submit"></input>
-    <input type="reset" value="Reset"></input>
-    </td>
-    </tr>
-    </tbody>
-    </table>
+    <br/><label class="field">
+    &nbsp;
+    </label>
+    <input class="button" type="submit" value="Submit"></input>
+    <br/>
+    </fieldset>
     </form>
     >>> req = Request.blank('/test?title=&content=')
     >>> f.check(req.GET)
@@ -74,7 +55,7 @@ def test_1():
 def test_2():
     """
     >>> buf = Buf()
-    >>> buf << Tag('div') << Tag('p', 'hello')
+    >>> a = buf << Tag('div') << Tag('p', 'hello')
     >>> print buf
     <div>
     <p>

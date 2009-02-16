@@ -9,6 +9,7 @@ __all__ = ['save_file', 'get_filename', 'get_url']
 def prepare_default_env(sender, env):
     url = sender.settings.UPLOAD.URL_SUFFIX.rstrip('/')
     expose('%s/<path:filename>' % url, static=True)(file_serving)
+    env['get_url'] = get_url
  
 def file_serving(filename):
     from uliweb.core.FileApp import return_file
@@ -21,7 +22,7 @@ def file_serving(filename):
 def _get_normal_filename(filename, path_to=None, subfolder=''):
     path = path_to or application.settings.UPLOAD.TO_PATH
     if subfolder:
-        path = os.path.join(path, subfolder)
+        path = os.path.join(path, subfolder).replace('\\', '/')
     fname = os.path.normpath(filename)
     f = os.path.join(path, fname).replace('\\', '/')
     if not f.startswith(path):

@@ -31,7 +31,7 @@ Installation
     
    .. note::
     
-       Why not use ``python setup.py install``, because I saw that the ``uliweb`` script
+       Why not use ``python setup.py install``? Because I saw that the ``uliweb`` script
        can't be installed correctly, I don't know why.
     
 #. After above steps, you should already run ``uliweb`` command in command line. 

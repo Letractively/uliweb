@@ -40,12 +40,12 @@ def check_password(raw_password, enc_password):
 
 class User(Model):
     username = Field(str, max_length=30, unique=True, index=True, nullable=False)
-    email = Field(str, max_length=40)
+#    email = Field(str, max_length=40)
     password = Field(str, max_length=128, nullable=False)
     is_superuser = Field(bool)
-    last_login = Field(datetime.datetime, auto_now=True)
+    last_login = Field(datetime.datetime)
     date_join = Field(datetime.datetime, auto_now_add=True)
-    image = Field(str, max_length=128)
+#    image = Field(str, max_length=128)
     
     def set_password(self, raw_password):
         import random
