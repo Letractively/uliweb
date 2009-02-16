@@ -1,8 +1,8 @@
 from uliweb.core.plugin import plugin
 from uliweb.core.SimpleFrame import expose
 
-@plugin('prepare_default_env')
-def prepare_default_env(sender, env):
+@plugin('prepare_template_env')
+def prepare_template_env(sender, env):
     global BUFFER_SIZE, SAVING_PATH
     
     env['url_for_static'] = url_for_static

@@ -38,6 +38,12 @@ def save_file(filename, fobj, path_to=None, replace=False, subfolder=''):
     
     filename = files.save_file(fname, fobj, replace, application.settings.UPLOAD.BUFFER_SIZE)
     return files.encoding_filename(filename, s.FILESYSTEM_ENCODING, s.HTMLPAGE_ENCODING)
+
+def save_file_field(field, path_to=None, replace=False, subfolder=''):
+    if field:
+        filename = field.data.filename
+        fname = save_file(filename, field.data.file, path_to, replace, subfolder)
+        field.data.filename = fname
         
 def get_filename(filename, path_to=None, subfolder=''):
     return _get_normal_filename(filename, path_to, subfolder)
