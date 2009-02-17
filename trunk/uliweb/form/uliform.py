@@ -726,6 +726,13 @@ class FileField(BaseField):
             value = data
         return str(self.build(name=self.name, id=self.id, **self.html_attrs))
     
+class ImageField(FileField):
+    
+    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, size=None, **kwargs):
+        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
+        self.size = size
+        self.validators.append(IS_IMAGE(self.size))
+    
 DEFAULT_DATE_INPUT_FORMATS = (
     '%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d',  # '2006-10-25', '10/25/2006', '10/25/06'
     '%b %d %Y', '%b %d, %Y',            # 'Oct 25 2006', 'Oct 25, 2006'

@@ -9,20 +9,15 @@ Requirement
 --------------
 
 * Python 2.4+
-* setuptools (recommend 0.6c9+)
-* wsgiref(Optional)
+* setuptools (There's a bug in version less than 0.6c8 which will cause installation failed.)
+* wsgiref (Required if you use Python 2.4. It's shipped within Python 2.5+.)
 
 .. note::
  
-    Because setuptools 0.6c8 has a bug, so you must use 0.6c9+ version.
+    You can install wsgiref via::
 
-If you are using Python 2.5 version, you don't need to install wsgiref, because
-it's already been shipped. But if you are using Python 2.4, you can use::
-
-    easy_install wsgiref
+        easy_install wsgiref
     
-to install it.
-
 Installation
 ---------------
 

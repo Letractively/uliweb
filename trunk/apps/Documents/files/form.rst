@@ -111,12 +111,12 @@ or whole Form. For example:
         password = PasswordField(required=True)
         enter_password_again = PasswordField(required=True)
         
-        def validate_user_name(self, data):
-            if data != 'limodou':
+        def validate_user_name(self, value):
+            if value != 'limodou':
                 raise ValidationError, 'Username should be limodou'
             
-        def validate(self, all_data):
-            if all_data.password != all_data.enter_password_again:
+        def validate(self, all_values):
+            if all_values.password != all_values.enter_password_again:
                 raise ValidationError, 'Passwords are not matched'
 
 This example demenstrates how to define a validateor for ``user_name`` field in

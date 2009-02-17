@@ -103,8 +103,8 @@ Adding templates
 
 If your view function returns a dict object, Uliweb will apply it to a template automatically.
 It means that different return value will cause a different action.
-The filename of this automatically template is the same as your view function, 
-and it ends with '.html', for example, the template of ``index()`` is ``index.html``. 
+The template is the same name as your view function with '.html' suffix.
+For example, the template of ``index()`` is ``index.html``. 
 Templates should be placed into the directory ``templates`` which will be automatically
 created when creating a new app. Now let's add a new function to test template
 process.
@@ -116,19 +116,19 @@ process.
         return {}
 
 Then create a new file ``template.html`` in ``apps/Hello/templates`` with contents 
-like below£º
+like below:
 
 .. code:: html
 
     <h1>Hello, Uliweb</h1>
     
-Type http://localhost:8000/template in the browser, you will see the same thing as the previous one.
+Visit http://localhost:8000/template in the browser, you will see the same thing as the previous one.
 
 Using template variables
 ---------------------------
 
 In above two examples, all data are outputed directly, we're going to use template
- variables to change that. Add another view function with the following code:
+variables to change that. Add another view function with the following code:
 
 .. code:: python
 
