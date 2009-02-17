@@ -45,6 +45,15 @@ def save_file_field(field, path_to=None, replace=False, subfolder=''):
         fname = save_file(filename, field.data.file, path_to, replace, subfolder)
         field.data.filename = fname
         
+def save_image_field(field, path_to=None, resize_to=None, replace=False, subfolder=''):
+    if field:
+        if resize_to:
+            from uliweb.utils.image import resize_image
+            field.data.file = resize_image(field.data.file, resize_to)
+        filename = field.data.filename
+        fname = save_file(filename, field.data.file, path_to, replace, subfolder)
+        field.data.filename = fname
+        
 def get_filename(filename, path_to=None, subfolder=''):
     return _get_normal_filename(filename, path_to, subfolder)
 
