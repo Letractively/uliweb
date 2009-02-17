@@ -11,6 +11,7 @@ Requirement
 * Python 2.4+
 * setuptools (There's a bug in version less than 0.6c8 which will cause installation failed.)
 * wsgiref (Required if you use Python 2.4. It's shipped within Python 2.5+.)
+* PIL (If you want to process image, used by form module and upload app)
 
 .. note::
  

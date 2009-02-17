@@ -1,4 +1,5 @@
 import os
+import re
 from uliweb.core.plugin import plugin
 from uliweb.utils.common import log
 
@@ -14,12 +15,30 @@ def get_handlers():
 
 _saved_template_plugins_modules = {}
 
+r_with = re.compile('\s+with\s+')
+def _parse_arguments(text):
+    b = r_with.split(text)
+    if len(b) == 1:
+        name, args = b[0], ()
+    else:
+        name = b[0]
+        args = [x.strip() for x in b[1].split(',')]
+    return name, args
+
+def eval_vars(vs, vars, env):
+    if isinstance(vs, (tuple, list)):
+        return [eval_vars(x, vars, env) for x in vs]
+    else:
+        return eval(vs, vars, env.to_dict())
+
 from uliweb.utils.sorteddict import SortedDict
 def use_tag_handler(app):
     def use(plugin, container, stack, vars, env, dirs, writer, app=app):
         from uliweb.core.SimpleFrame import get_app_dir
         
-        plugin = eval(plugin, vars, env.to_dict())
+        plugin, args = _parse_arguments(plugin)
+        plugin = eval_vars(plugin, vars, env)
+        args = eval_vars(args, vars, env)
         collection = env.dicts[0].get('collection', SortedDict())
         if plugin in _saved_template_plugins_modules:
             mod = _saved_template_plugins_modules[plugin]
@@ -39,7 +58,7 @@ def use_tag_handler(app):
                 _saved_template_plugins_modules[plugin] = mod
         register = getattr(mod, 'register', None)
         if register:
-            v = register(app, vars, env)
+            v = register(app, vars, env, *args)
             if v:
                 collection[plugin] = v
         env['collection'] = collection
