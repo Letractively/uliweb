@@ -172,6 +172,16 @@ def is_pyfile_exist(dir, pymodule):
                 return False
     return True
     
+def wrap(f):
+    def d_wrap(func):
+        func.__name__ = f.__name__
+        func.__dict__.update(f.__dict__)
+        func.__doc__ = f.__doc__
+        func.__module__ = f.__module__
+        func.func_globals.update(f.func_globals)
+        return func
+    return d_wrap
+
 if __name__ == '__main__':
     log.info('Info: info')
     try:

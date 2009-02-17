@@ -62,7 +62,7 @@ def expose(rule=None, **kw):
         if args :
             args = ['<%s>' % x for x in args]
         if f.__name__ in reversed_keys:
-            raise ReversedKeyError, "The name %s is a reversed key, so please change another one" % f.__name__
+            raise ReversedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
         appname = f.__module__.split('.')[1]
         rule = '/' + '/'.join([appname, f.__name__] + args)
         kw['endpoint'] = f.__module__ + '.' + f.__name__
@@ -97,6 +97,8 @@ def expose(rule=None, **kw):
     return decorate
 
 def url_for(endpoint, _external=False, **values):
+    if callable(endpoint):
+        endpoint = endpoint.__module__ + '.' + endpoint.__name__
     return local.url_adapter.build(endpoint, values, force_external=_external)
 
 def import_func(path):
@@ -433,7 +435,13 @@ class Dispatcher(object):
                 tmpfile = response.template
             else:
                 tmpfile = request.function + settings.GLOBAL.TEMPLATE_SUFFIX
-            response = self.render(tmpfile, result, env=env, request=request, default_template=['default.html', self.default_template])
+            
+            #if debug mode, then display a default_template
+            if self.debug:
+                d = ['default.html', self.default_template]
+            else:
+                d = None
+            response = self.render(tmpfile, result, env=env, request=request, default_template=d)
         elif isinstance(result, (str, unicode)):
             response = Response(result, content_type='text/html')
         elif isinstance(result, (Response, BaseResponse)):

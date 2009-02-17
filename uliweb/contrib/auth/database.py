@@ -11,11 +11,11 @@ def authenticate(request, username, password):
     user = User.get(User.c.username==username)
     if user:
         if user.check_password(password):
-            return True, 'default'
+            return True, user, 'default'
         else:
-            return False, {'password': "Password isn't correct!"}
+            return False, {'password': "Password isn't correct!"}, 'default'
     else:
-        return False, {'username': 'Username is not existed!'}
+        return False, {'username': 'Username is not existed!'}, 'default'
     
 @plugin('create_user', signal=(None, 'default'), kind=LOW)
 def create_user(request, username, password, **kwargs):
