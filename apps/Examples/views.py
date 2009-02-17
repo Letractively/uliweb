@@ -1,6 +1,6 @@
 from uliweb.core.SimpleFrame import expose
 from apps.Portal.modules.menu import menu
-from uliweb import form
+import uliweb.form.uliform as Form
 
 def __begin__():
     response.menu=menu(request, 'Examples')
@@ -26,11 +26,11 @@ def examples_response():
 @expose
 def examples_form():
     class F(Form.Form):
-        title = Form.TextField(label='Title:', required=True, help_string='Title help string')
-        content = Form.TextAreaField(label='Content:')
+        title = Form.StringField(label='Title:', required=True, help_string='Title help string')
+        content = Form.TextField(label='Content:')
         age = Form.IntField(label='Age:')
         id = Form.HiddenField()
-        tag = Form.TextListField(label='Tag:')
+        tag = Form.ListField(label='Tag:')
         public = Form.BooleanField(label='Public:')
         format = Form.SelectField(label='Format:', choices=[('rst', 'reStructureText'), ('text', 'Plain Text')], default='rst')
         radio = Form.RadioSelectField(label='Radio:', choices=[('rst', 'reStructureText'), ('text', 'Plain Text')], default='rst')
@@ -38,13 +38,13 @@ def examples_form():
     
     f = F()
     if request.method == 'GET':
-        return dict(form=f.html(), message='')
+        return dict(form=f, message='')
     elif request.method == 'POST':
-        flag, data = f.validate(request.params)
+        flag = f.check(request.params)
         if flag:
             return dict(message='success', form='')
         else:
-            return dict(form=f.html(request.params, data, py=False), message='')
+            return dict(form=f, message='')
         
 @expose
 def examples_error():
