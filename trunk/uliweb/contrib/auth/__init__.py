@@ -56,7 +56,15 @@ def authenticate(request, username, password, backend_id=None):
     return flag, result, if flag == True, result will be backend_id
     if flag == False, result will be the error message({}):
     """
-    flag, backend = execplugin(request, 'authenticate', username, password, signal=backend_id)
+    flag, result, backend = execplugin(request, 'authenticate', username, password, signal=backend_id)
+    if flag:
+        if not isinstance(result, User):
+            user = User.get(User.c.username==username)
+            if not user:
+                user = User(username=username, **kwargs)
+                user.save()
+        else:
+            user = result
     return flag, backend
 
 def login(request, username, backend_id=None):
