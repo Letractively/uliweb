@@ -62,20 +62,19 @@ Uliweb applications are placed in the ``apps`` folder. Uliweb also ships with ma
 built-in apps, they are stored in the ``uliweb/contrib`` folder.
 
 There is a global settings file for all apps in the ``apps`` folder called ``setting.ini`` . 
-Each app can have its own ``setting.ini`` file for initialisation and configuration purposes. For more details to see
-*App Organization* section.
+Each app can have its own ``setting.ini`` file for initialisation and configuration purposes.
 
 An Uliweb **app** in its basic form is actually Python package, this implies the precense
 of an empty ``__init__.py`` file in its root folder. Further, an **app** may have the following
 components:
 
-* ``settings.ini`` file, the configuration file of te app.
-* ``templates`` directory, used to store template files.
-* ``static`` directory used to store static files.
-* ``config.ini`` can be used to define app dependencies.
+* ``settings.ini`` file, the configuration file of the app.
+* ``config.ini`` file, used to define app dependencies.
+* ``templates/`` directory, used to store template files.
+* ``static/`` directory, used to store static files like images, css files, javascript files.
 
 A ``settings.ini`` can be used to carry out some initalization work. For example, 
-database, I18n configuration etc. 
+database, i18n configuration etc. 
         
 A example of what an ``apps`` folder structure in an project could look like is below:
 
@@ -168,7 +167,7 @@ At present, Uliweb supports two ways to definé URLs in views.
 One way is to define a URL by using the ``expose`` decorator. This is the easier method.
 The other way is to define the URLs in each view module as normal, and then use the 
 ``extracturls`` command to dump these urls to the ``apps/urls.py`` file. Uliweb will automatically
-find and import it, the ``expose`` would therby be be automatically disabled.
+find and import it, the ``expose`` will be automatically disabled.
 
 To assist in URL management, Uliweb provides an ``url_for`` function. This function
 can be used for reversed URL creation, it'll create URLs according to the correspondingview function
