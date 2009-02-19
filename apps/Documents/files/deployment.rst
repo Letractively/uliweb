@@ -8,9 +8,9 @@ Deployment Guide
 GAE(Google Application Engine)
 --------------------------------
 
-GAE is a plaform provided by Google for web applications. Follow the instructions 
-on the GAE main site to create an account. 
-create a project with your account to deploy your Uliweb project. 
+GAE is a plaform provided by Google for web applications. To use GAE in combination 
+with ULiweb for web development, you will need a GAE accont. Follow the instructions 
+on the GAE main site to create one.
 
 You should test your project code under the GAE SDK development environment first 
 before the final deployment.
@@ -44,7 +44,7 @@ mod_wsgi
 ~~~~~~~~~~~
 
 #. You should refer to the `mod_wsgi <http://code.google.com/p/modwsgi/>`_ document, and 
-   install the mod_wsgi.so for Apache.
+   install the mod_wsgi.so module for Apache.
 
    * Copy mod_wsgi.so to apache/modules directory.
 
