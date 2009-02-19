@@ -1,5 +1,5 @@
 from uliweb.utils.common import log
-from uliweb.core.plugin import callplugin, execplugin
+from uliweb.core import dispatch
 import database
 from models import User
 
@@ -20,14 +20,14 @@ def get_user(request):
     backend_key = _get_backend_key(request)
     backend_id = request.session.get(backend_key)
     if user_id:
-        return execplugin(request, 'get_user', user_id, signal=backend_id)
+        return dispatch.get(request, 'get_user', user_id, signal=backend_id)
 
 def create_user(request, username, password, backend_id=None, **kwargs):
     """
     return flag, result(result can be an User object or just True, {} for errors)
     """
     
-    v = execplugin(request, 'create_user', username, password, signal=backend_id, **kwargs)
+    v = dispatch.get(request, 'create_user', username, password, signal=backend_id, **kwargs)
     flag, result = v
     if flag:
         if not isinstance(result, User):
@@ -41,10 +41,10 @@ def create_user(request, username, password, backend_id=None, **kwargs):
     return flag, result
     
 def change_password(request, username, password, backend_id=None):
-    return execplugin(request, 'change_password', username, password, signal=backend_id)
+    return dispatch.get(request, 'change_password', username, password, signal=backend_id)
 
 def delete_user(request, username, backend_id=None):
-    result = execplugin(request, 'delete_user', username, signal=backend_id)
+    result = dispatch.get(request, 'delete_user', username, signal=backend_id)
     if result:
         user = User.get(User.c.username==username)
         if user:
@@ -56,7 +56,7 @@ def authenticate(request, username, password, backend_id=None):
     return flag, result, if flag == True, result will be backend_id
     if flag == False, result will be the error message({}):
     """
-    flag, result, backend = execplugin(request, 'authenticate', username, password, signal=backend_id)
+    flag, result, backend = dispatch.get(request, 'authenticate', username, password, signal=backend_id)
     if flag:
         if not isinstance(result, User):
             user = User.get(User.c.username==username)
@@ -71,7 +71,7 @@ def login(request, username, backend_id=None):
     """
     return user, backend_id
     """
-    result = execplugin(request, 'login', username, signal=backend_id)
+    result = dispatch.get(request, 'login', username, signal=backend_id)
     if result:
         import datetime
         
@@ -88,7 +88,7 @@ def logout(request, backend_id=None):
     """
     Remove the authenticated user's ID from the request.
     """
-    result = execplugin(request, 'logout', request.user.username, signal=backend_id)
+    result = dispatch.get(request, 'logout', request.user.username, signal=backend_id)
     if result:
         try:
             del request.session[_get_auth_key(request)]
