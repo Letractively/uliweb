@@ -17,3 +17,14 @@ def urls():
     u.sort()
     
     return {'urls':u}
+
+@expose("/admin/global")
+def globals_():
+#    glob = globals()
+#    glo = [ (key,glob[key]) for key in glob.keys() if callable(glob[key]) ]
+#    un = [(key, str(glob[key]) or "none") for key in glob.keys() if not callable(glob[key]) ]
+#    glo.extend(un)
+#    glob = sorted(glob)
+    
+    return {"glo":env}
+ 
