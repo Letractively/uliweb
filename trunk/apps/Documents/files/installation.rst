@@ -9,9 +9,9 @@ Requirement
 --------------
 
 * Python 2.4+
-* setuptools (There's a bug in version less than 0.6c8 which will cause installation failed.)
-* wsgiref (Required if you use Python 2.4. It's shipped within Python 2.5+.)
-* PIL (If you want to process image, used by form module and upload app)
+* setuptools (There's a bug in version less than 0.6c8 which will cause an installation failure.)
+* wsgiref (Required if you use Python 2.4. It's shipped with Python 2.5+.)
+* PIL (If you want to process images, used by the form module and upload app)
 
 .. note::
  
@@ -31,18 +31,17 @@ Installation
 
        python setup.py develop
     
-   This command will install a link of current Uliweb directory to Python 
-   site-packages directory, and you can find an entry in easy_install.pth.
-   And this command will also install a script named ``uliweb`` to Python/Scripts
-   directory. So if you've already set the Python/Scripts to search path, you 
-   can directly run it from command line. If not, please add Python and Python/Scripts
-   directories to search path(change PATH environment to add new path).
+   This command will install a link of the current Uliweb directory to the Python 
+   site-packages directory. , and you can find an entry in easy_install.pth.
+   This command will also install a script named ``uliweb`` to Python/Scripts
+   directory. Make sure that you have added the Python and Python/Scripts directories 
+   to your systems search path(adding the new path to the PATH environment). Doing this allows you
+   to run the uliweb scripts anywhere on te commandline.
     
    .. note::
     
-       Why not use ``python setup.py install``? Because I saw that the ``uliweb`` script
-       can't be installed correctly, I don't know why.
+       Why not use ``python setup.py install``? The ``uliweb`` script
+       can't be installed correctly using this method, I will appreciate if someone can help with this issue.
     
-#. After above steps, you should already run ``uliweb`` command in command line. 
-   Next you should see some tutorials to learn how to use ``uliweb`` command and how
-   to develop a web site with Uliweb.
+#. After above steps, run ``uliweb`` command in command line and see the tutorials 
+    to learn how to use ``uliweb`` for web application development.

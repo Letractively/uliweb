@@ -11,8 +11,10 @@ Uliweb is a Python web application framework that utilizes a MVT architecture.
 MVT Framework
 ---------------
 
-The **M** or Model is an ORM based on SqlAlchemy package. You are however not
-restricted to using Uliwebs ORM. You can choose another ORM package of your choice.
+The **M** or Model. A model is a description of the data employed in your web application. 
+ You define your models, place them in the models file and use an ORM to access them. 
+Uliweb provides an ORM that wraps the SQLAlchemy package. You are however not
+restricted to using Uliwebs ORM. You can choose another ORM package of your choice for your models.
 
 The **V** or View process is accomplished via functions or callable classes. When 
 view function is run, Uliweb will provide an environment for the the view to run in
@@ -162,7 +164,7 @@ collect all URL mapping definition from all of these view modules.
 URL Mapping Process
 ---------------------
 
-At present, Uliweb supports two ways to definé URLs in views.
+At present, Uliweb supports two ways to define URLs in views.
 
 One way is to define a URL by using the ``expose`` decorator. This is the easier method.
 The other way is to define the URLs in each view module as normal, and then use the 

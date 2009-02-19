@@ -6,8 +6,9 @@ Extending Uliweb
 .. contents:: 
 .. sectnum::
 
-It is very hard to anticipate all your needs, that is why Uliweb strives to 
-provide a lot of flexibility and extensibility.
+A web framework might fall short to anticipate all your development needs. 
+Although Uliweb is no exemption in this respect, it strives to provide the most 
+possible amount of flexibility and extensibility.
 
 Plugin System
 ---------------
@@ -26,30 +27,29 @@ in mid-execution, and it does not have a return value. The other method is calle
 , if any function returns a value other than ``None``, the execution will stop and the
 value will be returned. So you can choose the suitable method that fits your needs.
 
-You can also define the arguments used in this invoking point, for example:
+You can also define the arguments used in an invocation point, for example:
 
 .. code:: python
 
     callplugin(self, 'startup_installed')
     
-All invoking points are just functions, the first argument must be the sender
-object, and you can also use other arguments. And there is a special argument
-``signal``, is can be just simple type, for example, ``None``, or a string. If the 
-invoking point set this argument, plugin function can match it or just skip it,
-it depends on how do you define your plugin function, will see it below.
+All invocation points are just functions, the first argument must be the sender
+object and other arguments might follow. And there is a special argument
+``signal``, this can be a simple type, for example, ``None``, or a string. If the 
+invoking point set to this argument, a plugin function can match or skip it, 
+depending on how your plugin function is defined.
 
-There are four kinds of function:
+There are four kinds of plugin invocation function:
 
-* callplugin Can't be interrupted and will return nothing, can be executed many times
+* callplugin Can't be interrupted and will return nothing, can be executed several times
 * callplugin_once Just like above, but can only be executed once
 * execplugin Can be interrupted and will return a value(if any plugin function
-  return a value is not ``None``, the execution will be interrupted)
-* execplugin_once Just like above, but can only be executed once, and invoke
-  it the next time, it'll return the first return value.
+  returns a value that is not ``None``, the execution will be interrupted)
+* execplugin_once Just like above, but can only be executed once, and if it is invoked
+  a second time, it'll return the first return value.
 
-**Plugin collection system** is used the collect all plugin functions. 
-When Uliweb execution reaches an invocation point, it'll look for a mtaching plugin
-functions from the collection system. But you should define plugin function 
-first. Which places are the mose suitable place to writing the plugin functions?
-The answer is in each app's ``__init__.py`` or app's ``start.py``, because they'll 
+**Plugin collection system** is used the collect all plugin functions. This works in the sense that  
+when the Uliweb main process execution reaches an invocation point, it'll look for matching plugin
+functions in from the collection system to execute. The most suitable places to define plugins are in
+each app's ``__init__.py`` or app's ``start.py``, because they'll 
 be imported automatically when the Uliweb started.

@@ -7,24 +7,24 @@ Form
 .. sectnum::
 
 Form creation and processing is a big problem in web development. Uliweb provides
-its own form processing module, but it's not bound by default, it is named ``form`` 
-and can be found in the ``uliweb`` directory. It is basically a common Python module, and can, as such, 
-be imported as one when you want to use it. You can use other form processing modules in Uliweb.
+its own form processing module, but it is not bound for use by default just in 
+case you intend to use another form processing module. This 
+module is named ``form`` and can be found in the ``uliweb`` directory. It is 
+basically a normal Python module, and can, as such, be imported as one for use.
 
-What are the features of the Uliweb Form module?
+The features of the form module are:
 
-* Define it just like define a model
-* Creating HTML code directly from Field, Form object
-* Support layout process, so you can define your own HTML output
-* Can validate the submitted data and convert them into Python data type
-* Support user defined validator
-* Provide a form app(not implemented yet), so you can use it more easier
+* Ease of use. Just define it like a simple class and instanciate it for use.
+* Easy HTML code generation. HTML code can be generated directly from Field or Form objects
+* Support for custom HTML layout processes.
+* Can validate the submitted data and convert them into Python data types
+* Support user defined validators
+* Support for file uploads and management.
 
-Form Class
+The Form Class
 ------------
 
-If you want to use Form module, you should define a Form class first, just like
-this:
+To get started, define a Form class first, as follows:
 
 .. code:: python
 

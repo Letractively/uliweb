@@ -6,12 +6,12 @@ Uliweb Introduction
 
 .. contents:: 
 
-What is Uliweb?
+About Uliweb
 ----------------
 
-Uliweb is a new Python Web Framework. Before I started to create this framework,
-I had used a few other frameworks such as Karrigell, Cherrypy, 
-Django and web2py, but they did satisfy me due to several reasons. I then decided 
+Uliweb is a relatively new Python based web framework. Before I started to create 
+this framework,I had used a few other frameworks such as Karrigell, Cherrypy, 
+Django and web2py, but they did not satisfy my needs due to several reasons. I then decided 
 to create a web framework that combined the strengths of these frameworks, keeping in mind
 that the main focus is to make Uliweb easy to use yet powerful.
 
@@ -29,28 +29,27 @@ Infrastructure
 Uliweb was not created totally from scratch. It uses some modules created by 
 other developers, for example:
 
-* `Werkzeug <http://werkzeug.pocoo.org/>`_ Used in core process of framework. 
-  For example: command line, URL Mapping, Debug, etc.
+* `Werkzeug <http://werkzeug.pocoo.org/>`_ Used to handle core processes in the framework. 
+  For example: command line tools , URL Mapping, Debug, etc.
 * `webob <http://pythonpaste.org/webob/>`_  Used to create Request, Response
-  object, and static file process.
-* `SqlAlchemy <http://www.sqlalchemy.org>`_ I wrapped an ORM based on it.
-  So Uliweb user can use ORM to access a database, or use this module directly.
+  objects and static file processing.
+* `SqlAlchemy <http://www.sqlalchemy.org>`_ The ORM based on it. Developers can access
+  databases, or use the module separately.
 
 I also referenced some code from other web frameworks, for example:
 
-* Template was borrowed from `web2py <http://mdp.cti.depaul.edu/>`_ and I made some 
-  improvements.
-* Some codes were referenced from `Django <http://www.djangoproject.com/>`_ project.
+* The Templating system is styled after the one used in `web2py <http://mdp.cti.depaul.edu/>`_ several 
+  improvements were made.
 
-And I also constructed a few new "wheels" myself. For example:
+I also constructed a few new "wheels" myself. For example:
 
-* Form process, developers can use it to create HTML code, validate submitted data and 
+* Form processing module. Developers can use it to create HTML code, validate submitted data and 
   convert submitted data to Python data types.
 * I18n processing including template support, language lazy process.
 * Uliorm, which is an ORM module, was built on top of SqlAlchemy. I also referenced from 
   GAE datastore module.
 * Framework runtime process.
-* Plugin mechanism, borrowed from `UliPad <http://code.google.com/p/ulipad>`_ project.
+* Plugin mechanism, styled after the one used in the `UliPad <http://code.google.com/p/ulipad>`_ project.
 
 Features
 -----------
@@ -59,85 +58,83 @@ Features
 
   * MVT(Model View Template) development model.
   * Distributed development but unified management. Uliweb organizes a project with
-    small apps. Each app can has its own configuration file(settings.ini), templates 
-    directory, and static directory. Previouly created app can be easily reused. But 
-    when user runs the project, all apps can be treated as a whole app. User can also 
-    reference other static files and templates. If INSTALLED_APPS is not configured in
-    the configuration file, all apps will be available by default. And all configuration
-    files for all available apps will be automatically processed at project startup, 
-    which gives the user a complete configuration view.
+    small apps. Each app can have its own configuration file(settings.ini), template 
+    directory, and static directory. Existing apps can be easily reused, but are treated as a compound. 
+    web application project if configured as such. Developers can also 
+    reference static files and templates between apps, thus easing inter-application data exchange. 
+    All apps in a project are loaded by default if INSTALLED_APPS is not configured in
+    the configuration file. All separate app configuration files are automatically processed at 
+    project startup.
 
 * URL Mapping
 
   * Flexiable and powerful URL mapping. Uliweb uses werkzeug's routing module. 
-    User can easily define a URL, which in turn can be easily binded with a view function.
-    URL can also be created reversely according to the view function name. It supports
-    arguments definition in URL. And it also supports default URL mapping to a 
+    User can easily define a URL, which in turn can be easily bound with a view function.
+    URLs can also be created reversely according to the view function name. It supports
+    argument definitions in URLs and default URL mapping to a 
     view function.
     
 * View and Template
 
-  * View template can be automatically applied. If you return a dict variable from
-    view function, Uliweb will automatically find a default applied template according
+  * View templates can be automatically applied. If you return a dict variable from
+    view function, Uliweb will automatically try to match and apply a template according
     to the view function name.
   * Environment execution mode. Each view function will be run in an environment,
     which eliminates the need to write many import statements. Plus there are already many
-    objects that can be used directly, for example: request, response, etc. When used, 
-    these objectsIt can save many lines of code.
-  * User can directly use Python code in a template, and user does not need to indent
-    his code, as long as he remembers to add a pass statement at the end of each block. 
-    Uliweb also supports including of child template and inheriting from parent template.
+    objects that can be used directly, for example: request, response, etc. This is DRY and saves a lot of coding
+  * Developers can directly use Python code in a template, the Python code does not neede to be indented
+    as long as a pass statement is added at the end of each code block. 
+    Uliweb also supports child template inclusion and inheritance.
     
 * ORM
 
-  * Uliorm is the default ORM module but not configured by default, user can use any 
-    ORM module as he prefers.
-  * Uliorm supports models and automatic database migiration, including table creation 
-    and table structure modification.
+  * Uliorm is the default ORM module but not configured by default. Developers are free to use any 
+    ORM module as preferred.
+  * Uliorm supports model creation and automatic database migiration(table creation 
+    and table structure modification).
 
 * I18n
 
-  * Supports python file and template file.
-  * Supports browser language setting and cookie setting, and automatic language switch.
-  * Provides command line tool. User can use it to extract .po files. It can support
-    app level or project level process. It can automatically merge .pot files to existing
+  * Can be used in python and template files.
+  * Browser language and cookie settings are supported including automatic language switching.
+  * Provides a command line tool that developers can use to extract .po files. 
+    This can happen either at the app level or project level process. It can automatically merge .pot files to existing
     .po files.
     
 * Extension
 
-  * Plugin extension. This is a plugin process mechanism. There are already some
-    plugin invoke points in Uliweb. So you can write some procedures and bind them
-    to these points, in order to finish some special works. For example, database
+  * Plugin extension. This is a plugin processing mechanism that utilizes different 
+    types of plugin invocation points. So you can write procedures to carry out 
+    special processes and bind them to these points. For example, database
     initicalization, I18n process initialization, etc.
-  * middleware extension. It's similar with Django. You can configure it in configure
-    files. Each middleware can process request and response.
-  * views module initial process. If you write a special function named __begin__,
-    it'll be processed before any view function can be processed, so you can do
-    some module level process here, for example: check the user authentication, etc.
-    So I suggest that you devide different view modules according different 
-    functionality.
+  * middleware extension. It's similar to Djangos. You can configure it in configuration
+    files. Each middleware can process the request and response objets.
+  * Special function calls in the views module initial process. If you write a special 
+    function named __begin__, it'll be processed before any view function can be processed, 
+    this allows developers to do some module level processing at that point, for example: 
+    check the user authentication, etc.
     
 * Command Line Tools
 
-  * Export a clear environment to a special directory. Then you can work from there.
-  * Create app, and include the essential directory structure, files and code.
+  * Export a clean working environment to an assigned directory.
+  * Create app, and include the basic essential directory structure, files and code.
   * Export static files, you can export all available apps' static files to a
     special directory.
-  * Startup a developing web server, support debug and automatically reload.
+  * Startup a development web server thats supports debugging and autoreload.
+  * Several project and app management tools.
 
 * Deployment
 
-  * Support GAE, it's very easy.
-  * Support mod_wsgi, cgi, fast_cgi, scgi.
+  * Supports easy deployment on the GAE platform.
+  * Supports mod_wsgi, cgi, fast_cgi, scgi.
 
 * Development
 
   * Provide a development server, and can be automatically reload when some
     module files are modified.
-  * Enable debug, you can check the error traceback, and it also supports
-    template debugging.
+  * Enhanced debugging, you can check the error traceback, template debugging is also supported.
 
-* Others
+* Misc.
 
   * Various demos are available for anyone interested in learning more about Uliweb. 
     It includes all core codes and also all source code of `uliwebproject <http://uliwebproject.appspot.com>`_ , 
@@ -148,9 +145,8 @@ Features
 Goals
 ----------
 
-* Developing a simple and easy to use web framework.
+* Simple and easy to use web framework.
 * The web framework should be flexiable and easy to extend.
 * The web framework should be able to be deployed in different platforms.
-* Providing enough sample codes for using this framework.
-* Providing concise and easy to understand documentation for this framework.
-
+* Provision of enough sample code.
+* Provision of concise and easy to understand documentation.
