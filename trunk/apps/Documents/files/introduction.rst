@@ -103,9 +103,9 @@ Features
     
 * Extension
 
-  * Plugin extension. This is a plugin processing mechanism that utilizes different 
-    types of plugin invocation points. So you can write procedures to carry out 
-    special processes and bind them to these points. For example, database
+  * Dispatch extension. This is a dispatch processing mechanism that utilizes different 
+    types of dispatch points. So you can write procedures to carry out 
+    special processes and bind them to these dispatch points. For example, database
     initicalization, I18n process initialization, etc.
   * middleware extension. It's similar to Djangos. You can configure it in configuration
     files. Each middleware can process the request and response objets.

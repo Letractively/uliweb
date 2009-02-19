@@ -1,11 +1,11 @@
 import os
-from uliweb.core.plugin import plugin
+from uliweb.core.dispatch import bind
 from uliweb.core.SimpleFrame import expose
 from werkzeug.exceptions import Forbidden
 
 __all__ = ['save_file', 'get_filename', 'get_url']
 
-@plugin('prepare_default_env')
+@bind('prepare_default_env')
 def prepare_default_env(sender, env):
     url = sender.settings.UPLOAD.URL_SUFFIX.rstrip('/')
     expose('%s/<path:filename>' % url, static=True)(file_serving)

@@ -1,6 +1,6 @@
-from uliweb.core.plugin import plugin
+from uliweb.core.dispatch import bind
 
-@plugin('startup')
+@bind('startup')
 def startup(sender):
     from uliweb import orm
     

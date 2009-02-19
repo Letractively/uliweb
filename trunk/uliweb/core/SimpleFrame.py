@@ -17,7 +17,7 @@ from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
 from rules import Mapping, add_rule
 import template
 from storage import Storage
-from plugin import *
+import dispatch
 from uliweb.utils.common import pkg, log
 from uliweb.utils.pyini import Ini
 
@@ -237,17 +237,13 @@ class Dispatcher(object):
         self.include_apps = include_apps or []
         if not Dispatcher.installed:
             self.init(apps_dir)
-            callplugin(self, 'startup_installed')
+            dispatch.call(self, 'startup_installed')
             
         if start:
-            callplugin(self, 'startup')
+            dispatch.call(self, 'startup')
         
     def init(self, apps_dir):
         global APPS_DIR, url_map, _static_urls
-        import __builtin__
-        setattr(__builtin__, 'expose', expose)
-        setattr(__builtin__, 'plugin', plugin)
-        setattr(__builtin__, 'application', self)
         
         APPS_DIR = apps_dir
         Dispatcher.apps_dir = apps_dir
@@ -278,8 +274,8 @@ class Dispatcher(object):
         Dispatcher.settings = settings
         self.debug = settings.GLOBAL.get('DEBUG', False)
         Dispatcher.template_env = Storage(Dispatcher.env.copy())
-        callplugin(self, 'prepare_default_env', Dispatcher.env)
-        callplugin(self, 'prepare_template_env', Dispatcher.template_env)
+        dispatch.call(self, 'prepare_default_env', Dispatcher.env)
+        dispatch.call(self, 'prepare_template_env', Dispatcher.template_env)
         Dispatcher.default_template = pkg.resource_filename('uliweb.core', 'default.html')
         Dispatcher.installed = True
         
@@ -324,19 +320,19 @@ class Dispatcher(object):
         env = self.get_template_env(env)
         if request:
             dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
-        handlers = execplugin(self, 'get_template_tag_handlers')
+        handlers = dispatch.get(self, 'get_template_tag_handlers')
         if self.debug:
             def _compile(code, filename, action):
                 __loader__ = Loader(filename, vars, env, dirs, notest=True)
                 return compile(code, filename, 'exec')
             
-            callplugin(self, 'before_render_template', vars, env)
+            dispatch.call(self, 'before_render_template', vars, env)
             fname, code, e = template.render_file(filename, vars, env, dirs, 
                 default_template=default_template, handlers=handlers)
                 
             #user can insert new local environment variables to e variable
             #and e will be a Context object
-            callplugin(self, 'before_compile_template', fname, code, vars, e)
+            dispatch.call(self, 'before_compile_template', fname, code, vars, e)
             out = template.Out()
             new_e = template._prepare_run(vars, e, out)
             if isinstance(code, (str, unicode)):
@@ -344,21 +340,21 @@ class Dispatcher(object):
             __loader__ = Loader(fname, vars, env, dirs)
             exec code in new_e
             text = out.getvalue()
-            output = execplugin(self, 'after_render_template', text, vars, e)
+            output = dispatch.get(self, 'after_render_template', text, vars, e)
             return output or text
         else:
-            callplugin(self, 'before_render_template', vars, env)
+            dispatch.call(self, 'before_render_template', vars, env)
             fname, code, e = template.render_file(filename, vars, env, dirs, 
                 default_template=default_template, handlers=handlers)
                 
-            callplugin(self, 'before_compile_template', vars, e)
+            dispatch.call(self, 'before_compile_template', vars, e)
             out = template.Out()
             new_e = template._prepare_run(vars, e, out)
             if isinstance(code, (str, unicode)):
                 code = compile(code, fname, 'exec')
             exec code in new_e
             text = out.getvalue()
-            output = execplugin(self, 'after_render_template', text, vars, e)
+            output = dispatch.get(self, 'after_render_template', text, vars, e)
             return output or text
     
     def render(self, templatefile, vars, env=None, dirs=None, request=None, default_template=None):

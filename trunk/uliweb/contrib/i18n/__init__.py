@@ -1,4 +1,4 @@
-from uliweb.core.plugin import plugin
+from uliweb.core.dispatch import bind
 from uliweb.i18n import format_locale
 from uliweb.i18n import ugettext_lazy as _
 
@@ -10,7 +10,7 @@ LANGUAGES = {}
 for k, v in _LANGUAGES.items():
     LANGUAGES[format_locale(k)] = v
 
-@plugin('startup_installed')
+@bind('startup_installed')
 def startup(sender):
     """
     @LANGUAGE_CODE
@@ -23,7 +23,7 @@ def startup(sender):
     install('uliweb', localedir)
     set_default_language(sender.settings.I18N.LANGUAGE_CODE)
     
-@plugin('prepare_template_env')
+@bind('prepare_template_env')
 def prepare_template_env(sender, env):
     from uliweb.i18n import ugettext_lazy
     env['_'] = ugettext_lazy

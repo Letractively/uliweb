@@ -1,6 +1,6 @@
 import os
 import re
-from uliweb.core.plugin import plugin
+from uliweb.core.dispatch import bind
 from uliweb.utils.common import log
 
 _template_handlers = {}
@@ -64,14 +64,14 @@ def use_tag_handler(app):
         env['collection'] = collection
     return use
 
-@plugin('startup_installed')
+@bind('startup_installed')
 def startup(sender):
     from uliweb.core import template
     if sender.settings.TEMPLATE.USE_TEMPLATE_TEMP_DIR:
         template.use_tempdir(sender.settings.TEMPLATE.TEMPLATE_TEMP_DIR)
     register('use', use_tag_handler(sender))
 
-@plugin('prepare_template_env')
+@bind('prepare_template_env')
 def prepare_template_env(sender, env):
     def cycle(*elements):
         while 1:
@@ -80,11 +80,11 @@ def prepare_template_env(sender, env):
 
     env['cycle'] = cycle
     
-@plugin('get_template_tag_handlers')
+@bind('get_template_tag_handlers')
 def get_template_tag_handlers(sender):
     return get_handlers()
 
-@plugin('after_render_template')
+@bind('after_render_template')
 def after_render_template(sender, text, vars, env):
     from htmlmerger import merge
     collections = []

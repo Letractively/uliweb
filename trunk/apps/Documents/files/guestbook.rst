@@ -108,21 +108,21 @@ Template Environment Extension
 
 Because we want to enable user input plain text and output them as HTML code,
 so we'll use uliweb.utils.text2html function to convert text to HTML code, and
-we can indeed import this function in template file, but we can also hook
-``prepare_template_env`` plugin, and inject a ``text2html`` function object to 
+we can indeed import this function in template file, but we can also bind
+``prepare_template_env`` dispatch point, and inject a ``text2html`` function object to 
 template environment, so that you can use ``text2html`` directly in template.
 Open ``GuestBook/__init__.py`` and adding below codes:
 
 .. code:: python
 
-    from uliweb.core.plugin import plugin
+    from uliweb.core.dispatch import bind
     
-    @plugin('prepare_template_env')
+    @bind('prepare_template_env')
     def prepare_template_env(sender, env):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
 
-This is a plugin hook usage example, and there are some others plugin hook you can
+This is a dispatch receiver function usage example, and there are some others plugin hook you can
 use.
 
 Prepare Model

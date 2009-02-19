@@ -40,7 +40,8 @@ site itself.
 
 A web application is defined as a **Project** in Uliweb. An Uliweb web application Project
 consists of any number of smaller components. These components can be complete applications
-called **Apps** in Uliweb speak, middleware, plugins, Uliweb core applications or Python modules of your own.
+called **Apps** in Uliweb speak, middlewares, dispatch units, Uliweb core applications 
+or Python modules of your own.
 
 The basic directory structure of an Uliweb Project is as follows:
 
@@ -145,7 +146,8 @@ feature will simplify the configuration.
 Startup and initialisation process
 ------------------------------------
 
-When an Uliweb project starts up, it searches the apps folder and imports all them one by one. So if you have plugins hook or some
+When an Uliweb project starts up, it searches the apps folder and imports 
+all them one by one. So if you have dispatch units or some
 initialization process you can write them in app's ``__init__.py`` module.
 Then it'll process all settings file, and 
 create an ini object named ``settings`` and bind it to ``application`` object.
@@ -180,10 +182,10 @@ Extending Uliweb
 
 Uliweb provides many ways to extend it:
 
-* Plugin extension. This is a plugin mechanism. It's similar as Dispatch module,
-  but I created it myself, and it's easy and simple. Uliweb has already predefined
-  some plugin hook points, when it runs there, it'll find if there are some
-  matched plugin hook functions existed, and will invoke them one by one.
+* Dispatch extension. This is a dispatch mechanism. I created it myself, and 
+  it's easy and simple. Uliweb has already predefined
+  some dispatch points, when it runs there, it'll find if there are some
+  associated receiver functions existed, and will call them one by one.
 * middleware extension. It's similar with Django. You can configure them in 
   ``settings.ini``, and it can be used for processing before or after the view
   process.

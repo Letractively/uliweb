@@ -1,7 +1,7 @@
-from uliweb.core.plugin import plugin
+from uliweb.core.dispatch import bind
 from uliweb.core.SimpleFrame import expose
 
-@plugin('prepare_template_env')
+@bind('prepare_template_env')
 def prepare_template_env(sender, env):
     global BUFFER_SIZE, SAVING_PATH
     

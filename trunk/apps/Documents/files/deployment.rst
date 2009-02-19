@@ -9,7 +9,7 @@ GAE(Google Application Engine)
 --------------------------------
 
 GAE is a plaform provided by Google for web applications. To use GAE in combination 
-with ULiweb for web development, you will need a GAE accont. Follow the instructions 
+with ULiweb for web development, you will need a GAE account. Follow the instructions 
 on the GAE main site to create one.
 
 You should test your project code under the GAE SDK development environment first 

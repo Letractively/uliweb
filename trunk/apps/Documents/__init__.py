@@ -1,9 +1,9 @@
-from uliweb.core.plugin import plugin
+from uliweb.core.dispatch import bind
 
 ##################################################
 # insert rst2html function to template environment
 ##################################################
-@plugin('prepare_template_env')
+@bind('prepare_template_env')
 def prepare_template_env(sender, env):
     from uliweb.utils.rst import to_html
     from uliweb.core.SimpleFrame import errorpage
