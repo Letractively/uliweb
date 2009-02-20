@@ -11,19 +11,14 @@ from werkzeug import script
 from uliweb.core import SimpleFrame
 
 def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True):
+    from uliweb.utils.common import sort
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
         
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps)
     if app.settings.GLOBAL.WSGI_MIDDLEWARES:
-        s = []
-        for w in app.settings.GLOBAL.WSGI_MIDDLEWARES:
-            if not isinstance(w, tuple):
-                s.append((500, w))
-            else:
-                s.append(w)
-        for i in reversed(s):
-            w = i[1]
+        s = sort(app.settings.GLOBAL.WSGI_MIDDLEWARES, default=500)
+        for w in reversed(s):
             if w in app.settings:
                 args = app.settings[w].dict()
             else:
