@@ -18,7 +18,7 @@ from rules import Mapping, add_rule
 import template
 from storage import Storage
 import dispatch
-from uliweb.utils.common import pkg, log
+from uliweb.utils.common import pkg, log, sort
 from uliweb.utils.pyini import Ini
 
 class ReversedKeyError(Exception):pass
@@ -77,16 +77,23 @@ def expose(rule=None, **kw):
     def decorate(f, rule=rule):
         if __use_urls:
             return f
-        if f.__name__ in reversed_keys:
-            raise ReversedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
-        kw['endpoint'] = f.__module__ + '.' + f.__name__
-        if callable(rule):
-            import inspect
-            args = inspect.getargspec(f)[0]
-            if args :
-                args = ['<%s>' % x for x in args]
-            appname = f.__module__.split('.')[1]
-            rule = '/' + '/'.join([appname, f.__name__] + args)
+        if callable(f):
+            f_name = f.__name__
+            endpoint = f.__module__ + '.' + f.__name__
+        else:
+            f_name = f.split('.')[-1]
+            endpoint = f
+            
+        if f_name in reversed_keys:
+            raise ReversedKeyError, 'The name "%s" is a reversed key, so please change another one' % f_name
+        kw['endpoint'] = endpoint
+#        if callable(rule):
+#            import inspect
+#            args = inspect.getargspec(f)[0]
+#            if args :
+#                args = ['<%s>' % x for x in args]
+#            appname = f.__module__.split('.')[1]
+#            rule = '/' + '/'.join([appname, f.__name__] + args)
         _urls.append((rule, kw))
         if static:
             _static_views.append(kw['endpoint'])
@@ -576,6 +583,7 @@ class Dispatcher(object):
                 _inss = {}
 
                 #middleware process request
+                #todo: saving the middlewares?
                 middlewares = settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
                 s = []
                 for middleware in middlewares:
@@ -587,11 +595,11 @@ class Dispatcher(object):
                         if order is None:
                             order = getattr(cls, 'ORDER', 500)
                         s.append((order, middleware))
-                    except ImportError:
+                    except ImportError, e:
                         log.exception(e)
                         errorpage("Can't import the middleware %s" % middleware)
                     _clses[middleware] = cls
-                middlewares = [v for k, v in sorted(s)]
+                middlewares = sort(s)
                 
                 for middleware in middlewares:
                     cls = _clses[middleware]

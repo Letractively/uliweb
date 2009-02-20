@@ -182,6 +182,37 @@ def wrap(f):
         return func
     return d_wrap
 
+def sort(alist, default=500):
+    """
+    Sort a list, each element could be a tuple (order, value) or just a value
+    for example:
+        ['abc', (50, 'cde')]
+    you can put a default argument to it, if there is no order of a element, then
+    the order of this element will be the default value.
+    All elements will be sorted according the order value, and the same order
+    value elements will be sorted in the definition of the element
+    
+    >>> sort(['a', 'c', 'b'])
+    ['a', 'c', 'b']
+    >>> sort([(100, 'a'), 'c', 'd', (50, 'b')])
+    ['b', 'a', 'c', 'd']
+    >>> sort([(100, 'a'), (100, 'c'), 'd', (100, 'b')])
+    ['a', 'c', 'b', 'd']
+    
+    """
+    d = {}
+    for v in alist:
+        if isinstance(v, (tuple, list)):
+            n, s = v[0], v[1]
+        else:
+            n, s = default, v
+        p = d.setdefault(n, [])
+        p.append(s)
+    t = []
+    for k in sorted(d.keys()):
+        t.extend(d[k])
+    return t
+
 if __name__ == '__main__':
     log.info('Info: info')
     try:
