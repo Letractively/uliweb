@@ -21,6 +21,7 @@ __debug_query__ = None
 import decimal
 import threading
 import datetime
+from uliweb.utils import date
 from sqlalchemy import *
 
 _default_metadata = MetaData()
@@ -323,28 +324,12 @@ class DateTimeProperty(Property):
     data_type = datetime.datetime
     field_class = DateTime
     
-    DEFAULT_DATETIME_INPUT_FORMATS = (
-        '%Y-%m-%d %H:%M:%S',     # '2006-10-25 14:30:59'
-        '%Y-%m-%d %H:%M',        # '2006-10-25 14:30'
-        '%Y-%m-%d',              # '2006-10-25'
-        '%Y/%m/%d %H:%M:%S',     # '2006/10/25 14:30:59'
-        '%Y/%m/%d %H:%M',        # '2006/10/25 14:30'
-        '%Y/%m/%d ',             # '2006/10/25 '
-        '%m/%d/%Y %H:%M:%S',     # '10/25/2006 14:30:59'
-        '%m/%d/%Y %H:%M',        # '10/25/2006 14:30'
-        '%m/%d/%Y',              # '10/25/2006'
-        '%m/%d/%y %H:%M:%S',     # '10/25/06 14:30:59'
-        '%m/%d/%y %H:%M',        # '10/25/06 14:30'
-        '%m/%d/%y',              # '10/25/06'
-        '%H:%M:%S',              # '14:30:59'
-        '%H:%M',                 # '14:30'
-    )
-    
     def __init__(self, verbose_name=None, auto_now=False, auto_now_add=False,
-             **kwds):
+            format=None, **kwds):
         super(DateTimeProperty, self).__init__(verbose_name, **kwds)
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
+        self.format = format
 
     def validate(self, value):
         value = super(DateTimeProperty, self).validate(value)
@@ -367,15 +352,12 @@ class DateTimeProperty(Property):
 
     @staticmethod
     def now():
-        return datetime.datetime.now()
+        return date.now()
 
     def convert(self, value):
-        import time
-        for format in self.DEFAULT_DATETIME_INPUT_FORMATS:
-            try:
-                return datetime.datetime(*time.strptime(value, format)[:6])
-            except ValueError:
-                continue
+        d = date.to_datetime(value, format=self.format)
+        if d:
+            return d
         raise BadValueError('The datetime value is not a valid format')
     
 class DateProperty(DateTimeProperty):
@@ -385,12 +367,12 @@ class DateProperty(DateTimeProperty):
     def get_value_for_datastore(self, model_instance):
         value = super(DateProperty, self).get_value_for_datastore(model_instance)
         if value is not None:
-            value = datetime.datetime(value.year, value.month, value.day)
+            value = date.to_datetime(value)
         return value
 
     def make_value_from_datastore(self, value):
         if value is not None:
-            value = datetime.date(value.year, value.month, value.day)
+            value = date.to_date(value)
         return value
 
     #if the value is datetime.datetime, this convert will not be invoked at all
@@ -400,14 +382,11 @@ class DateProperty(DateTimeProperty):
             'The value of DataProperty should be str, unicode, or datetime.datetime type.'\
             'But it is %s' % type(value).__name__
         if isinstance(value, datetime.datetime):
-            return datetime.date(value.year, value.month, value.day)
+            return date.to_date(value)
         else:
-            import time
-            for format in self.DEFAULT_DATETIME_INPUT_FORMATS:
-                try:
-                    return datetime.date(*time.strptime(value, format)[:3])
-                except ValueError:
-                    continue
+            d = date.to_datetime(value)
+            if d:
+                return date.to_date(d)
             raise BadValueError('The date value is not a valid format')
     
 class TimeProperty(DateTimeProperty):
@@ -419,14 +398,12 @@ class TimeProperty(DateTimeProperty):
     def get_value_for_datastore(self, model_instance):
         value = super(TimeProperty, self).get_value_for_datastore(model_instance)
         if value is not None:
-            value = datetime.datetime(1970, 1, 1, value.hour, value.minute, value.second,
-                value.microsecond)
+            value = date.to_datetime(value)
         return value
 
     def make_value_from_datastore(self, value):
         if value is not None:
-            value = datetime.time(value.hour, value.minute, value.second,
-                value.microsecond)
+            value = date.to_time(value)
         return value
 
     def convert(self, value):
@@ -434,14 +411,11 @@ class TimeProperty(DateTimeProperty):
             'The value of DataProperty should be str, unicode, or datetime.datetime type.'\
             'But it is %s' % type(value).__name__
         if isinstance(value, datetime.datetime):
-            return datetime.time(value.hour, value.minute, value.second)
+            return date.to_time(value)
         else:
-            import time
-            for format in self.DEFAULT_DATETIME_INPUT_FORMATS:
-                try:
-                    return datetime.time(*time.strptime(value, format)[3:6])
-                except ValueError:
-                    continue
+            d = date.to_datetime(value)
+            if d:
+                return date.to_time(d)
             raise BadValueError('The time value is not a valid format')
     
 class IntegerProperty(Property):
