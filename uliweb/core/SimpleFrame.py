@@ -284,6 +284,11 @@ class Dispatcher(object):
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
         dispatch.call(self, 'prepare_template_env', Dispatcher.template_env)
         Dispatcher.default_template = pkg.resource_filename('uliweb.core', 'default.html')
+        
+        #setup timezone
+        from uliweb.utils import date
+        date.set_timezone(settings.GLOBAL.TIME_ZONE)
+        
         Dispatcher.installed = True
         
     def _prepare_env(self):
