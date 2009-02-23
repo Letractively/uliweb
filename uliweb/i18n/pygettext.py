@@ -12,6 +12,7 @@
 # directory (including globbing chars, important for Win32).
 # Made docstring fit in 80 chars wide displays using pydoc.
 #
+# Updated by limodou 2009-02-23
 
 # for selftesting
 import sys
@@ -270,17 +271,25 @@ def _visit_pyfiles(list, dirname, names):
     # get extension for python source files
     if not globals().has_key('_py_ext'):
         global _py_ext
+#        _py_ext = [triple[0] for triple in imp.get_suffixes()
+#                   if triple[2] == imp.PY_SOURCE][0]
         _py_ext = [triple[0] for triple in imp.get_suffixes()
-                   if triple[2] == imp.PY_SOURCE][0]
+                   if triple[2] == imp.PY_SOURCE]
+        
 
     # don't recurse into CVS directories
     if 'CVS' in names:
         names.remove('CVS')
 
+    if '.svn' in names:
+        names.remove('.svn')
+    
     # add all *.py files to list
     list.extend(
         [os.path.join(dirname, file) for file in names
-         if os.path.splitext(file)[1] == _py_ext]
+         #if os.path.splitext(file)[1] == _py_ext]
+         #so that _py_ext could be a list
+         if os.path.splitext(file)[1] in _py_ext]
         )
 
 
@@ -692,6 +701,9 @@ def main():
             fp.close()
 
 def extrace_files(files, outputfile):
+    global _py_ext
+    
+    _py_ext = ['.py', '.ini', '.html']
     class Options:
         # constants
         GNU = 1
@@ -699,7 +711,7 @@ def extrace_files(files, outputfile):
         # defaults
         extractall = 0 # FIXME: currently this option has no effect at all.
         escape = 0
-        keywords = []
+        keywords = ['gettext', 'ngettext']
         outpath = ''
         outfile = outputfile
         writelocations = 1
@@ -716,10 +728,14 @@ def extrace_files(files, outputfile):
     make_escapes(options.escape)
     options.keywords.extend(default_keywords)
     
+    if not isinstance(files, list):
+        files = getFilesForName(files)
     eater = TokenEater(options)
     for filename in files:
         if options.verbose:
             print _('Working on %s') % filename
+        if not os.path.exists(filename):
+            continue
         if filename.endswith('.html'):
             from uliweb.core import template
             from cStringIO import StringIO
@@ -729,7 +745,7 @@ def extrace_files(files, outputfile):
             text = file(filename, 'rb').read()
             text = re_include.sub('', text)
             text = re_extend.sub('', text)
-            text = template.render_text(text)
+            text, env = template.render_text(text)
             fp = StringIO(text)
             closep = 0
         else:

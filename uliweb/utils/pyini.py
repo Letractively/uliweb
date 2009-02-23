@@ -183,12 +183,13 @@ class Section(SortedDict):
         return buf.getvalue()
     
 class Ini(SortedDict):
-    def __init__(self, inifile=None, commentchar='#', encoding='utf-8'):
+    def __init__(self, inifile=None, commentchar='#', encoding='utf-8', env=None):
         super(Ini, self).__init__()
         self._inifile = inifile
 #        self.value = value
         self._commentchar = commentchar
         self._encoding = 'utf-8'
+        self._env = env or {}
         
         if self._inifile:
             self.read(self._inifile)
@@ -272,7 +273,7 @@ class Ini(SortedDict):
                             (value.startswith('u"') and value.endswith('"'))):
                             v = unicode(value[2:-1], self._encoding)
                         else:
-                            v = eval(value, {}, section)
+                            v = eval(value, self._env, section)
                     except Exception, e:
                         raise Exception, "Converting value (%s) error in line %d" % (value, lineno)
                     
