@@ -93,3 +93,13 @@ def test_ini():
     >>> print x.default.d
     {'a': 'a', 'b': 'b'}
     """  
+
+def test_gettext():
+    """
+    >>> from uliweb.i18n import gettext_lazy as _
+    >>> x = Ini(env={'_':_})
+    >>> x['default'] = Section('default')
+    >>> x.default.option = _('Hello')
+    >>> x
+    <Ini {'default':<Section {'option':gettext('Hello')}>}>
+    """

@@ -543,7 +543,9 @@ class Dispatcher(object):
         global settings
         inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
         s.insert(0, inifile)
-        settings = Ini()
+        from uliweb.i18n import gettext_lazy
+        env = {'_':gettext_lazy}
+        settings = Ini(env=env)
         for v in s:
             settings.read(v)
             

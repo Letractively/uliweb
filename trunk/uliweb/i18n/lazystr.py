@@ -4,6 +4,11 @@ def lazy(func):
     return f
     
 class LazyString(object):
+    """
+    >>> from uliweb.i18n import gettext_lazy as _
+    >>> x = _('Hello')
+    >>> print repr(x)
+    """
     def __init__(self, func, message):
         self._func = func
         self.msg = message
@@ -26,7 +31,7 @@ class LazyString(object):
         return self._func(self.msg)
     
     def __repr__(self):
-        return self.__str__()
+        return "%s(%r)" % (self._func.__name__, self.msg)
     
     def __add__(self, obj):
         return self.getvalue() + obj

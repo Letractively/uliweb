@@ -43,6 +43,7 @@ def parse_translation(f):
         msgstr += '\n' + line[:-1]
 
     if line.strip() != '':
+        print 'Error Line: ', line
         raise RuntimeError("parse error")
 
     return comments, msgid, msgstr
@@ -115,7 +116,7 @@ def merge(file1, file2):
 #                            untranslated += 1
             outfile.write('\n'.join(comments) + '\n')
             outfile.write('msgid ' + msgid + '\n')
-            outfile.write('msgstr ' + msgstr + '\n')
+            outfile.write('msgstr ' + msgstr + '\n\n')
         if msgid != '""' and msgstr == '""':
             untranslated += 1
     
