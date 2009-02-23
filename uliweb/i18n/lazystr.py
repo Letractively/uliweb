@@ -31,7 +31,7 @@ class LazyString(object):
         return self._func(self.msg)
     
     def __repr__(self):
-        return "%s(%r)" % (self._func.__name__, self.msg)
+        return "%s_lazy(%r)" % (self._func.__name__, self.msg)
     
     def __add__(self, obj):
         return self.getvalue() + obj
