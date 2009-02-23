@@ -30,3 +30,9 @@ def startup(sender):
 def prepare_template_env(sender, env):
     from uliweb.i18n import ugettext_lazy
     env['_'] = ugettext_lazy
+
+@bind('init_settings_env')
+def init_settings_env(sender):
+    from uliweb.i18n import gettext_lazy
+    env = {'_':gettext_lazy, 'gettext_lazy':gettext_lazy}
+    return env
