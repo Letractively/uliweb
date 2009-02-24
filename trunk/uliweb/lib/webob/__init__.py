@@ -20,6 +20,10 @@ from webob.statusreasons import status_reasons
 from webob.cachecontrol import CacheControl, serialize_cache_control
 from webob.acceptparse import Accept, MIMEAccept, NilAccept, MIMENilAccept, NoAccept
 from webob.byterange import Range, ContentRange
+try:
+    sorted
+except NameError:
+    from webob.compat import sorted
 
 _CHARSET_RE = re.compile(r';\s*charset=([^;]*)', re.I)
 _SCHEME_RE = re.compile(r'^[a-z]+:', re.I)
@@ -42,16 +46,18 @@ UTC = _UTC()
 
 def html_escape(s):
     """HTML-escape a string or object
-    
+
     This converts any non-string objects passed into it to strings
     (actually, using ``unicode()``).  All values returned are
     non-unicode strings (using ``&#num;`` entities for all non-ASCII
     characters).
-    
+
     None is treated specially, and returns the empty string.
     """
     if s is None:
         return ''
+    if hasattr(s, '__html__'):
+        return s.__html__()
     if not isinstance(s, basestring):
         if hasattr(s, '__unicode__'):
             s = unicode(s)
@@ -167,6 +173,9 @@ class header_getter(object):
             if self.header in obj.headers:
                 del obj.headers[self.header]
         else:
+            if isinstance(value, unicode):
+                # This is the standard encoding for headers:
+                value = value.encode('ISO-8859-1')
             obj.headers[self.header] = value
 
     def __delete__(self, obj):
@@ -176,6 +185,34 @@ class header_getter(object):
 
     def __repr__(self):
         return '<Proxy for header %s>' % self.header
+
+class set_via_call(object):
+    def __init__(self, func, adapt_args=None):
+        self.func = func
+        self.adapt_args = adapt_args
+    def __get__(self, obj, type=None):
+        return self.__class__(self.func.__get__(obj, type))
+    def __set__(self, obj, value):
+        if self.adapt_args is None:
+            args, kw = (value,), {}
+        else:
+            result = self.adapt_args(value)
+            if result is None:
+                return
+            args, kw = result
+        self.func(obj, *args, **kw)
+    def __repr__(self):
+        return 'set_via_call(%r)' % self.func
+    def __call__(self, *args, **kw):
+        return self.func(*args, **kw)
+
+def _adapt_cache_expires(value):
+    if value is False:
+        return None
+    if value is True:
+        return (0,), {}
+    else:
+        return (value,), {}
 
 class converter(object):
     """
@@ -274,6 +311,9 @@ def _parse_date(value):
     if t is None:
         # Could not parse
         return None
+    if t[-1] is None:
+        # No timezone given.  None would mean local time, but we'll force UTC
+        t = t[:9] + (0,)
     t = mktime_tz(t)
     return datetime.fromtimestamp(t, UTC)
 
@@ -290,10 +330,21 @@ def _serialize_date(dt):
         dt = dt.timetuple()
     if isinstance(dt, (tuple, time.struct_time)):
         dt = calendar.timegm(dt)
-    if not isinstance(dt, (float, int)):
+    if not isinstance(dt, (float, int, long)):
         raise ValueError(
             "You must pass in a datetime, date, time tuple, or integer object, not %r" % dt)
     return formatdate(dt)
+
+def _serialize_cookie_date(dt):
+    if dt is None:
+        return None
+    if isinstance(dt, unicode):
+        dt = dt.encode('ascii')
+    if isinstance(dt, timedelta):
+        dt = datetime.now() + dt
+    if isinstance(dt, (datetime, date)):
+        dt = dt.timetuple()
+    return time.strftime('%a, %d-%b-%Y %H:%M:%S GMT', dt)
 
 def _parse_date_delta(value):
     """
@@ -462,26 +513,27 @@ class Request(object):
     request_body_tempfile_limit = 10*1024
 
     def __init__(self, environ=None, environ_getter=None, charset=NoDefault, unicode_errors=NoDefault,
-                 decode_param_names=NoDefault):
-        if environ is None and environ_getter is None:
-            raise TypeError(
-                "You must provide one of environ or environ_getter")
-        if environ is not None and environ_getter is not None:
-            raise TypeError(
-                "You can only provide one of the environ and environ_getter arguments")
+                 decode_param_names=NoDefault, **kw):
+        if environ_getter is not None:
+            raise ValueError('The environ_getter argument is no longer '
+                             'supported')
         if environ is None:
-            self._environ_getter = environ_getter
-        else:
-            if not isinstance(environ, dict):
-                raise TypeError(
-                    "Bad type for environ: %s" % type(environ))
-            self._environ = environ
+            raise TypeError("You must provide an environ arg")
+        d = self.__dict__
+        d['environ'] = environ
         if charset is not NoDefault:
-            self.__dict__['charset'] = charset
+            d['charset'] = charset
         if unicode_errors is not NoDefault:
-            self.__dict__['unicode_errors'] = unicode_errors
+            d['unicode_errors'] = unicode_errors
         if decode_param_names is not NoDefault:
-            self.__dict__['decode_param_names'] = decode_param_names
+            d['decode_param_names'] = decode_param_names
+        if kw:
+            my_class = self.__class__
+            for name, value in kw.iteritems():
+                if not hasattr(my_class, name):
+                    raise TypeError(
+                        "Unexpected keyword: %s=%r" % (name, value))
+                setattr(self, name, value)
 
     def __setattr__(self, attr, value, DEFAULT=[]):
         ## FIXME: I don't know why I need this guard (though experimentation says I do)
@@ -507,16 +559,6 @@ class Request(object):
             del self.environ['webob.adhoc_attrs'][attr]
         except KeyError:
             raise AttributeError(attr)
-
-    def environ(self):
-        """
-        The WSGI environment dictionary for this request
-        """
-        return self._environ_getter()
-    environ = property(environ, doc=environ.__doc__)
-
-    def _environ_getter(self):
-        return self._environ
 
     def _body_file__get(self):
         """
@@ -731,7 +773,7 @@ class Request(object):
                 del self.environ['wsgiorg.routing_args']
             else:
                 self.environ['wsgiorg.routing_args'] = (self.environ['wsgiorg.routing_args'][0], {})
-            
+
     urlvars = property(_urlvars__get, _urlvars__set, _urlvars__del, doc=_urlvars__get.__doc__)
 
     def _urlargs__get(self):
@@ -801,16 +843,19 @@ class Request(object):
         except ValueError:
             return ''
         c = self.body_file.read(length)
-        tempfile_limit = self.request_body_tempfile_limit
-        if tempfile_limit and len(c) > tempfile_limit:
-            fileobj = tempfile.TemporaryFile()
-            fileobj.write(c)
-            fileobj.seek(0)
+        if hasattr(self.body_file, 'seek'):
+            self.body_file.seek(0)
         else:
-            fileobj = StringIO(c)
-        # We don't want/need to lose CONTENT_LENGTH here (as setting
-        # self.body_file would do):
-        self.environ['wsgi.input'] = fileobj
+            tempfile_limit = self.request_body_tempfile_limit
+            if tempfile_limit and len(c) > tempfile_limit:
+                fileobj = tempfile.TemporaryFile()
+                fileobj.write(c)
+                fileobj.seek(0)
+            else:
+                fileobj = StringIO(c)
+            # We don't want/need to lose CONTENT_LENGTH here (as setting
+            # self.body_file would do):
+            self.environ['wsgi.input'] = fileobj
         return c
 
     def _body__set(self, value):
@@ -831,14 +876,16 @@ class Request(object):
 
     def str_POST(self):
         """
-        Return a MultiDict containing all the variables from a POST
-        form request.  Does *not* return anything for non-POST
-        requests or for non-form requests (returns empty dict-like
-        object in that case).
+        Return a MultiDict containing all the variables from a form
+        request. Returns an empty dict-like object for non-form
+        requests.
+
+        Form requests are typically POST requests, however PUT requests
+        with an appropriate Content-Type are also supported.
         """
         env = self.environ
-        if self.method != 'POST':
-            return NoVars('Not a POST request')
+        if self.method not in ('POST', 'PUT'):
+            return NoVars('Not a form request')
         if 'webob._parsed_post_vars' in env:
             vars, body_file = env['webob._parsed_post_vars']
             if body_file is self.body_file:
@@ -853,15 +900,15 @@ class Request(object):
         content_type = self.content_type
         if ';' in content_type:
             content_type = content_type.split(';', 1)[0]
-        if content_type not in ('', 'application/x-www-form-urlencoded',
-                                'multipart/form-data'):
+        if (self.method == 'PUT' and not content_type) or \
+                content_type not in ('', 'application/x-www-form-urlencoded',
+                                     'multipart/form-data'):
             # Not an HTML form submission
             return NoVars('Not an HTML form submission (Content-Type: %s)'
                           % content_type)
-        if 'CONTENT_LENGTH' not in env:
-            # FieldStorage assumes a default CONTENT_LENGTH of -1, but a
-            # default of 0 is better:
-            env['CONTENT_TYPE'] = '0'
+        # FieldStorage assumes a default CONTENT_LENGTH of -1, but a
+        # default of 0 is better:
+        env.setdefault('CONTENT_LENGTH', 0)
         fs_environ = env.copy()
         fs_environ['QUERY_STRING'] = ''
         fs = cgi.FieldStorage(fp=self.body_file,
@@ -917,7 +964,7 @@ class Request(object):
 
     str_queryvars = deprecated_property(str_GET, 'str_queryvars',
                                         'use str_GET instead')
-                                        
+
 
     def GET(self):
         """
@@ -957,6 +1004,8 @@ class Request(object):
 
     params = property(params, doc=params.__doc__)
 
+    _rx_quotes = re.compile('"(.*)"')
+
     def str_cookies(self):
         """
         Return a *plain* dictionary of cookies as found in the request.
@@ -972,7 +1021,11 @@ class Request(object):
             cookies = BaseCookie()
             cookies.load(source)
             for name in cookies:
-                vars[name] = cookies[name].value
+                value = cookies[name].value
+                unquote_match = self._rx_quotes.match(value)
+                if unquote_match is not None:
+                    value = unquote_match.group(1)
+                vars[name] = value
         env['webob._parsed_cookies'] = (vars, source)
         return vars
 
@@ -998,16 +1051,9 @@ class Request(object):
         This only does a shallow copy, except of wsgi.input
         """
         env = self.environ.copy()
-        data = self.body
-        tempfile_limit = self.request_body_tempfile_limit
-        if tempfile_limit and len(data) > tempfile_limit:
-            fileobj = tempfile.TemporaryFile()
-            fileobj.write(data)
-            fileobj.seek(0)
-        else:
-            fileobj = StringIO(data)
-        env['wsgi.input'] = fileobj
-        return self.__class__(env)
+        new_req = self.__class__(env)
+        new_req.copy_body()
+        return new_req
 
     def copy_get(self):
         """
@@ -1023,7 +1069,64 @@ class Request(object):
         env['REQUEST_METHOD'] = 'GET'
         return self.__class__(env)
 
-    def remove_conditional_headers(self, remove_encoding=True):
+    def make_body_seekable(self):
+        """
+        This forces ``environ['wsgi.input']`` to be seekable.  That
+        is, if it doesn't have a `seek` method already, the content is
+        copied into a StringIO or temporary file.
+
+        The choice to copy to StringIO is made from
+        ``self.request_body_tempfile_limit``
+        """
+        input = self.body_file
+        if hasattr(input, 'seek'):
+            # It has a seek method, so we don't need to do anything
+            return
+        self.copy_body()
+
+    def copy_body(self):
+        """
+        Copies the body, in cases where it might be shared with
+        another request object and that is not desired.
+
+        This copies the body in-place, either into a StringIO object
+        or a temporary file.
+        """
+        length = self.content_length
+        if length == 0:
+            # No real need to copy this, but of course it is free
+            self.body_file = StringIO('')
+            return
+        tempfile_limit = self.request_body_tempfile_limit
+        body = None
+        input = self.body_file
+        if hasattr(input, 'seek'):
+            # Just in case someone has read parts of the body already
+            ## FIXME: Should we use .tell() to try to put the body
+            ## back to its previous position?
+            input.seek(0)
+        if length in (-1, None):
+            body = self.body
+            length = len(body)
+            self.content_length = length
+        if tempfile_limit and length > tempfile_limit:
+            fileobj = tempfile.TemporaryFile()
+            if body is None:
+                while length:
+                    data = input.read(min(length, 4096))
+                    fileobj.write(data)
+                    length -= len(data)
+            else:
+                fileobj.write(body)
+            fileobj.seek(0)
+        else:
+            if body is None:
+                body = input.read(length)
+            fileobj = StringIO(body)
+        self.body_file = fileobj
+
+    def remove_conditional_headers(self, remove_encoding=True, remove_range=True,
+                                        remove_match=True, remove_modified=True):
         """
         Remove headers that make the request conditional.
 
@@ -1033,13 +1136,19 @@ class Request(object):
         This does not remove headers like If-Match, which are used for
         conflict detection.
         """
-        for key in ['HTTP_IF_MATCH', 'HTTP_IF_MODIFIED_SINCE',
-                    'HTTP_IF_RANGE', 'HTTP_RANGE']:
+        check_keys = []
+        if remove_range:
+            check_keys += ['HTTP_IF_RANGE', 'HTTP_RANGE']
+        if remove_match:
+            check_keys.append('HTTP_IF_NONE_MATCH')
+        if remove_modified:
+            check_keys.append('HTTP_IF_MODIFIED_SINCE')
+        if remove_encoding:
+            check_keys.append('HTTP_ACCEPT_ENCODING')
+
+        for key in check_keys:
             if key in self.environ:
                 del self.environ[key]
-        if remove_encoding:
-            if 'HTTP_ACCEPT_ENCODING' in self.environ:
-                del self.environ['HTTP_ACCEPT_ENCODING']
 
     accept = converter(
         environ_getter('HTTP_ACCEPT', rfc_section='14.1'),
@@ -1142,7 +1251,7 @@ class Request(object):
     user_agent = environ_getter('HTTP_USER_AGENT', rfc_section='14.43')
 
     def __repr__(self):
-        msg = '<%s at %x %s %s>' % (
+        msg = '<%s at 0x%x %s %s>' % (
             self.__class__.__name__,
             abs(id(self)), self.method, self.url)
         return msg
@@ -1219,7 +1328,7 @@ class Request(object):
             request=self)
 
     #@classmethod
-    def blank(cls, path, environ=None, base_url=None, headers=None):
+    def blank(cls, path, environ=None, base_url=None, headers=None, **kw):
         """
         Create a blank request environ (and Request wrapper) with the
         given path (path should be urlencoded), and any keys from
@@ -1232,6 +1341,9 @@ class Request(object):
         values you pass in will take precedence.  If you pass in
         base_url then wsgi.url_scheme, HTTP_HOST, and SCRIPT_NAME will
         be filled in from that value.
+
+        Any extra keyword will be passed to ``__init__`` (e.g.,
+        ``decode_param_names``).
         """
         if _SCHEME_RE.search(path):
             scheme, netloc, path, qs, fragment = urlparse.urlsplit(path)
@@ -1298,7 +1410,7 @@ class Request(object):
                 env['SCRIPT_NAME'] = urllib.unquote(path)
         if environ:
             env.update(environ)
-        obj = cls(env)
+        obj = cls(env, **kw)
         if headers is not None:
             obj.headers.update(headers)
         return obj
@@ -1312,10 +1424,11 @@ class Response(object):
     """
 
     default_content_type = 'text/html'
-    default_charset = 'utf8'
+    default_charset = 'UTF-8'
+    unicode_errors = 'strict'
     default_conditional_response = False
 
-    def __init__(self, body=None, status='200 OK', headerlist=None, app_iter=None,
+    def __init__(self, body=None, status=None, headerlist=None, app_iter=None,
                  request=None, content_type=None, conditional_response=NoDefault,
                  **kw):
         if app_iter is None:
@@ -1324,7 +1437,10 @@ class Response(object):
         elif body is not None:
             raise TypeError(
                 "You may only give one of the body and app_iter arguments")
-        self.status = status
+        if status is None:
+            self._status = '200 OK'
+        else:
+            self.status = status
         if headerlist is None:
             self._headerlist = []
         else:
@@ -1339,42 +1455,52 @@ class Response(object):
                 self._request = None
         else:
             self._environ = self._request = None
-        if content_type is not None:
-            self.content_type = content_type
-        elif self.default_content_type is not None and headerlist is None:
-            self.content_type = self.default_content_type
+        if content_type is None:
+            content_type = self.default_content_type
+        charset = None
+        if 'charset' in kw:
+            charset = kw.pop('charset')
+        elif self.default_charset and headerlist is None:
+            if content_type and (content_type == 'text/html'
+                                 or content_type.startswith('text/')
+                                 or content_type.startswith('application/xml')
+                                 or (content_type.startswith('application/')
+                                     and content_type.endswith('+xml'))):
+                charset = self.default_charset
+        if content_type and charset:
+            content_type += '; charset=' + charset
+        elif self._headerlist and charset:
+            self.charset = charset
+        if not self._headerlist and content_type:
+            self._headerlist.append(('Content-Type', content_type))
         if conditional_response is NoDefault:
             self.conditional_response = self.default_conditional_response
         else:
             self.conditional_response = conditional_response
-        if 'charset' in kw:
-            # We set this early, so something like unicode_body works later
-            value = kw.pop('charset')
-            if value:
-                self.charset = value
-        elif self.default_charset and not self.charset and headerlist is None:
-            ct = self.content_type
-            if ct and (ct.startswith('text/') or ct.startswith('application/xml')
-                       or (ct.startswith('application/') and ct.endswith('+xml'))):
-                self.charset = self.default_charset
         if app_iter is not None:
             self._app_iter = app_iter
             self._body = None
         else:
             if isinstance(body, unicode):
-                self.unicode_body = body
+                if charset is None:
+                    raise TypeError(
+                        "You cannot set the body to a unicode value without a charset")
+                body = body.encode(charset)
+            self._body = body
+            if headerlist is None:
+                self._headerlist.append(('Content-Length', str(len(body))))
             else:
-                self.body = body
+                self.headers['Content-Length'] = str(len(body))
             self._app_iter = None
-        for name, value in kw.items():
+        for name, value in kw.iteritems():
             if not hasattr(self.__class__, name):
                 # Not a basic attribute
                 raise TypeError(
-                    "Unexpected keyword: %s=%r in %r" % (name, value))
+                    "Unexpected keyword: %s=%r" % (name, value))
             setattr(self, name, value)
 
     def __repr__(self):
-        return '<%s %x %s>' % (
+        return '<%s at 0x%x %s>' % (
             self.__class__.__name__,
             abs(id(self)),
             self.status)
@@ -1385,6 +1511,19 @@ class Response(object):
                              for name, value in self.headerlist])
                 + '\n\n'
                 + self.body)
+
+    def copy(self):
+        """Makes a copy of the response"""
+        if self._app_iter is not None:
+            app_iter = self._app_iter
+        else:
+            app_iter = [self._body]
+        return self.__class__(
+            content_type=False,
+            status=self._status,
+            headerlist=self._headerlist,
+            app_iter=app_iter,
+            conditional_response=self.conditional_response)
 
     def _status__get(self):
         """
@@ -1519,7 +1658,7 @@ class Response(object):
         for match in _PARAM_RE.finditer(params):
             result[match.group(1)] = match.group(2) or match.group(3) or ''
         return result
-        
+
     def _content_type_params__set(self, value_dict):
         if not value_dict:
             del self.content_type_params
@@ -1582,6 +1721,12 @@ class Response(object):
             raise TypeError(
                 "You can only set the body to a str (not %s)"
                 % type(value))
+        try:
+            if self._body or self._app_iter:
+                self.content_md5 = None
+        except AttributeError:
+            # if setting body early in initialization _body and _app_iter don't exist yet
+            pass
         self._body = value
         self.content_length = len(value)
         self._app_iter = None
@@ -1620,7 +1765,7 @@ class Response(object):
             raise AttributeError(
                 "You cannot access Response.unicode_body unless charset is set")
         body = self.body
-        return body.decode(self.charset)
+        return body.decode(self.charset, self.unicode_errors)
 
     def _unicode_body__set(self, value):
         if not self.charset:
@@ -1666,12 +1811,22 @@ class Response(object):
 
     def set_cookie(self, key, value='', max_age=None,
                    path='/', domain=None, secure=None, httponly=False,
-                   version=None, comment=None):
+                   version=None, comment=None, expires=None):
         """
         Set (add) a cookie for the response
         """
+        if isinstance(value, unicode) and self.charset is not None:
+            value = '"%s"' % value.encode(self.charset)
         cookies = BaseCookie()
         cookies[key] = value
+        if isinstance(max_age, timedelta):
+            max_age = max_age.seconds + max_age.days*24*60*60
+        if max_age is not None and expires is None:
+            expires = datetime.utcnow() + timedelta(seconds=max_age)
+        if isinstance(expires, timedelta):
+            expires = datetime.utcnow() + expires
+        if isinstance(expires, datetime):
+            expires = '"'+_serialize_cookie_date(expires)+'"'
         for var_name, var_value in [
             ('max_age', max_age),
             ('path', path),
@@ -1680,10 +1835,15 @@ class Response(object):
             ('HttpOnly', httponly),
             ('version', version),
             ('comment', comment),
+            ('expires', expires),
             ]:
             if var_value is not None and var_value is not False:
                 cookies[key][var_name.replace('_', '-')] = str(var_value)
         header_value = cookies[key].output(header='').lstrip()
+        if header_value.endswith(';'):
+            # Python 2.4 adds a trailing ; to the end, strip it to be
+            # consistent with 2.5
+            header_value = header_value[:-1]
         self.headerlist.append(('Set-Cookie', header_value))
 
     def delete_cookie(self, key, path='/', domain=None):
@@ -1695,7 +1855,7 @@ class Response(object):
         that it should expire immediately.
         """
         self.set_cookie(key, '', path=path, domain=domain,
-                        max_age=0)
+                        max_age=0, expires=timedelta(days=-5))
 
     def unset_cookie(self, key):
         """
@@ -1716,8 +1876,12 @@ class Response(object):
             if key in cookies:
                 found = True
                 del cookies[key]
-            header = cookies.output(header='').lstrip()
+                header = cookies.output(header='').lstrip()
             if header:
+                if header.endswith(';'):
+                    # Python 2.4 adds a trailing ; to the end, strip it
+                    # to be consistent with 2.5
+                    header = header[:-1]
                 self.headers.add('Set-Cookie', header)
         if not found:
             raise KeyError(
@@ -1744,6 +1908,11 @@ class Response(object):
         return location
 
     def _location__set(self, value):
+        if value is None:
+            del self.location
+            return
+        if isinstance(value, unicode):
+            value = value.encode('ISO-8859-1')
         if not _SCHEME_RE.search(value):
             # Not absolute, see if we can make it absolute
             if self.request is not None:
@@ -1814,7 +1983,7 @@ class Response(object):
 
     cache_control = property(_cache_control__get, _cache_control__set, _cache_control__del, doc=_cache_control__get.__doc__)
 
-    def cache_expires(self, seconds=0, **kw):
+    def _cache_expires(self, seconds=0, **kw):
         """
         Set expiration on this request.  This sets the response to
         expire in the given seconds, and any other attributes are used
@@ -1844,6 +2013,8 @@ class Response(object):
         for name, value in kw.items():
             setattr(cache_control, name, value)
 
+    cache_expires = set_via_call(_cache_expires, _adapt_cache_expires)
+
     content_encoding = header_getter('Content-Encoding', rfc_section='14.11')
 
     def encode_content(self, encoding='gzip'):
@@ -1852,6 +2023,7 @@ class Response(object):
         identity are supported).
         """
         if encoding == 'identity':
+            self.decode_content()
             return
         if encoding != 'gzip':
             raise ValueError(
@@ -1910,18 +2082,28 @@ class Response(object):
 
     etag = header_getter('ETag', rfc_section='14.19')
 
-    def md5_etag(self, body=None):
+    def md5_etag(self, body=None, set_content_md5=False, set_conditional_response=False):
         """
         Generate an etag for the response object using an MD5 hash of
         the body (the body parameter, or ``self.body`` if not given)
 
         Sets ``self.etag``
+        If ``set_content_md5`` is True sets ``self.content_md5`` as well
+        If ``set_conditional_response`` is True sets ``self.conditional_response`` to True
         """
         if body is None:
             body = self.body
-        import md5
-        h = md5.new(body)
-        self.etag = h.digest().encode('base64').replace('\n', '').strip('=')
+        try:
+            from hashlib import md5
+        except ImportError:
+            from md5 import md5
+        h = md5(body)
+        md5_digest = h.digest().encode('base64').replace('\n', '').strip('=')
+        self.etag = md5_digest
+        if set_content_md5:
+            self.content_md5 = md5_digest
+        if set_conditional_response:
+            self.conditional_response = True
 
     expires = converter(
         header_getter('Expires', rfc_section='14.21'),
@@ -2000,7 +2182,7 @@ class Response(object):
         start_response(self.status, self.headerlist)
         if environ['REQUEST_METHOD'] == 'HEAD':
             # Special case here...
-            return []
+            return EmptyResponse(self.app_iter)
         return self.app_iter
 
     _safe_methods = ('GET', 'HEAD')
@@ -2027,10 +2209,10 @@ class Response(object):
                     status304 = False
         if status304:
             start_response('304 Not Modified', self.headerlist)
-            return []
+            return EmptyResponse(self.app_iter)
         if req.method == 'HEAD':
             start_response(self.status, self.headerlist)
-            return []
+            return EmptyResponse(self.app_iter)
         if (req.range and req.if_range.match_response(self)
             and self.content_range is None
             and req.method == 'GET'
@@ -2057,8 +2239,8 @@ class Response(object):
         if hasattr(app_iter, 'app_iter_range'):
             return app_iter.app_iter_range(start, stop)
         return AppIterRange(app_iter, start, stop)
-        
-        
+
+
 Request.ResponseClass = Response
 Response.RequestClass = Request
 
@@ -2131,7 +2313,7 @@ class FakeCGIBody(object):
         inner = repr(self.vars)
         if len(inner) > 20:
             inner = inner[:15] + '...' + inner[-5:]
-        return '<%s at %x viewing %s>' % (
+        return '<%s at 0x%x viewing %s>' % (
             self.__class__.__name__,
             abs(id(self)), inner)
 
@@ -2182,7 +2364,7 @@ class ResponseBodyFile(object):
     def writelines(self, seq):
         for item in seq:
             self.write(item)
-        
+
     closed = False
 
     def encoding(self):
@@ -2249,4 +2431,24 @@ class AppIterRange(object):
             return chunk[:-extra]
         self._served += len(chunk)
         return chunk
-            
+
+class EmptyResponse(object):
+
+    """An empty WSGI response.
+
+    An iterator that immediately stops. Optionally provides a close
+    method to close an underlying app_iter it replaces.
+    """
+
+    def __init__(self, app_iter=None):
+        if app_iter and hasattr(app_iter, 'close'):
+            self.close = app_iter.close
+
+    def __iter__(self):
+        return self
+
+    def __len__(self):
+        return 0
+
+    def next(self):
+        raise StopIteration()

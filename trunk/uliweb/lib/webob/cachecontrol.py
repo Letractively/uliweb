@@ -4,6 +4,10 @@ Represents the Cache-Control header
 
 import re
 from webob.updatedict import UpdateDict
+try:
+    sorted
+except NameError:
+    from webob.compat import sorted
 
 token_re = re.compile(
     r'([a-zA-Z][a-zA-Z_-]*)\s*(?:=(?:"([^"]*)"|([^ \t",;]*)))?')
@@ -32,7 +36,7 @@ class exists_property(object):
         else:
             if self.prop in obj.properties:
                 del obj.properties[self.prop]
-    def __del__(self, obj):
+    def __delete__(self, obj):
         self.__set__(obj, False)
 
 class value_property(object):
@@ -69,7 +73,7 @@ class value_property(object):
             obj.properties[self.prop] = None # Empty value, but present
         else:
             obj.properties[self.prop] = value
-    def __del__(self, obj):
+    def __delete__(self, obj):
         if self.prop in obj.properties:
             del obj.properties[self.prop]
 
