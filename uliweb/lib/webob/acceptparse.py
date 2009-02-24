@@ -10,6 +10,10 @@ exists, but this ignores them.
 """
 
 import re
+try:
+    sorted
+except NameError:
+    from webob.compat import sorted
 
 part_re = re.compile(
     r',\s*([^\s;,\n]+)(?:[^,]*?;\s*q=([0-9.]*))?')
@@ -51,7 +55,7 @@ class Accept(object):
         self._parsed = parse_accept(header_value)
 
     def __repr__(self):
-        return '<%s at %x %s: %s>' % (
+        return '<%s at 0x%x %s: %s>' % (
             self.__class__.__name__,
             abs(id(self)),
             self.header_name, str(self))

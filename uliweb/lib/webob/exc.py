@@ -47,7 +47,7 @@ Exception
         * 406 - HTTPNotAcceptable
         * 407 - HTTPProxyAuthenticationRequired
         * 408 - HTTPRequestTimeout
-        * 409 - HTTPConfict
+        * 409 - HTTPConflict
         * 410 - HTTPGone
         * 411 - HTTPLengthRequired
         * 412 - HTTPPreconditionFailed
@@ -81,6 +81,8 @@ except ImportError:
     from webob.util.stringtemplate import Template
 import types
 from webob import Response, Request, html_escape
+
+newstyle_exceptions = issubclass(Exception, object)
 
 tag_re = re.compile(r'<.*?>', re.S)
 br_re = re.compile(r'<br.*?>', re.I|re.S)
@@ -122,7 +124,8 @@ class HTTPException(Exception):
     
     exception = property(exception)
 
-    if sys.version_info < (2, 5):
+    # for old style exceptions
+    if not newstyle_exceptions:
         def __getattr__(self, attr):
             if not attr.startswith('_'):
                 return getattr(self.wsgi_response, attr)
@@ -171,10 +174,10 @@ ${body}''')
     empty_body = False
 
     def __init__(self, detail=None, headers=None, comment=None,
-                 body_template=None):
+                 body_template=None, **kw):
         Response.__init__(self,
                           status='%s %s' % (self.code, self.title),
-                          content_type='text/html')
+                          content_type='text/html', **kw)
         Exception.__init__(self, detail)
         if headers:
             self.headers.update(headers)
@@ -250,7 +253,7 @@ ${body}''')
     wsgi_response = property(wsgi_response)
 
     def exception(self):
-        if sys.version_info >= (2, 5):
+        if newstyle_exceptions:
             return self
         else:
             return HTTPException(self.detail, self)
