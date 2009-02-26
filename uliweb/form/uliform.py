@@ -1000,11 +1000,11 @@ class Form(object):
             if func and callable(func):
                 obj.validators.append(func)
                 
-        func = getattr(self, 'validate', None)
+        func = getattr(self, 'form_validate', None)
         if func and callable(func):
             self.validators.append(func)
 
-    def check(self, data, request=None):
+    def validate(self, data, request=None):
         """
         request should provide get() and getall() functions
         """

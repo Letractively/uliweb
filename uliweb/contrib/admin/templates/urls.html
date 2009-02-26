@@ -5,8 +5,8 @@
 {{block content}}
 <table border="1">
 <tr><th>URL</th><th>View Functions</th></tr>
-{{for url, endpoint in urls:}}
-<tr><td><a href="{{=url}}">{{=url}}</a></td><td>{{=endpoint}}</td></tr>
+{{for rule, methods, endpoint in urls:}}
+<tr><td><a href="{{=rule}}">{{=rule}}</a> {{=methods}}</td><td>{{=endpoint}}</td></tr>
 {{pass}}
 </table>
 {{end}}

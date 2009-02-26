@@ -103,6 +103,14 @@ def expose(rule=None, **kw):
         return f
     return decorate
 
+def POST(rule, **kw):
+    kw['methods'] = ['POST']
+    return expose(rule, **kw)
+
+def GET(rule, **kw):
+    kw['methods'] = ['GET']
+    return expose(rule, **kw)
+
 def url_for(endpoint, _external=False, **values):
     if callable(endpoint):
         endpoint = endpoint.__module__ + '.' + endpoint.__name__
@@ -296,7 +304,8 @@ class Dispatcher(object):
         env['url_for'] = url_for
         env['redirect'] = redirect
         env['error'] = errorpage
-        env['url_map'] = url_map
+#        env['url_map'] = url_map
+        env['application'] = self
 #        env['render'] = self.render
 #        env['template'] = self.template
         env['settings'] = settings
@@ -305,7 +314,7 @@ class Dispatcher(object):
 #        env['xhtml'] = xhtml
 #        from uliweb.core import Form
 #        env['Form'] = Form
-        env['get_file'] = self.get_file
+#        env['get_file'] = self.get_file
         return env
     
     def get_file(self, filename, request=None, dirname='files'):

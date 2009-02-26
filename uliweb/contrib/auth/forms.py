@@ -13,7 +13,7 @@ class RegisterForm(Form):
 #    email = StringField(label=_('Email:'))
     next = HiddenField()
     
-    def validate(self, all_data, request):
+    def form_validate(self, all_data, request):
         if all_data.password != all_data.password1:
             raise ValidationError, 'Passwords are not matched'
     
@@ -35,7 +35,7 @@ class ChangePasswordForm(Form):
     password1 = PasswordField(label=_('Password again:'), required=True)
     action = HiddenField(default='changepassword')
 
-    def validate(self, all_data, request):
+    def form_validate(self, all_data, request):
         if all_data.password != all_data.password1:
             raise ValidationError, 'Passwords are not matched'
 
