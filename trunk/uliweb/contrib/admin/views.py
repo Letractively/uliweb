@@ -13,7 +13,11 @@ def appsinfo():
 def urls():
     u = []
     for r in application.url_map.iter_rules():
-        u.append((r.rule, r.endpoint))
+        if r.methods:
+            methods = ' '.join(list(r.methods))
+        else:
+            methods = ''
+        u.append((r.rule, methods, r.endpoint))
     u.sort()
     
     return {'urls':u}

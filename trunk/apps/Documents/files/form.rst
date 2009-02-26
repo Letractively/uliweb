@@ -75,13 +75,13 @@ When creating Form instance, there are some parameters you can set:
         Data you want to set. It should be a dict, each key will be the attribute
         name. If you set it, it'll be replace with default value of matched field.
         You don't need to set it in initialization, you can use Form.binding() 
-        or when you call Form.check() to validate the submit data, the errors 
+        or when you call Form.validate() to validate the submit data, the errors 
         will be automatically bound.
         
     errors
         Error message of each field or the global error. It's a dict too. And if
         the key is ``'_'`` it means it's global error. You don't need to set it in 
-        initialization, you can use Form.binding() or when you call Form.check()
+        initialization, you can use Form.binding() or when you call Form.validate()
         to validate the submit data, the errors will be automatically bound.
         
     idtype
@@ -115,14 +115,14 @@ or whole Form. For example:
             if value != 'limodou':
                 raise ValidationError, 'Username should be limodou'
             
-        def validate(self, all_values):
+        def form_validate(self, all_values):
             if all_values.password != all_values.enter_password_again:
                 raise ValidationError, 'Passwords are not matched'
 
 This example demenstrates how to define a validateor for ``user_name`` field in
 the ``F`` form. You can define a function which name is like ``validate_<field_name>``.
 And how to define a whole Form level validator, just define a function which
-name is ``validate``.
+name is ``form_validate``.
 
 Form Layout
 --------------
@@ -245,7 +245,7 @@ When you defining a Form, you may want to validate the value. And you've seen
 how to define validator functions in a Form. So when user submitting the data,
 how to validate them and what's the next step after validating?
 
-You can use Form.check() to validate the submmited data. For example:
+You can use Form.validate() to validate the submmited data. For example:
 
 .. code:: python
 
@@ -257,22 +257,22 @@ You can use Form.check() to validate the submmited data. For example:
         enter_password_again = PasswordField(required=True)
     
     f = F()
-    if f.check(request.params):
+    if f.validate(request.params):
         ...
     else:
         return {'form':f}
         
 Above example demonstrates how to validate the submitted data. You should pass
-``request.GET`` or ``request.POST`` or ``request.params`` (for WebOb module) to Form.check() 
+``request.GET`` or ``request.POST`` or ``request.params`` (for WebOb module) to Form.validate() 
 function.
 
 .. note::
 
-    Here the data passed to Form.check() should be a dict-like object, and if 
+    Here the data passed to Form.validate() should be a dict-like object, and if 
     you define ``multiple`` parameter in one field definition, the data should 
     support getall() method or getlist() method.
     
-If Form.check() validate the submitted data ok, it'll return ``True``. Or it'll return
+If Form.validate() validate the submitted data ok, it'll return ``True``. Or it'll return
 ``False``. If the validatation result is ``True``, the submitted data will be converted to
 Python data type, and be bound to the Form instance. You can use ``Form.data`` and 
 ``Form.errors`` to get the data and errors. They are dict data type. You can also
@@ -308,7 +308,7 @@ Let's explain these parameters one by one:
         value will be used. default value for DateField and TimeField has other
         usage, you'll find it at DateField description.
         
-        Different fields have differnt default value, you should check documentan
+        Different fields have differnt default value, you should validate documentan
         carefully.
         
     required

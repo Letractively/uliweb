@@ -10,7 +10,7 @@ def login():
         form.next.data = request.GET.get('next', '/')
         return {'form':form, 'message':''}
     if request.method == 'POST':
-        flag = form.check(request.params)
+        flag = form.validate(request.params)
         if flag:
             f, d = authenticate(request, username=form.username.data, password=form.password.data)
             if f:
@@ -32,7 +32,7 @@ def register():
         form.next.data = request.GET.get('next', '/')
         return {'form':form, 'message':''}
     if request.method == 'POST':
-        flag = form.check(request.params)
+        flag = form.validate(request.params)
         if flag:
             f, d = create_user(request, username=form.username.data, password=form.password.data)
             if f:
@@ -57,7 +57,7 @@ def admin():
         return {'changepasswordform':changepasswordform}
     if request.method == 'POST':
         if request.POST.get('action') == 'changepassword':
-            flag = changepasswordform.check(request.POST, request)
+            flag = changepasswordform.valiate(request.POST, request)
             if flag:
                 return redirect(request.path)
             else:
