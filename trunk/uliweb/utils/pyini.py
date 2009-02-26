@@ -119,21 +119,24 @@ class Section(SortedDict):
         self._name = name
         self.add_comment(comments=comments)
         self._field_comments = {}
+        self._field_flag = {}
         self._encoding = encoding
             
-    def add(self, key, value, comments=None):
-        self[key] = value
+    def add(self, key, value, comments=None, replace=False):
+        self.__setitem__(key, value, replace)
+        self._field_flag[key] = replace
         self.add_comment(key, comments)
         
-    def __setitem__(self, key, value):
-        v = self.get(key)
-        #for mutable object, will merge them but not replace
-        if isinstance(v, (list, dict)):
-            if isinstance(v, list):
-                value = list(set(v + value))
-            else:
-                v.update(value)
-                value = v
+    def __setitem__(self, key, value, replace=False):
+        if not replace:
+            v = self.get(key)
+            #for mutable object, will merge them but not replace
+            if isinstance(v, (list, dict)):
+                if isinstance(v, list):
+                    value = list(set(v + value))
+                else:
+                    v.update(value)
+                    value = v
         super(Section, self).__setitem__(key, value)
         
     def add_comment(self, key=None, comments=None):
@@ -162,9 +165,13 @@ class Section(SortedDict):
             comments = self.comment(f)
             if comments:
                 print >> out, '\n'.join(comments)
-            buf = f + " = " + _uni_prt(self[f], self._encoding)
+            if self._field_flag.get(f, False):
+                op = ' <= '
+            else:
+                op = ' = '
+            buf = f + op + _uni_prt(self[f], self._encoding)
             if len(buf) > 79:
-                buf = f + " = " + _uni_prt(self[f], self._encoding, True)
+                buf = f + op + _uni_prt(self[f], self._encoding, True)
             print >> out, buf
             
     def __delitem__(self, key):
@@ -259,9 +266,19 @@ class Ini(SortedDict):
                     if section is None:
                         raise Exception, "No section found, please define it first in %s file" % self.filename
 
-                    pos = line.find('=')
-                    keyname = line[:pos].strip()
-                    f.seek(lastpos+pos+1)
+                    #if find <=, then it'll replace the old value for mutable variables
+                    #because the default behavior will merge list and dict
+                    pos = line.find('<=')
+                    if pos != -1:
+                        begin, end = pos, pos+2
+                        replace_flag = True
+                    else:
+                        pos = line.find('=')
+                        begin, end = pos, pos+1
+                        replace_flag = False
+                        
+                    keyname = line[:begin].strip()
+                    f.seek(lastpos+end)
                     try:
                         value = self.__read_line(f)
                     except Exception, e:
@@ -277,7 +294,7 @@ class Ini(SortedDict):
                     except Exception, e:
                         raise Exception, "Converting value (%s) error in line %d" % (value, lineno)
                     
-                    section.add(keyname, v, comments)
+                    section.add(keyname, v, comments, replace=replace_flag)
                     comments = []
             else:
                 comments.append(line)

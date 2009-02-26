@@ -101,5 +101,25 @@ def test_gettext():
     >>> x['default'] = Section('default')
     >>> x.default.option = _('Hello')
     >>> x
-    <Ini {'default':<Section {'option':gettext('Hello')}>}>
+    <Ini {'default':<Section {'option':gettext_lazy('Hello')}>}>
+    """
+    
+def test_replace():
+    """
+    >>> x = Ini()
+    >>> x['default'] = Section('default')
+    >>> x.default.option = ['a']
+    >>> x.default.option
+    ['a']
+    >>> x.default.option = ['b']
+    >>> x.default.option
+    ['a', 'b']
+    >>> x.default.add('option', ['c'], replace=True)
+    >>> x.default.option
+    ['c']
+    >>> print x.default
+    [default]
+    option <= ['c']
+    <BLANKLINE>
+    
     """
