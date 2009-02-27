@@ -388,8 +388,8 @@ class Dispatcher(object):
     <h3>Current URL Mapping is</h3>
     <table border="1">
     <tr><th>URL</th><th>View Functions</th></tr>
-    {{for url, endpoint in urls:}}
-    <tr><td>{{=url}}</td><td>{{=endpoint}}</td></tr>
+    {{for url, methods, endpoint in urls:}}
+    <tr><td>{{=url}} {{=methods}}</td><td>{{=endpoint}}</td></tr>
     {{pass}}
     </table>
     """ % description
@@ -399,7 +399,11 @@ class Dispatcher(object):
         if self.debug:
             urls = []
             for r in self.url_map.iter_rules():
-                urls.append((r.rule, r.endpoint))
+                if r.methods:
+                    methods = ' '.join(list(r.methods))
+                else:
+                    methods = ''
+                urls.append((r.rule, methods, r.endpoint))
             urls.sort()
             return self._page_not_found(url=request.path, urls=urls)
         tmp_file = template.get_templatefile('404'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
