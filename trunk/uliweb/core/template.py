@@ -255,7 +255,7 @@ class Lexer(object):
                         buf = "\n%s(%s, escape=False)\n" % (self.writer, value)
                         top.add(buf)
                     elif name == 'include':
-                        self._parse_include(value)
+                        self._parse_include(top, value)
                     elif name == 'extend':
                         extend = value
                     else:
@@ -269,7 +269,7 @@ class Lexer(object):
         if extend:
             self._parse_extend(extend)
             
-    def _parse_include(self, filename):
+    def _parse_include(self, content, filename):
         if not filename.strip():
             return
         filename = eval(filename, self.env.to_dict(), self.vars)
@@ -281,7 +281,7 @@ class Lexer(object):
         text = f.read()
         f.close()
         t = Lexer(text, self.vars, self.env, self.dirs, self.handlers)
-        self.content.merge(t.content)
+        content.merge(t.content)
         
     def _parse_extend(self, filename):
         filename = eval(filename, self.env.to_dict(), self.vars)
