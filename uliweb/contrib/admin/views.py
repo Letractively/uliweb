@@ -2,15 +2,15 @@
 from uliweb.core.SimpleFrame import expose
 
 @expose('/admin')
-def index():
+def admin_index():
     return {}
 
 @expose('/admin/appsinfo')
-def appsinfo():
+def admin_appsinfo():
     return {'apps':application.apps}
 
 @expose('/admin/urls')
-def urls():
+def admin_urls():
     u = []
     for r in application.url_map.iter_rules():
         if r.methods:
@@ -23,7 +23,7 @@ def urls():
     return {'urls':u}
 
 @expose("/admin/global")
-def globals_():
+def admin_globals():
 #    glob = globals()
 #    glo = [ (key,glob[key]) for key in glob.keys() if callable(glob[key]) ]
 #    un = [(key, str(glob[key]) or "none") for key in glob.keys() if not callable(glob[key]) ]
