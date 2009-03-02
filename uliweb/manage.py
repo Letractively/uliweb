@@ -180,7 +180,10 @@ def collect_files(apps_dir, apps):
     
     from uliweb.core.SimpleFrame import get_app_dir
     for p in apps:
-        f(get_app_dir(p))
+        path = get_app_dir(p)
+        files.append(os.path.join(path, 'config.ini'))
+        files.append(os.path.join(path, 'settings.ini'))
+        f(path)
     return files
         
 def runserver(apps_dir, hostname='localhost', port=5000, 
