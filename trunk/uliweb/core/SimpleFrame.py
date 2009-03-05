@@ -212,10 +212,11 @@ def get_apps(apps_dir, include_apps=None):
             configfile = os.path.join(get_app_dir(p), 'config.ini')
             if os.path.exists(configfile):
                 x = Ini(configfile)
-                for i in x.DEFAULT.get('REQUIRED_APPS', []):
-                    if i not in apps:
-                        apps.append(i)
-                    s.append(i)
+                if 'DEFAULT' in x:
+                    for i in x.DEFAULT.get('REQUIRED_APPS', []):
+                        if i not in apps:
+                            apps.append(i)
+                        s.append(i)
                 visited.add(p)
     
     return apps
