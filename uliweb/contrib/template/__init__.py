@@ -4,7 +4,7 @@ from uliweb.core.dispatch import bind
 from uliweb.utils.common import log
 
 _template_handlers = {}
-def register(name, handler):
+def register_tag(name, handler):
     global _template_handlers
     
     _template_handlers[name] = handler
@@ -69,7 +69,7 @@ def startup(sender):
     from uliweb.core import template
     if sender.settings.TEMPLATE.USE_TEMPLATE_TEMP_DIR:
         template.use_tempdir(sender.settings.TEMPLATE.TEMPLATE_TEMP_DIR)
-    register('use', use_tag_handler(sender))
+    register_tag('use', use_tag_handler(sender))
 
 @bind('prepare_template_env')
 def prepare_template_env(sender, env):
