@@ -24,10 +24,10 @@ def _show(request, response, filename, env, lang=None, render=True):
             response.set_cookie(env.settings.I18N.LANGUAGE_COOKIE_NAME, lang)
     if lang:
         lang = format_locale(lang)
-        f = env.get_file(os.path.join(lang, filename))
+        f = request.application.get_file(os.path.join(lang, filename))
         if f:
             filename = f
-    _f = env.get_file(filename)
+    _f = request.application.get_file(filename)
     if _f:
         content = file(_f).read()
         if render:
