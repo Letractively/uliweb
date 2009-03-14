@@ -342,7 +342,8 @@ class Dispatcher(object):
         env = self.get_template_env(env)
         if request:
             dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
-        handlers = dispatch.get(self, 'get_template_tag_handlers')
+        handlers = {}
+        dispatch.call(self, 'get_template_tag_handlers', handlers)
         if self.debug:
             def _compile(code, filename, action):
                 __loader__ = Loader(filename, vars, env, dirs, notest=True)
