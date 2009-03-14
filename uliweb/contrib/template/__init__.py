@@ -50,9 +50,9 @@ def use_tag_handler(app):
                     mod = None
             if mod:
                 _saved_template_plugins_modules[plugin] = mod
-        register = getattr(mod, 'register', None)
-        if register:
-            v = register(app, vars, env, *args)
+        call = getattr(mod, 'call', None)
+        if call:
+            v = call(app, vars, env, *args)
             if v:
                 collection[plugin] = v
         env['collection'] = collection

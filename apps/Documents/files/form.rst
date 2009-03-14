@@ -22,7 +22,7 @@ The features of the form module are:
 * Support for file uploads and management.
 
 The Form Class
-------------
+----------------
 
 To get started, define a Form class first, as follows:
 
