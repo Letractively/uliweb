@@ -454,7 +454,7 @@ class Dispatcher(object):
     def wrap_result(self, result, request, response, env=None):
         env = env or self.env
         #process ajax invoke, return a json response
-        if request.is_xhr and not isinstance(result, Response) and isinstance(result, dict):
+        if request.is_xhr and isinstance(result, dict):
             result = Response(sj.dumps(result), content_type='application/json')
                 
         if isinstance(result, dict):
