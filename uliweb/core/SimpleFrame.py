@@ -20,6 +20,7 @@ from storage import Storage
 import dispatch
 from uliweb.utils.common import pkg, log, sort
 from uliweb.utils.pyini import Ini
+import simplejson as sj
 
 class ReversedKeyError(Exception):pass
 
@@ -452,6 +453,10 @@ class Dispatcher(object):
         
     def wrap_result(self, result, request, response, env=None):
         env = env or self.env
+        #process ajax invoke, return a json response
+        if request.is_xhr and not isinstance(result, Response):
+            result = Response(sj.dumps(result), content_type='application/json')
+                
         if isinstance(result, dict):
             result = Storage(result)
             if hasattr(response, 'template'):

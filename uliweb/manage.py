@@ -10,11 +10,28 @@ sys.path.insert(0, os.path.join(workpath, 'lib'))
 from werkzeug import script
 from uliweb.core import SimpleFrame
 
+def install_config(apps_dir):
+    from uliweb.utils import pyini
+    #user can configure custom PYTHONPATH, so that uliweb can add these paths
+    #to sys.path, and user can manage third party or public apps in a separate
+    #directory
+    config_filename = os.path.join(apps_dir, 'config.ini')
+    if os.path.exists(config_filename):
+        c = pyini.Ini(config_filename)
+        paths = c.GLOBAL.get('PYTHONPATH', [])
+        if paths:
+            for p in reversed(paths):
+                p = os.path.abspath(os.path.normpath(p))
+                if not p in sys.path:
+                    sys.path.insert(0, p)
+
 def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True):
     from uliweb.utils.common import sort
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
         
+    install_config(apps_dir)
+    
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps)
     if app.settings.GLOBAL.WSGI_MIDDLEWARES:
         s = sort(app.settings.GLOBAL.WSGI_MIDDLEWARES, default=500)
@@ -216,7 +233,9 @@ def main():
     apps_dir = os.path.join(os.getcwd(), apps_dir)
     if os.path.exists(apps_dir):
         sys.path.insert(0, apps_dir)
-            
+       
+    install_config(apps_dir)
+    
     action_runserver = runserver(apps_dir, port=8000)
     action_runadmin = runserver(apps_dir, port=8000, admin=True)
     action_makeapp = make_app
