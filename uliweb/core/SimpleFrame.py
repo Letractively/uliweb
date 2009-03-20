@@ -22,7 +22,7 @@ from uliweb.utils.common import pkg, log, sort
 from uliweb.utils.pyini import Ini
 import simplejson as sj
 
-class ReversedKeyError(Exception):pass
+class ReservedKeyError(Exception):pass
 
 try:
     set
@@ -41,7 +41,7 @@ __use_urls = False
 __app_dirs = {}
 settings = None
 
-reversed_keys = ['settings', 'redirect', 'application', 'request', 'response', 'error']
+reserved_keys = ['settings', 'redirect', 'application', 'request', 'response', 'error']
 
 def expose(rule=None, **kw):
     """
@@ -62,8 +62,8 @@ def expose(rule=None, **kw):
         args = inspect.getargspec(f)[0]
         if args :
             args = ['<%s>' % x for x in args]
-        if f.__name__ in reversed_keys:
-            raise ReversedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
+        if f.__name__ in reserved_keys:
+            raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
         appname = f.__module__.split('.')[1]
         rule = '/' + '/'.join([appname, f.__name__] + args)
         kw['endpoint'] = f.__module__ + '.' + f.__name__
@@ -85,8 +85,8 @@ def expose(rule=None, **kw):
             f_name = f.split('.')[-1]
             endpoint = f
             
-        if f_name in reversed_keys:
-            raise ReversedKeyError, 'The name "%s" is a reversed key, so please change another one' % f_name
+        if f_name in reserved_keys:
+            raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f_name
         kw['endpoint'] = endpoint
 #        if callable(rule):
 #            import inspect
