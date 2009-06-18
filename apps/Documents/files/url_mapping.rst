@@ -23,7 +23,7 @@ expose Description
 ----------------------
 
 For now, Uliweb doesn't support centralized URL management, so you need to add
-expose() in front of each view function. If there is no expose, the function will
+expose in front of each view function. If there is no expose, the function will
 not be visited by browser.
 
 Basic usage is:
@@ -32,7 +32,7 @@ Basic usage is:
 
    .. code:: python
 
-        @expose()
+        @expose
         def index(arg1, arg2):
             return {}
         

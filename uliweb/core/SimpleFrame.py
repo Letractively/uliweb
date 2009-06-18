@@ -64,7 +64,12 @@ def expose(rule=None, **kw):
             args = ['<%s>' % x for x in args]
         if f.__name__ in reserved_keys:
             raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
-        appname = f.__module__.split('.')[1]
+        m = f.__module__.split('.')
+        s = []
+        for i in m:
+            if not i.startswith('views'):
+                s.append(i)
+        appname = '/'.join(s)
         rule = '/' + '/'.join([appname, f.__name__] + args)
         kw['endpoint'] = f.__module__ + '.' + f.__name__
         _urls.append((rule, kw))
@@ -529,7 +534,7 @@ class Dispatcher(object):
             path = get_app_dir(p)
             #deal with views
             if check_view:
-                views_path = os.path.join(p, 'views')
+                views_path = os.path.join(path, 'views')
                 if os.path.exists(views_path) and os.path.isdir(views_path):
                     enum_views(views_path, p, 'views')
                 else:
