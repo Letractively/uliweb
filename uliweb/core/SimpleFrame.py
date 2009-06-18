@@ -83,6 +83,14 @@ def expose(rule=None, **kw):
     def decorate(f, rule=rule):
         if __use_urls:
             return f
+        if not rule:
+            m = f.__module__.split('.')
+            s = []
+            for i in m:
+                if not i.startswith('views'):
+                    s.append(i)
+            appname = '/'.join(s)
+            rule = '/' + '/'.join([appname, f.__name__] + args)
         if callable(f):
             f_name = f.__name__
             endpoint = f.__module__ + '.' + f.__name__
