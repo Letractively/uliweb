@@ -8,7 +8,7 @@ def post():
     form = ContentForm()
     content = ''
     if request.method == 'POST':
-        flag = form.check(request.params)
+        flag = form.validate(request.params)
         if flag:
             from uliweb.utils.rst import to_html
             content = to_html(form.content.data)

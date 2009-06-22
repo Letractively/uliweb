@@ -611,7 +611,7 @@ class TextField(StringField):
             value = self.to_html(data)
         else:
             value = data
-        return str(self.build(self.to_html(data), id='field_'+self.name, name=self.name, **self.html_attrs))
+        return str(self.build(self.to_html(data), id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
 
 class IntField(BaseField):
     """
@@ -1071,11 +1071,11 @@ class Form(object):
         return '</form>'
     
     def get_buttons(self):
+        b = Buf()
         if self._buttons is None:
-            b = Buf()
             b << [Submit(value='Submit', _class="button")]
         else:
-            b = self._buttons
+            b << self._buttons
         return str(b)
     
     def bind(self, data={}, errors={}):
