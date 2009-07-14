@@ -1,26 +1,19 @@
-r"""
-Using simplejson from the shell to validate and
-pretty-print::
-    
-    $ echo '{"json":"obj"}' | python -msimplejson
+r"""Command-line tool to validate and pretty-print JSON
+
+Usage::
+
+    $ echo '{"json":"obj"}' | python -m simplejson.tool
     {
         "json": "obj"
     }
-    $ echo '{ 1.2:3.4}' | python -msimplejson
+    $ echo '{ 1.2:3.4}' | python -m simplejson.tool
     Expecting property name: line 1 column 2 (char 2)
 
-Note that the JSON produced by this module's default settings
-is a subset of YAML, so it may be used as a serializer for that as well.
 """
+import sys
 import simplejson
 
-#
-# Pretty printer:
-#     curl http://mochikit.com/examples/ajax_tables/domains.json | python -msimplejson.tool
-#
-
 def main():
-    import sys
     if len(sys.argv) == 1:
         infile = sys.stdin
         outfile = sys.stdout
@@ -31,7 +24,7 @@ def main():
         infile = open(sys.argv[1], 'rb')
         outfile = open(sys.argv[2], 'wb')
     else:
-        raise SystemExit("%s [infile [outfile]]" % (sys.argv[0],))
+        raise SystemExit(sys.argv[0] + " [infile [outfile]]")
     try:
         obj = simplejson.load(infile)
     except ValueError, e:
