@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys, os
+import logging
 from uliweb.utils.common import log, check_apps_dir
         
 apps_dir = 'apps'
@@ -24,15 +25,27 @@ def install_config(apps_dir):
                 p = os.path.abspath(os.path.normpath(p))
                 if not p in sys.path:
                     sys.path.insert(0, p)
-
+                    
+def set_log(app):
+    if app.settings.LOG:
+        level = app.settings.LOG.get("level", "info").upper()
+    else:
+        level = 'INFO'
+    log.setLevel(getattr(logging, level, logging.INFO))
+    
 def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True):
     from uliweb.utils.common import sort
+    
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
         
     install_config(apps_dir)
     
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps)
+    
+    #set logger level
+    set_log(app)
+    
     if app.settings.GLOBAL.WSGI_MIDDLEWARES:
         s = sort(app.settings.GLOBAL.WSGI_MIDDLEWARES, default=500)
         for w in reversed(s):
@@ -57,6 +70,7 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
                 
     debug_flag = application.settings.GLOBAL.DEBUG
     if debug or debug_flag:
+        log.setLevel(logging.DEBUG)
         log.info(' * Loading DebuggedApplication...')
         from werkzeug.debug import DebuggedApplication
         app = DebuggedApplication(app, debug_console)

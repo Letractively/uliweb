@@ -50,6 +50,8 @@ def use_tag_handler(app):
                     mod = None
             if mod:
                 _saved_template_plugins_modules[plugin] = mod
+            else:
+                log.debug("Can't found the [%s] html plugins, please check if you've installed special app already" % plugin)
         call = getattr(mod, 'call', None)
         if call:
             v = call(app, vars, env, *args)

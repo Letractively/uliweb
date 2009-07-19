@@ -191,7 +191,7 @@ def get_app_dir(app):
     Get an app's directory
     """
     path = __app_dirs.get(app)
-    if path:
+    if path is not None:
         return path
     else:
         try:
