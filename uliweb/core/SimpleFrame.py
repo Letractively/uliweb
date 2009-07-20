@@ -160,6 +160,9 @@ def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
         kwargs.setdefault('link', request.url)
     raise HTTPError(errorpage, **kwargs)
 
+def json(data):
+    return Response(sj.dumps(data), content_type='application/json')
+
 def static_serve(app, filename, check=True, dir=None):
     from werkzeug.exceptions import Forbidden
     f = None
@@ -324,6 +327,7 @@ class Dispatcher(object):
 #        env['render'] = self.render
 #        env['template'] = self.template
         env['settings'] = settings
+        env['json'] = json
 #        from werkzeug import html, xhtml
 #        env['html'] = html
 #        env['xhtml'] = xhtml
@@ -503,6 +507,7 @@ class Dispatcher(object):
         local_env['redirect'] = redirect
         local_env['error'] = errorpage
         local_env['settings'] = settings
+        local_env['json'] = json
         
         for k, v in local_env.iteritems():
             handler.func_globals[k] = v
