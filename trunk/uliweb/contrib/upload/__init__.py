@@ -10,7 +10,6 @@ __all__ = ['save_file', 'get_filename', 'get_url']
 def prepare_default_env(sender, env):
     url = sender.settings.UPLOAD.URL_SUFFIX.rstrip('/')
     expose('%s/<path:filename>' % url, static=True)(file_serving)
-    env['get_url'] = get_url(sender)
  
 def file_serving(filename):
     from uliweb.core.FileApp import return_file
@@ -58,9 +57,7 @@ def save_image_field(field, path_to=None, resize_to=None, replace=False, subfold
 def get_filename(filename, path_to=None, subfolder='', application=None):
     return _get_normal_filename(filename, path_to, subfolder, application)
 
-def get_url(application):
-    def f(filename, path_to=None, subfolder=''):
-        import urllib
-        filename = urllib.quote_plus(filename)
-        return _get_normal_filename(filename, application.settings.UPLOAD.URL_SUFFIX, subfolder, application)
-    return f
+def get_url(filename, path_to=None, subfolder='', application=None):
+    import urllib
+    filename = urllib.quote_plus(filename)
+    return _get_normal_filename(filename, application.settings.UPLOAD.URL_SUFFIX, subfolder, application)
