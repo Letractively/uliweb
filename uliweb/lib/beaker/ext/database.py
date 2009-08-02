@@ -1,8 +1,9 @@
 import cPickle
 import logging
+import pickle
 from datetime import datetime
 
-from beaker.container import NamespaceManager, Container
+from beaker.container import OpenResourceNamespaceManager, Container
 from beaker.exceptions import InvalidCacheBackendError, MissingCacheParameter
 from beaker.synchronization import file_synchronizer, null_synchronizer
 from beaker.util import verify_directory, SyncDict
@@ -22,7 +23,7 @@ except ImportError:
 if not hasattr(sa, 'BoundMetaData'):
     sa_version = '0.4'
 
-class DatabaseNamespaceManager(NamespaceManager):
+class DatabaseNamespaceManager(OpenResourceNamespaceManager):
     metadatas = SyncDict()
     tables = SyncDict()
     
@@ -43,19 +44,17 @@ class DatabaseNamespaceManager(NamespaceManager):
         ``table_name``
             The table name to use in the database for the cache.
         """
-        NamespaceManager.__init__(self, namespace)
+        OpenResourceNamespaceManager.__init__(self, namespace)
         
         if sa_opts is None:
             sa_opts = params
-        
-        if lock_dir is not None:
+
+        if lock_dir:
             self.lock_dir = lock_dir
-        elif data_dir is None:
-            raise MissingCacheParameter("data_dir or lock_dir is required")
-        else:
+        elif data_dir:
             self.lock_dir = data_dir + "/container_db_lock"
-        
-        verify_directory(self.lock_dir)
+        if self.lock_dir:
+            verify_directory(self.lock_dir)            
         
         # Check to see if the table's been created before
         url = url or sa_opts['sa.url']
@@ -84,7 +83,7 @@ class DatabaseNamespaceManager(NamespaceManager):
                              sa.Column('namespace', types.String(255), nullable=False),
                              sa.Column('accessed', types.DateTime, nullable=False),
                              sa.Column('created', types.DateTime, nullable=False),
-                             sa.Column('data', types.BLOB(), nullable=False),
+                             sa.Column('data', types.PickleType, nullable=False),
                              sa.UniqueConstraint('namespace')
             )
             cache.create(checkfirst=True)
@@ -118,8 +117,9 @@ class DatabaseNamespaceManager(NamespaceManager):
         else:
             self._is_new = False
             try:
-                self.hash = cPickle.loads(str(result['data']))
-            except (IOError, OSError, EOFError, cPickle.PickleError):
+                self.hash = result['data']
+            except (IOError, OSError, EOFError, cPickle.PickleError,
+                    pickle.PickleError):
                 log.debug("Couln't load pickle data, creating new storage")
                 self.hash = {}
                 self._is_new = True
@@ -130,14 +130,13 @@ class DatabaseNamespaceManager(NamespaceManager):
         if self.flags is not None and (self.flags == 'c' or self.flags == 'w'):
             cache = self.cache
             if self._is_new:
-                cache.insert().execute(namespace=self.namespace, 
-                                       data=cPickle.dumps(self.hash),
-                                       accessed=datetime.now(), 
+                cache.insert().execute(namespace=self.namespace, data=self.hash,
+                                       accessed=datetime.now(),
                                        created=datetime.now())
                 self._is_new = False
             else:
                 cache.update(cache.c.namespace==self.namespace).execute(
-                    data=cPickle.dumps(self.hash), accessed=datetime.now())
+                    data=self.hash, accessed=datetime.now())
         self.flags = None
     
     def do_remove(self):
