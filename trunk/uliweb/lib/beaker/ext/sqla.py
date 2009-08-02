@@ -1,8 +1,9 @@
 import cPickle
 import logging
+import pickle
 from datetime import datetime
 
-from beaker.container import NamespaceManager, Container
+from beaker.container import OpenResourceNamespaceManager, Container
 from beaker.exceptions import InvalidCacheBackendError, MissingCacheParameter
 from beaker.synchronization import file_synchronizer, null_synchronizer
 from beaker.util import verify_directory, SyncDict
@@ -14,7 +15,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-class SqlaNamespaceManager(NamespaceManager):
+class SqlaNamespaceManager(OpenResourceNamespaceManager):
     binds = SyncDict()
     tables = SyncDict()
 
@@ -30,16 +31,14 @@ class SqlaNamespaceManager(NamespaceManager):
             SQLAlchemy ``Table`` object in which to store namespace data.
             This should usually be something created by ``make_cache_table``.
         """
-        NamespaceManager.__init__(self, namespace)
+        OpenResourceNamespaceManager.__init__(self, namespace)
 
-        if lock_dir is not None:
+        if lock_dir:
             self.lock_dir = lock_dir
-        elif data_dir is None:
-            raise MissingCacheParameter('data_dir or lock_dir is required')
-        else:
-            self.lock_dir = data_dir + '/container_db_lock'
-
-        verify_directory(self.lock_dir)
+        elif data_dir:
+            self.lock_dir = data_dir + "/container_db_lock"
+        if self.lock_dir:
+            verify_directory(self.lock_dir)            
 
         self.bind = self.__class__.binds.get(str(bind.url), lambda: bind)
         self.table = self.__class__.tables.get('%s:%s' % (bind.url, table.name),
@@ -69,8 +68,9 @@ class SqlaNamespaceManager(NamespaceManager):
         else:
             self._is_new = False
             try:
-                self.hash = cPickle.loads(str(result['data']))
-            except (IOError, OSError, EOFError, cPickle.PickleError):
+                self.hash = result['data']
+            except (IOError, OSError, EOFError, cPickle.PickleError,
+                    pickle.PickleError):
                 log.debug("Couln't load pickle data, creating new storage")
                 self.hash = {}
                 self._is_new = True
@@ -79,16 +79,14 @@ class SqlaNamespaceManager(NamespaceManager):
 
     def do_close(self):
         if self.flags is not None and (self.flags == 'c' or self.flags == 'w'):
-            data = cPickle.dumps(self.hash)
             if self._is_new:
                 insert = self.table.insert()
-                self.bind.execute(insert, namespace=self.namespace, data=data,
-                                  accessed=datetime.now(),
-                                  created=datetime.now())
+                self.bind.execute(insert, namespace=self.namespace, data=self.hash,
+                                  accessed=datetime.now(), created=datetime.now())
                 self._is_new = False
             else:
                 update = self.table.update(self.table.c.namespace == self.namespace)
-                self.bind.execute(update, data=data, accessed=datetime.now())
+                self.bind.execute(update, data=self.hash, accessed=datetime.now())
         self.flags = None
 
     def do_remove(self):
@@ -123,4 +121,4 @@ def make_cache_table(metadata, table_name='beaker_cache'):
                     sa.Column('namespace', sa.String(255), primary_key=True),
                     sa.Column('accessed', sa.DateTime, nullable=False),
                     sa.Column('created', sa.DateTime, nullable=False),
-                    sa.Column('data', sa.BLOB(), nullable=False))
+                    sa.Column('data', sa.PickleType, nullable=False))

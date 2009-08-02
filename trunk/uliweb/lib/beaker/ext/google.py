@@ -3,7 +3,7 @@ import cPickle
 import logging
 from datetime import datetime
 
-from beaker.container import NamespaceManager, Container
+from beaker.container import OpenResourceNamespaceManager, Container
 from beaker.exceptions import InvalidCacheBackendError
 from beaker.synchronization import null_synchronizer
 
@@ -16,17 +16,17 @@ except ImportError:
                                    "'google.appengine.ext' library")
 
 
-class GoogleNamespaceManager(NamespaceManager):
+class GoogleNamespaceManager(OpenResourceNamespaceManager):
     tables = {}
     
     def __init__(self, namespace, table_name='beaker_cache', **params):
         """Creates a datastore namespace manager"""
-        NamespaceManager.__init__(self, namespace)
+        OpenResourceNamespaceManager.__init__(self, namespace)
         
         def make_cache():
             table_dict = dict(created=db.DateTimeProperty(),
                               accessed=db.DateTimeProperty(),
-                              data=db.TextProperty())
+                              data=db.BlobProperty())
             table = type(table_name, (db.Model,), table_dict)
             return table
         self.table_name = table_name
@@ -44,6 +44,7 @@ class GoogleNamespaceManager(NamespaceManager):
         return null_synchronizer()
 
     def get_creation_lock(self, key):
+        # this is weird, should probably be present
         return null_synchronizer()
 
     def do_open(self, flags):

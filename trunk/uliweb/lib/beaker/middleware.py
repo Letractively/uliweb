@@ -10,7 +10,8 @@ except:
 
 from beaker.cache import CacheManager
 from beaker.session import Session, SessionObject
-from beaker.util import coerce_cache_params, coerce_session_params
+from beaker.util import coerce_cache_params, coerce_session_params, \
+    parse_cache_config_options
 
 
 class CacheMiddleware(object):
@@ -44,25 +45,16 @@ class CacheMiddleware(object):
         self.app = app
         config = config or {}
         
-        # Load up the default params
-        self.options= dict(type='memory', data_dir=None, timeout=None, 
-                           log_file=None)
+        self.options = {}
         
-        # Pull out any config args starting with beaker cache. if there are any
-        for dct in [config, kwargs]:
-            for key, val in dct.iteritems():
-                if key.startswith('beaker.cache.'):
-                    self.options[key[13:]] = val
-                if key.startswith('cache.'):
-                    self.options[key[6:]] = val
-                if key.startswith('cache_'):
-                    warnings.warn('Cache options should start with cache. '
-                                  'instead of cache_', DeprecationWarning, 2)
-                    self.options[key[6:]] = val
+        # Update the options with the parsed config
+        self.options.update(parse_cache_config_options(config))
         
-        # Coerce and validate cache params
-        coerce_cache_params(self.options)
-        
+        # Add any options from kwargs, but leave out the defaults this
+        # time
+        self.options.update(
+            parse_cache_config_options(kwargs, include_defaults=False))
+                
         # Assume all keys are intended for cache if none are prefixed with
         # 'cache.'
         if not self.options and config:
@@ -106,7 +98,7 @@ class SessionMiddleware(object):
             environ
         
         ``**kwargs``
-            All keyword arguments are assumed to be cache settings and
+            All keyword arguments are assumed to be session settings and
             will override any settings found in ``config``
 
         """
@@ -150,7 +142,7 @@ class SessionMiddleware(object):
         environ['beaker.get_session'] = self._get_session
         
         def session_start_response(status, headers, exc_info = None):
-            if session.dirty() or (session.accessed() and self.options.get('auto')):
+            if session.accessed():
                 session.persist()
                 if session.__dict__['_headers']['set_cookie']:
                     cookie = session.__dict__['_headers']['cookie_out']
