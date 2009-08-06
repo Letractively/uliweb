@@ -254,6 +254,12 @@ class RequestProxy(object):
     
     def __setattr__(self, name, value):
         setattr(local.request, name, value)
+        
+    def __str__(self):
+        return str(local.request)
+    
+    def __repr__(self):
+        return repr(local.request)
             
 class ResponseProxy(object):
     def __init__(self, res):
@@ -268,6 +274,12 @@ class ResponseProxy(object):
     def __setattr__(self, name, value):
         setattr(local.response, name, value)
 
+    def __str__(self):
+        return str(local.response)
+    
+    def __repr__(self):
+        return repr(local.response)
+    
 class Loader(object):
     def __init__(self, tmpfilename, vars, env, dirs, notest=False):
         self.tmpfilename = tmpfilename
