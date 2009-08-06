@@ -141,7 +141,7 @@ class HTTPError(Exception):
         self.errors = kwargs
 
     def __str__(self):
-        return self.e
+        return repr(self.errors)
    
 def redirect(location, code=302):
     response = Response(
@@ -237,6 +237,36 @@ def get_apps(apps_dir, include_apps=None):
                 visited.add(p)
     
     return apps
+
+#####################################################################
+# local functions and classes
+#####################################################################
+
+class RequestProxy(object):
+    def __init__(self, req):
+        local.request = req
+        
+    def instance(self):
+        return local.request
+        
+    def __getattr__(self, name):
+        return getattr(local.request, name)
+    
+    def __setattr__(self, name, value):
+        setattr(local.request, name, value)
+            
+class ResponseProxy(object):
+    def __init__(self, res):
+        local.response = res
+        
+    def instance(self):
+        return local.response
+        
+    def __getattr__(self, name):
+        return getattr(local.response, name)
+    
+    def __setattr__(self, name, value):
+        setattr(local.response, name, value)
 
 class Loader(object):
     def __init__(self, tmpfilename, vars, env, dirs, notest=False):
@@ -500,9 +530,9 @@ class Dispatcher(object):
         
         #prepare local env
         local_env = {}
-        local_env['application'] = self
-        local_env['request'] = request
-        local_env['response'] = response
+        local_env['application'] = local.application
+        local_env['request'] = RequestProxy(request)
+        local_env['response'] = ResponseProxy(response)
         local_env['url_for'] = url_for
         local_env['redirect'] = redirect
         local_env['error'] = errorpage
@@ -516,6 +546,8 @@ class Dispatcher(object):
         handler.func_globals['env'] = env
         
         result = handler(**values)
+        if isinstance(result, ResponseProxy):
+            result = local.response
         return result, env
     
     def call_handler(self, handler, request, response=None, **values):
