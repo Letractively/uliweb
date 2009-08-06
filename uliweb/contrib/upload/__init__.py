@@ -11,6 +11,15 @@ def prepare_default_env(sender, env):
     url = sender.settings.UPLOAD.URL_SUFFIX.rstrip('/')
     expose('%s/<path:filename>' % url, static=True)(file_serving)
  
+@bind('set_local_env')
+def set_local_env(sender, env, request):
+    d = get_url
+    def g(application):
+        def f(filename, path_to=None, subfolder='', application=application):
+            return d(filename, path_to=path_to, subfolder=subfolder, application=application)
+        return f
+    env['get_url'] = g(request.application)
+
 def file_serving(filename):
     from uliweb.core.FileApp import return_file
     from uliweb.utils import files

@@ -530,6 +530,10 @@ class Dispatcher(object):
         
         #prepare local env
         local_env = {}
+
+        #process before view call
+        dispatch.call(self, 'set_local_env', local_env, request)
+
         local_env['application'] = local.application
         local_env['request'] = RequestProxy(request)
         local_env['response'] = ResponseProxy(response)
@@ -538,6 +542,7 @@ class Dispatcher(object):
         local_env['error'] = errorpage
         local_env['settings'] = settings
         local_env['json'] = json
+        
         
         for k, v in local_env.iteritems():
             handler.func_globals[k] = v
