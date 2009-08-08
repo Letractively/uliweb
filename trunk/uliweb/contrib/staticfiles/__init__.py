@@ -3,8 +3,6 @@ from uliweb.core.SimpleFrame import expose
 
 @bind('prepare_template_env')
 def prepare_template_env(sender, env):
-    global BUFFER_SIZE, SAVING_PATH
-    
     env['url_for_static'] = url_for_static
     
     url = sender.settings.staticfiles.STATIC_URL.rstrip('/')
