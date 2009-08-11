@@ -20,12 +20,13 @@
 		<!-- begin: main navigation #nav -->
 		<div id="nav"> <a id="navigation" name="navigation"></a>
 			<!-- skiplink anchor: navigation -->
-            {{include "admin_menu.html"}}
+            {{from uliweb.contrib.admin.menu import menu}}
 			<div id="nav_main">
-				<ul>{{block nav_menu}}
+				{{block nav_menu}}<ul>
 					<li id="current"><strong>settings.ini</strong></li>
-					<li><a href="#">Apps Info</a></li>{{end}}
+					<li><a href="#">Apps Info</a></li>
 				</ul>
+                {{end}}
 			</div>
 		</div>
 		<!-- end: main navigation -->
