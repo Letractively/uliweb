@@ -132,3 +132,8 @@ def get_once(sender, topic, *args, **kwargs):
         r = get(sender, topic, *args, **kwargs)
         _called[(topic, signal)] = r
         return r
+
+def print_topics():
+    import pprint
+    
+    pprint.pprint(_receivers)
