@@ -3,11 +3,22 @@ from uliweb.core.SimpleFrame import url_for
 from uliweb.core.dispatch import bind, call
 from StringIO import StringIO
 
-def bind_menu(caption, id=None, parent_menu_id=None, weight=10):
+__weight = 0
+
+def bind_menu(caption, id=None, parent_menu_id=None, weight=None):
     
     def decorate(f, id=id, caption=caption, parent_menu_id=parent_menu_id, weight=weight):
+        global __weight
+        
         if not id:
             id = caption
+            
+        if not weight:
+            __weight += 10
+            weight = __weight
+        else:
+            __weight = max(__weight, weight)
+            
         if callable(f):
             f_name = f.__name__
             endpoint = f.__module__ + '.' + f.__name__

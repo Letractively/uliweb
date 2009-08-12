@@ -1,0 +1,55 @@
+{{extend "admin_layout.html"}}
+{{block nav_menu}}
+{{<< menu('Build')}}
+{{end}}
+{{block content}}
+{{use "mootools"}}
+{{link "css/tabs.css"}}
+{{link "js/clientcide-tabswap.js"}}
+<div id="build-container">
+    <ul class="tabSet">
+        <li class="on"><a>Generic</a></li>
+        <li class="off"><a>App Configure</a></li>
+    </ul>
+    <div class="panelSet">
+        <div class="panel">
+        </div>
+        <div class="panel">
+            {{from uliweb.utils.textconvert import text2html}}
+            {{for p in sorted(apps.keys(), key=str.lower):}}
+                {{v = apps[p]}}
+                <h3>{{=p}}</h3>
+                <table border="1">
+                <tr><th>Enabled</th><th>App Name</th><th>Title</th><th>Module</th><th>Description</th></tr>
+                {{for d in sorted(v, key=lambda x:x['name'].lower()):}}
+                    <tr>
+                        <td width="5%" align="center"><input type="checkbox" name="appname" value="{{=d['module']}}"/></td>
+                        <td width="10%">{{=d['name']}}</td>
+                        <td width="20%">{{=d['title']}}</td>
+                        <td width="20%">{{=d['module']}}</td>
+                        <td width="*">{{<< text2html(d['desc'])}}</td>
+                    </tr>
+                {{pass}}
+                </table>
+            {{pass}}
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+window.addEvent('domready', function() {
+	new TabSwapper({
+	  selectedClass: 'on',
+	  deselectedClass: 'off',
+	  tabs: $$('#build-container li'),
+	  clickers: $$('#build-container li a'),
+	  sections: $$('div.panelSet div.panel'),
+	  /*remember what the last tab the user clicked was*/
+	  cookieName: 'admin.build',
+	  /*use transitions to fade across*/
+	  smooth: true,
+      smoothSize: true
+	});
+});
+</script>
+{{end}}
+
