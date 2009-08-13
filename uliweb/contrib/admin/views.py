@@ -185,7 +185,12 @@ def admin_app_conf():
                     if flag:
                         ini.save()
                 elif request.method == 'GET':
-                    ini_to_form(form, application.settings)
+                    ini = Ini()
+                    ini_file = os.path.join(app['path'], 'settings.ini')
+                    if os.path.exists(ini_file):
+                        ini.read(ini_file)
+                    ini.read(os.path.join(application.apps_dir, 'settings.ini'))
+                    ini_to_form(form, ini)
         
         except ImportError:
             log.exception(e)
