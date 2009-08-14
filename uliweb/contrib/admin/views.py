@@ -87,7 +87,6 @@ def admin_edit_app():
             ini.GLOBAL.INSTALLED_APPS.remove(module)
             flag = True
     
-    print ini.GLOBAL.INSTALLED_APPS
     if flag:
         ini.save()
     return 'ok'
@@ -100,16 +99,23 @@ def ini_to_form(form, ini):
             if v:
                 getattr(form, k).data = v
 
-def form_to_ini(form, ini):
+def form_to_ini(form, ini, default=None):
     flag = False
     for k, obj in form.fields.items():
         if 'key' in obj.kwargs:
             key = obj.kwargs['key']
             v = get_var(key, ini)
+            if default:
+                d = get_var(key, default)
+            else:
+                d = None
             value = getattr(form, k).data
-            if v != value:
-                flag = True
-                set_var(key, value, ini)
+            if default:
+                if value == d:
+                    flag = del_var(key, ini)
+                    continue
+            if value != v:
+                flag = set_var(key, value, ini)
                 
     return flag
     
@@ -118,10 +124,11 @@ def get_var(key, ini_obj):
     obj = ini_obj
     for i in s:
         k = obj.get(i)
-        if k:
+        if k is not None:
             obj = k
         else:
             return None
+        
     return obj
 
 def set_var(key, value, ini_obj):
@@ -132,8 +139,25 @@ def set_var(key, value, ini_obj):
         if k:
             obj = k
         else:
-            return
+            return False
     obj[s[-1]] = value
+    
+    return True
+    
+def del_var(key, ini_obj):
+    s = key.split('/')
+    obj = ini_obj
+    for i in s[:-1]:
+        k = obj.add(i)
+        if k:
+            obj = k
+        else:
+            return False
+    
+    if s[-1] in obj:
+        del obj[s[-1]]
+    
+    return True
    
 def get_apps(application, apps_dirs):
     catalogs = {}
@@ -162,31 +186,28 @@ def get_apps(application, apps_dirs):
 @expose('/admin/app_conf')
 def admin_app_conf():
     
-    from uliweb.utils.common import pkg
+    from uliweb.utils.common import pkg, is_pyfile_exist
     
-    contrib_path = pkg.resource_filename('uliweb.contrib', '')
-    apps_dirs = [(application.apps_dir, ''), (contrib_path, 'uliweb.contrib')]
-    catalogs, apps = get_apps(application, apps_dirs)
+    module = request.GET['module']
+    app_path = pkg.resource_filename(module, '')
     
-    app = apps.get(request.GET['id'])
-    
-    conf_py = os.path.join(app['path'], 'conf.py')
     form = '<h3>Nothing need to configure!</h3>'
-    if os.path.exists(conf_py):
+    if is_pyfile_exist(app_path, 'conf'):
         try:
-            mod = __import__(app['module'] + '.conf', {}, {}, [''])
+            mod = __import__(module + '.conf', {}, {}, [''])
             f = getattr(mod, 'ManageForm')
             if f:
-                form = f(action=url_for(admin_app_conf)+'?id=%s' % app['name'], method='post')
+                form = f(action=url_for(admin_app_conf)+'?module=%s' % module, method='post')
                 if request.method == 'POST':
                     ini = Ini(os.path.join(application.apps_dir, 'settings.ini'))
+                    default_ini = Ini(os.path.join(app_path, 'settings.ini'))
                     r = form.validate(request.POST)
-                    flag = form_to_ini(form, ini)
+                    flag = form_to_ini(form, ini, default_ini)
                     if flag:
                         ini.save()
                 elif request.method == 'GET':
                     ini = Ini()
-                    ini_file = os.path.join(app['path'], 'settings.ini')
+                    ini_file = os.path.join(app_path, 'settings.ini')
                     if os.path.exists(ini_file):
                         ini.read(ini_file)
                     ini.read(os.path.join(application.apps_dir, 'settings.ini'))

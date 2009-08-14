@@ -19,7 +19,7 @@
                     <span>+</span>
                 </h3>
             {{pass}}
-            <div class="details" id="panel_{{=d['name']}}">
+            <div class="details" id="panel_{{=d['module']}}">
                 <table border=0 class="full">
                     <tr>
                         <th>Configuration</th>
@@ -61,11 +61,12 @@ window.addEvent('domready', function() {
         if (this.checked){
             action = 'add';
         }
+        var input = this;
         var req = new Request({
         	method: 'get',
         	url: "{{=url_for('uliweb.contrib.admin.views.admin_edit_app')}}",
         	onComplete: function(response) {
-                if (this.checked) {
+                if (input.checked) {
                     parent.removeClass('noselected');
                     parent.addClass('selected');
                 }
@@ -93,7 +94,7 @@ window.addEvent('domready', function() {
                                 form_send(div.getElement('form'));
                             }
                         });
-                        div.load('{{=url_for("uliweb.contrib.admin.views.admin_app_conf")}}?id='+list[i].get('id').slice(6));
+                        div.load('{{=url_for("uliweb.contrib.admin.views.admin_app_conf")}}?module='+list[i].get('id').slice(6));
                     }
                 }
             });
@@ -140,8 +141,6 @@ window.addEvent('domready', function() {
             this.send();
         });
     };
-    
-    //form_send($$('.config-body form'));
 
 });
 </script>
