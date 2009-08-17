@@ -2,6 +2,7 @@
 from uliweb.core.SimpleFrame import expose
 from uliweb.contrib.admin.menu import bind_menu
 from uliweb.utils.common import log
+from uliweb.utils.common import pkg, is_pyfile_exist
 
 @expose('/admin')
 @bind_menu('Settings', weight=10)
@@ -55,14 +56,14 @@ def admin_build():
     f = GenericForm(method="post")
     
     if request.method == 'GET':
-        ini = Ini(os.path.join(application.apps_dir, 'settings.ini'))
-        ini_to_form(f, ini)
+#        ini = Ini(os.path.join(application.apps_dir, 'settings.ini'))
+        ini_to_form(f, application.settings)
         
     else:
         r = f.validate(request.params)
         if r:
             ini = Ini(os.path.join(application.apps_dir, 'settings.ini'))
-            flag = form_to_ini(f, ini)
+            flag = form_to_ini(f, ini, application.settings)
             if flag:
                 ini.save()
         
@@ -110,6 +111,7 @@ def form_to_ini(form, ini, default=None):
             else:
                 d = None
             value = getattr(form, k).data
+            print key, value, v, d
             if default:
                 if value == d:
                     flag = del_var(key, ini)
@@ -156,42 +158,59 @@ def del_var(key, ini_obj):
     
     if s[-1] in obj:
         del obj[s[-1]]
+        flag = True
+    else:
+        flag = False
     
-    return True
+    return flag
    
+def _get_apps(application, path, parent_module, catalogs, apps):
+    for p in os.listdir(path):
+        app_path = os.path.join(path, p)
+        
+        if not os.path.isdir(app_path):
+            continue
+        
+        info_ini = os.path.join(app_path, 'info.ini')
+        if os.path.exists(info_ini) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
+            info = get_app_info(p, app_path, info_ini)
+            if parent_module:
+                info['module'] = parent_module + '.' + p
+            else:
+                info['module'] = p
+            if info['module'] in application.apps:
+                info['selected'] = True
+            else:
+                info['selected'] = False
+                
+            apps[p] = info
+            d = catalogs.setdefault(info['catalog'], [])
+            d.append(info)
+               
+        _path = os.path.join(path, p)
+        if is_pyfile_exist(_path, '__init__'):
+            if parent_module:
+                m = parent_module + '.' + p
+            else:
+                m = p
+            _get_apps(application, _path, m, catalogs, apps)
+    
 def get_apps(application, apps_dirs):
     catalogs = {}
     apps = {}
     
     for path, parent_module in apps_dirs:
-        for p in os.listdir(path):
-            app_path = os.path.join(path, p)
-            if os.path.isdir(app_path) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
-                info = get_app_info(p, app_path)
-                if parent_module:
-                    info['module'] = parent_module + '.' + p
-                else:
-                    info['module'] = p
-                if info['module'] in application.apps:
-                    info['selected'] = True
-                else:
-                    info['selected'] = False
-                    
-                    
-                apps[p] = info
-                d = catalogs.setdefault(info['catalog'], [])
-                d.append(info)
+        _get_apps(application, path, parent_module, catalogs, apps)
+        
     return catalogs, apps
 
 @expose('/admin/app_conf')
 def admin_app_conf():
-    
-    from uliweb.utils.common import pkg, is_pyfile_exist
-    
     module = request.GET['module']
     app_path = pkg.resource_filename(module, '')
     
     form = '<h3>Nothing need to configure!</h3>'
+    message = ''
     if is_pyfile_exist(app_path, 'conf'):
         try:
             mod = __import__(module + '.conf', {}, {}, [''])
@@ -202,9 +221,15 @@ def admin_app_conf():
                     ini = Ini(os.path.join(application.apps_dir, 'settings.ini'))
                     default_ini = Ini(os.path.join(app_path, 'settings.ini'))
                     r = form.validate(request.POST)
-                    flag = form_to_ini(form, ini, default_ini)
-                    if flag:
-                        ini.save()
+                    if r:
+                        flag = form_to_ini(form, ini, default_ini)
+                        if flag:
+                            message = '<div class="note">Changes have been saved!</div>'
+                            ini.save()
+                        else:
+                            message = '<div class="important">There are no changes.</div>'
+                    else:
+                        message = '<div class="warning">There are some errors.</div>'
                 elif request.method == 'GET':
                     ini = Ini()
                     ini_file = os.path.join(app_path, 'settings.ini')
@@ -216,11 +241,10 @@ def admin_app_conf():
         except ImportError:
             log.exception(e)
     
-    return form
+    print message
+    return message + str(form)
                 
-def get_app_info(name, app_path):
-    info_ini = os.path.join(app_path, 'info.ini')
-    
+def get_app_info(name, app_path, info_ini):
     catalog = 'No Catalog'
     desc = ''
     title = name.capitalize()

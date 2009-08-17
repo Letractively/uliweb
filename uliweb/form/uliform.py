@@ -548,10 +548,60 @@ class ListField(StringField):
         self.datatype = datatype
 
     def to_python(self, data):
-        return [self.datatype(x) for x in data.split(self.delimeter)]
+        if issubclass(self.build, TextArea):
+            return [self.datatype(x) for x in data.splitlines()]
+        else:
+            return [self.datatype(x) for x in data.split(self.delimeter)]
 
     def to_html(self, data):
-        return self.delimeter.join([_str(x) for x in data])
+        if issubclass(self.build, TextArea):
+            return '\n'.join([_str(x) for x in data])
+        else:
+            return self.delimeter.join([_str(x) for x in data])
+
+class TextField(StringField):
+    """
+    >>> a = TextField(name='text', id='field_text')
+    >>> print a.html('Test')
+    <textarea class="field" cols="40" id="field_text" name="text" rows="5">
+    Test
+    </textarea>
+    
+    """
+    default_build = TextArea
+
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=5, cols=40, **kwargs):
+        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
+        self.rows = rows
+        self.cols = cols
+        
+    def html(self, data='', py=True):
+        if py:
+            value = self.to_html(data)
+        else:
+            value = data
+        return str(self.build(self.to_html(data), id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
+
+class TextLinesField(TextField):
+    """
+    >>> a = TextLinesField(name='list', id='field_list')
+    >>> print a.html(['a', 'b'])
+    <textarea class="field" cols="40" id="field_list" name="list" rows="4">
+    a
+    b
+    </textarea>
+    
+    """
+    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, datatype=str, rows=4, cols=40, **kwargs):
+        TextField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, rows=rows, cols=cols, **kwargs)
+        self._default = default or []
+        self.datatype = datatype
+
+    def to_python(self, data):
+        return [self.datatype(x) for x in data.splitlines()]
+
+    def to_html(self, data):
+        return '\n'.join([_str(x) for x in data])
 
 class BooleanField(BaseField):
     """
@@ -589,29 +639,6 @@ class BooleanField(BaseField):
             return 'on'
         else:
             return ''
-
-class TextField(StringField):
-    """
-    >>> a = TextField(name='text', id='field_text')
-    >>> print a.html('Test')
-    <textarea class="field" cols="40" id="field_text" name="text" rows="5">
-    Test
-    </textarea>
-    
-    """
-    default_build = TextArea
-
-    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=5, cols=40, **kwargs):
-        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
-        self.rows = rows
-        self.cols = cols
-        
-    def html(self, data='', py=True):
-        if py:
-            value = self.to_html(data)
-        else:
-            value = data
-        return str(self.build(self.to_html(data), id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
 
 class IntField(BaseField):
     """
