@@ -7,14 +7,14 @@ import os
 __templates_temp_dir = 'tmp/templates_temp'
 __options = {'use_temp_dir':False}
 
-def use_tempdir(dir=None):
+def use_tempdir(dir=''):
     global __options, __templates_temp_dir
     
-    __options['use_temp_dir'] = True
     if dir:
         __templates_temp_dir = dir
-    if not os.path.exists(__templates_temp_dir):
-        os.makedirs(__templates_temp_dir)
+        __options['use_temp_dir'] = True
+        if not os.path.exists(__templates_temp_dir):
+            os.makedirs(__templates_temp_dir)
 
 def set_options(**options):
     """

@@ -9,13 +9,13 @@
             {{if d['selected']:}}
                 <h3 class="app_name selected">
                     <input type="checkbox" name="appname" class="f_checkbox" id="check_{{=d['module']}}" checked/> 
-                    <a>{{=d['name']}}</a> 
+                    <a>{{=d['name']}}({{=d['module']}})</a> 
                     <span>+</span>
                 </h3>
             {{else:}}
                 <h3 class="app_name noselected">
                     <input type="checkbox" name="appname" class="f_checkbox" id="check_{{=d['module']}}"/> 
-                    <a>{{=d['name']}}</a> 
+                    <a>{{=d['name']}}({{=d['module']}})</a> 
                     <span>+</span>
                 </h3>
             {{pass}}
