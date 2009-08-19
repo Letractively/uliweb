@@ -33,5 +33,5 @@ class StaticFilesMiddleware(object):
             return Forbidden('The file %s is forbidden' % filename)
         
         from uliweb.core.SimpleFrame import static_serve
-        response = static_serve(self.mainapplication, filename)
+        response = static_serve(self.mainapplication, filename, dir=self.mainapplication.settings.STATICFILES.STATIC_FOLDER)
         return response(environ, start_response)

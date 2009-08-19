@@ -75,15 +75,18 @@ def admin_edit_app():
     flag = False
     module = request.GET['module']
     
+    import uliweb.core.SimpleFrame as sf
+    app_apps = sf.get_apps(application.apps_dir)
+    
     if request.GET['action'] == 'add':
         if not ini.GLOBAL.get('INSTALLED_APPS'):
-            ini.GLOBAL.INSTALLED_APPS = application.apps
+            ini.GLOBAL.INSTALLED_APPS = app_apps
         if module not in ini.GLOBAL.INSTALLED_APPS:
             ini.GLOBAL.INSTALLED_APPS.append(module)
             flag = True
     else:
         if not ini.GLOBAL.get('INSTALLED_APPS'):
-            ini.GLOBAL.INSTALLED_APPS = application.apps
+            ini.GLOBAL.INSTALLED_APPS = app_apps
         if module in ini.GLOBAL.INSTALLED_APPS:
             ini.GLOBAL.INSTALLED_APPS.remove(module)
             flag = True
@@ -164,7 +167,7 @@ def del_var(key, ini_obj):
     
     return flag
    
-def _get_apps(application, path, parent_module, catalogs, apps):
+def _get_apps(application, path, parent_module, catalogs, apps, app_apps):
     for p in os.listdir(path):
         app_path = os.path.join(path, p)
         
@@ -178,7 +181,7 @@ def _get_apps(application, path, parent_module, catalogs, apps):
                 info['module'] = parent_module + '.' + p
             else:
                 info['module'] = p
-            if info['module'] in application.apps:
+            if info['module'] in app_apps:
                 info['selected'] = True
             else:
                 info['selected'] = False
@@ -193,14 +196,17 @@ def _get_apps(application, path, parent_module, catalogs, apps):
                 m = parent_module + '.' + p
             else:
                 m = p
-            _get_apps(application, _path, m, catalogs, apps)
-    
+            _get_apps(application, _path, m, catalogs, apps, app_apps)
+
 def get_apps(application, apps_dirs):
     catalogs = {}
     apps = {}
     
+    import uliweb.core.SimpleFrame as sf
+    app_apps = sf.get_apps(application.apps_dir)
+    
     for path, parent_module in apps_dirs:
-        _get_apps(application, path, parent_module, catalogs, apps)
+        _get_apps(application, path, parent_module, catalogs, apps, app_apps)
         
     return catalogs, apps
 
@@ -241,7 +247,6 @@ def admin_app_conf():
         except ImportError:
             log.exception(e)
     
-    print message
     return message + str(form)
                 
 def get_app_info(name, app_path, info_ini):
