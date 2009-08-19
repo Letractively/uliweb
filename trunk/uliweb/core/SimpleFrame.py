@@ -402,6 +402,11 @@ class Dispatcher(object):
         env = self.get_template_env(env)
         if request:
             dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
+        
+        d = dispatch.get(self, 'get_template_dirs', dirs, request)
+        if d:
+            dirs = d
+        
         handlers = {}
         dispatch.call(self, 'get_template_tag_handlers', handlers)
         if self.debug:
