@@ -107,13 +107,13 @@ class Session(dict):
         self._old_value = self.copy()
             
     def _is_modified(self):
-        return set(self._old_value.items()) == set(self.items())
+        return set(self._old_value.items()) != set(self.items())
     
     def _is_not_expiry(self, accessed_time, expiry_time):
         return time.time() < accessed_time + expiry_time
         
     def save(self):
-        if bool(self) and not self.deleted:
+        if not self.deleted and (bool(self) or (not bool(self) and self._is_modified())):
             self.key = self.key or _get_id()
             now = time.time()
 
