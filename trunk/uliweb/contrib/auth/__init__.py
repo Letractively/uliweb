@@ -61,7 +61,7 @@ def authenticate(request, username, password, backend_id=None):
         if not isinstance(result, User):
             user = User.get(User.c.username==username)
             if not user:
-                user = User(username=username, **kwargs)
+                user = User(username=username)
                 user.save()
         else:
             user = result
