@@ -373,6 +373,8 @@ class BaseField(object):
         return all_data.get(self.name, None)
 
     def to_html(self, data):
+        if data is None:
+            return ''
         return _str(data)
 
     def validate(self, data, request=None):
@@ -601,6 +603,8 @@ class TextLinesField(TextField):
         return [self.datatype(x) for x in data.splitlines()]
 
     def to_html(self, data):
+        if data is None:
+            return ''
         return '\n'.join([_str(x) for x in data])
 
 class BooleanField(BaseField):
@@ -667,6 +671,8 @@ class IntField(BaseField):
         return int(data)
 
     def to_html(self, data):
+        if data is None:
+            return ''
         return str(data)
 
 class SelectField(BaseField):

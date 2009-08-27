@@ -1,45 +1,46 @@
 from uliweb.middleware import Middleware
-from beaker.session import SessionObject
+from weto.session import Session, SessionCookie
 
-class Session(SessionObject):
-    def __setattr__(self, value):
-        super(Session, self).__setattr__(value)
-        self.save()
-        
 class SessionMiddle(Middleware):
     ORDER = 50
     def __init__(self, application, settings):
-        from beaker.util import coerce_session_params
         from datetime import timedelta
-        default = {
-            'type':'dbm', 
-            'data_dir':'./tmp/session', 
-            'timeout':3600, 
-            'encrypt_key':'uliweb', 
-            'key':'uliweb.session.id',
-            'table_name':'uliweb_table',
-            'cookie_expires': 300
-            
-        }
-        self.options = settings.get('SESSION', default)
-        default.update(self.options)
-        self.options = default
-        if isinstance(default['cookie_expires'], int):
-            default['cookie_expires'] = timedelta(seconds=default['cookie_expires'])
-        coerce_session_params(self.options)
+        self.options = dict(settings.get('SESSION_STORAGE', {}))
+        
+        #process Session options
+        Session.default_expiry_time = settings.SESSION.timeout
+        Session.default_storage_type = settings.SESSION.type
+        
+        #process Cookie options
+        SessionCookie.default_domain = settings.SESSION_COOKIE.domain
+        SessionCookie.default_path = settings.SESSION_COOKIE.path
+        SessionCookie.default_secure = settings.SESSION_COOKIE.secure
+        SessionCookie.default_cookie_id = settings.SESSION_COOKIE.cookie_id
+
+        if isinstance(settings.SESSION_COOKIE.timeout, int):
+            timeout = timedelta(seconds=settings.SESSION_COOKIE.timeout)
+        else:
+            timeout = settings.SESSION_COOKIE.timeout
+        SessionCookie.default_expiry_time = timeout
         
     def process_request(self, request):
-        session = SessionObject(request.environ, **self.options)
+        key = request.cookies.get(SessionCookie.default_cookie_id)
+        session = Session(key, options=self.options)
         request.session = session
 
     def process_response(self, request, response):
         session = request.session
-        session.save()
-        session.persist()
-        if session.request is not None:
-            if session.request['set_cookie']:
-                cookie = session.request['cookie_out']
-                if cookie:
-                    response.headers['Set-cookie'] = cookie
+        if session.deleted:
+            response.delete_cookie(session.cookie.cookie_id)
+        else:
+            flag = session.save()
+            if flag:
+                c = session.cookie
+                response.set_cookie(c.cookie_id,
+                        session.key, max_age=c.expiry_time,
+                        expires=None, domain=c.domain,
+                        path=c.path,
+                        secure=c.secure)
+        
         return response
         
