@@ -114,14 +114,13 @@ def form_to_ini(form, ini, default=None):
             else:
                 d = None
             value = getattr(form, k).data
-            print key, value, v, d
             if default:
                 if value == d:
-                    flag = del_var(key, ini)
+                    flag = del_var(key, ini) or flag
                     continue
             if value != v:
-                flag = set_var(key, value, ini)
-                
+                flag = set_var(key, value, ini) or flag
+    
     return flag
     
 def get_var(key, ini_obj):
