@@ -154,6 +154,7 @@ class Session(dict):
                 self._accessed_time = time.time()
         return _func
     
+    clear = _check(dict.clear)
     __getitem__ = _check(dict.__getitem__)
     __setitem__ = _check(dict.__setitem__)
     __delitem__ = _check(dict.__delitem__)
