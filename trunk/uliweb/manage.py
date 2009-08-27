@@ -193,6 +193,22 @@ def collcet_commands():
             if t.startswith('action_') and callable(getattr(mod, t)):
                 actions[t] = getattr(mod, t)(apps_dir)
     return actions
+
+def call_commands(command=''):
+    """
+    Call <command>.py for each installed app according the command argument.
+    """
+    if not command:
+        log.error("Error: There is no command module name behind call command.")
+        return
+    from uliweb.core.SimpleFrame import get_apps
+    actions = {}
+    for f in get_apps(apps_dir):
+        m = '%s.%s' % (f, command)
+        try:
+            mod = __import__(m, {}, {}, [''])
+        except ImportError:
+            continue
                 
 def collect_files(apps_dir, apps):
     files = [os.path.join(apps_dir, 'settings.ini')]
@@ -259,6 +275,7 @@ def main():
     action_i18n = make_extract(apps_dir)
     action_extracturls = extracturls
     action_makeproject = make_project
+    action_call = call_commands
     
     #process app's commands.py
     locals().update(collcet_commands())
