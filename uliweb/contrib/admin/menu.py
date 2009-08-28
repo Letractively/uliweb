@@ -57,7 +57,7 @@ def menu(current='settings'):
     for m in mlist[None]:
         weight, id, caption, endpoint = m
         if id == current:
-            out.write('<li id="current"><strong>%s</strong></li>' % caption)
+            out.write('<li class="active"><strong>%s</strong></li>' % caption)
         else:
             out.write('<li><a href="%s">%s</a></li>' % (url_for(endpoint), caption))
         
