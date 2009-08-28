@@ -12,7 +12,7 @@ def _parse_arguments(text, key='with'):
         name, args = b[0], ()
     else:
         name = b[0]
-        args = [x.strip() for x in b[1].split(',')]
+        args = b[1]
     return name, args
 
 def eval_vars(vs, vars, env):
