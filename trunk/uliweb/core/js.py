@@ -121,7 +121,7 @@ class New(B):
             if i is None:
                 continue
             if isinstance(i, Var):
-                args.append(Var.name)
+                args.append(i.name)
             else:
                 args.append(S(i))
         return 'new %s(%s)' % (self.value, ','.join(args))
