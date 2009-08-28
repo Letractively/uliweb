@@ -4,11 +4,15 @@
 {{end}}
 {{block content}}
 <div>
-<table border="1">
-<tr><th>App Name</th><th>Information</th></tr>
-{{for p in apps:}}
-<tr><td>{{=p}}</td><td></td></tr>
-{{pass}}
+<table>
+    <thead>
+        <tr><th>App Name</th><th>Information</th></tr>
+    </thead>
+    <tbody>
+    {{for p in apps:}}
+        <tr><td>{{=p}}</td><td></td></tr>
+    {{pass}}
+    </tbody>
 </table>
 </div>
 {{end}}
