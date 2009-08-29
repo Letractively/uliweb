@@ -1,4 +1,4 @@
-import messages
+from uliweb.i18n import gettext_lazy as _
 
 class ValidationError(Exception):
     def __init__(self, message):
@@ -18,7 +18,7 @@ def __get_choices_keys(choices):
             else:
                 keys.add(v)
     else:
-        raise ValidationError, messages.choice_datatype_error
+        raise ValidationError, _('Choices need a dict, tuple or list data.')
     return keys
     
 def IS_IN_SET(choices):
@@ -27,7 +27,7 @@ def IS_IN_SET(choices):
     '''
     def f(data, rquest=None):
         if data not in __get_choices_keys(choices):
-            raise ValidationError, messages.is_in_set_validate_error
+            raise ValidationError, _('Select a valid choice. That choice is not one of the available choices.')
     return f
 
 def IS_IMAGE(size=None):
@@ -38,9 +38,9 @@ def IS_IMAGE(size=None):
                 image = Image.open(data.file)
                 if size:
                     if image.size[0]>size[0] or image.size[1]>size[1]:
-                        raise ValidationError, messages.image_size_is_to_large
+                        raise ValidationError, _("The image file size exceeds the limit.")
             except Exception, e:
-                raise ValidationError, messages.is_not_valid_image
+                raise ValidationError, _("The file is not a valid image.")
         finally:
             data.file.seek(0)
     return f

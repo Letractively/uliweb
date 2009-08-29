@@ -341,35 +341,27 @@ class Out(object):
         self.buf = StringIO.StringIO()
         
     def _str(self, text):
+        if not isinstance(text, (str, unicode)):
+            text = str(text)
         if isinstance(text, unicode):
             return text.encode(self.encoding)
         else:
             return text
 
     def write(self, text, escape=True):
+        s = self._str(text)
         if escape:
-            self.buf.write(self.xmlescape(text))
+            self.buf.write(cgi.escape(s))
         else:
-            self.buf.write(self._str(text))
+            self.buf.write(s)
             
     def noescape(self, text):
         self.write(self._str(text), escape=False)
         
-    def json(self, text):
-        from datawrap import dumps
-        self.write(dumps(text))
-
-    def xmlescape(self, data, quote=False):
-        try:
-            data = data.xml()
-        except AttributeError:
-            if not isinstance(data, (str, unicode)):
-                data = str(data)
-            if isinstance(data, unicode):
-                data = data.encode("utf8","xmlcharrefreplace")
-            data = cgi.escape(data, quote)
-        return data
-
+#    def json(self, text):
+#        from datawrap import dumps
+#        self.write(dumps(text))
+#
     def getvalue(self):
         return self.buf.getvalue()
 

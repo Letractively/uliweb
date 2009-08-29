@@ -3,11 +3,13 @@ import os
 import cgi
 import datetime
 import time
-import messages
 from validators import *
+from uliweb.i18n import gettext_lazy as _
+from html import *
+from widgets import *
+from layout import *
 
 DEFAULT_FORM_CLASS = 'form'
-DEFAULT_CHARSET = 'utf-8'
 REQUIRED_CAPTION = '(*)'
 REQUIRED_CAPTION_AFTER = True
 
@@ -45,195 +47,6 @@ def check_reserved_word(f):
         raise ReservedWordError(
             "Cannot define property using reserved word '%s'. " % f
             )
-
-##################################################################
-#  HTML Helper
-##################################################################
-
-def _str(v, encoding=None):
-    if not encoding:
-        encoding = DEFAULT_CHARSET
-    if isinstance(v, str):
-        pass
-    elif isinstance(v, unicode):
-        v = v.encode(encoding)
-    else:
-        v = str(v)
-    return v
-
-def _create_kwargs(args, nocreate_if_none=['id', 'for']):
-    """
-    Make python dict to k="v" format
-    
-    >>> print _create_kwargs({'name':'title'})
-     name="title"
-    >>> print _create_kwargs({'_class':'color', 'id':'title'})
-     class="color" id="title"
-    >>> print _create_kwargs({'_class':'color', 'id':None})
-     class="color"
-    >>> print _create_kwargs({'_class':'color', 'checked':None})
-     class="color" checked
-    >>> print _create_kwargs({'_class':'color', '_for':None})
-     class="color"
-    
-    """
-    if not args:
-        return ''
-    s = ['']
-    for k, v in sorted(args.items()):
-        if k.startswith('_'):
-            k = k[1:]
-        if v is None:
-            if k not in nocreate_if_none:
-                s.append(k)
-        else:
-            s.append('%s="%s"' % (k, cgi.escape(_str(v))))
-    return ' '.join(s)
-
-class Buf(object):
-    def __init__(self, begin='', end=''):
-        self.buf = []
-        self.begin = begin
-        self.end = end
-
-    def __lshift__(self, obj):
-        if obj:
-            if isinstance(obj, (tuple, list)):
-                self.buf.extend(obj)
-            else:
-                self.buf.append(obj)
-                obj = [obj]
-            return obj[0]
-        else:
-            return None
-
-    def __str__(self):
-        return self.html()
-
-    def html(self):
-        s = [self.begin]
-        s.extend(self.buf)
-        s.append(self.end)
-        s = filter(None, s)
-        return '\n'.join([str(x) for x in s])
-
-class Tag(Buf):
-    """
-    Creating a tag. For example:
-        
-        >>> print Tag('br/').html()
-        <br/>
-        >>> print Tag('a', 'Hello', href="/")
-        <a href="/">
-        Hello
-        </a>
-    """
-    def __init__(self, tag, *children, **args):
-        self.tag = tag
-        self.buf = list(children)
-        if tag.endswith('/'):
-            self.begin = '<%s%s>' % (tag, _create_kwargs(args))
-            self.end = ''
-        else:
-            self.begin = '<%s%s>' % (tag, _create_kwargs(args))
-            self.end = '</%s>' % tag
-
-    def html(self):
-        if not self.tag.endswith('/'):
-            b = ''.join([_str(x) for x in self.buf])
-            if not b:
-                s = [self.begin+self.end]
-            else:
-                s = [self.begin, b, self.end]
-        else:
-            s = [self.begin]
-        return '\n'.join(s)
-
-class Build(object):
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs
-
-    def html(self):
-        raise Exception, 'Not implemented'
-
-    def __str__(self):
-        return self.html()
-
-class Text(Build):
-    type = 'text'
-
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs
-
-    def html(self):
-        args = self.kwargs.copy()
-        args.setdefault('type', self.type)
-        return str(Tag('input', **args))
-
-class Password(Text): type = 'password'
-class TextArea(Build):
-    def __init__(self, value='', **kwargs):
-        self.kwargs = kwargs
-        self.value = value
-
-    def html(self):
-        args = self.kwargs
-        args.setdefault('rows', 5)
-        args.setdefault('cols', 40)
-        return str(Tag('textarea', self.value, **args))
-class Hidden(Text): type = 'hidden'
-class Button(Text): type = 'button'
-class Submit(Text): type = 'submit'
-class Reset(Text): type = 'reset'
-class File(Text): type = 'file'
-class Radio(Text): type = 'radio'
-class Select(Build):
-    def __init__(self, choices, value=None, **kwargs):
-        self.choices = choices
-        self.value = value
-        self.kwargs = kwargs
-
-    def html(self):
-        s = []
-        for v, caption in self.choices:
-            args = {'value': v}
-            if v == self.value:
-                args['selected'] = None
-            s.append(str(Tag('option', caption, **args)))
-        return str(Tag('select', '\n'.join(s), **self.kwargs))
-    
-class RadioSelect(Select):
-    _id = 0
-    def __init__(self, choices, value=None, **kwargs):
-        Select.__init__(self, choices, value, **kwargs)
-
-    def html(self):
-        s = []
-        for v, caption in self.choices:
-            args = {'value': v}
-            id = args.setdefault('id', 'radio_%d' % self.get_id())
-            args['name'] = self.kwargs.get('name')
-            if v == self.value:
-                args['checked'] = None
-            s.append(str(Radio(**args)))
-            s.append(str(Tag('label', caption, _for=id)))
-        return ''.join(s)
-    
-    def get_id(self):
-        RadioSelect._id += 1
-        return self._id
-    
-class Checkbox(Build):
-    def __init__(self, value=False, **kwargs):
-        self.value = value
-        self.kwargs = kwargs
-
-    def html(self):
-        args = self.kwargs.copy()
-        if self.value:
-            args.setdefault('checked', None)
-        args.setdefault('type', 'checkbox')
-        return str(Tag('input', **args))
 
 ###############################################################
 # Form Helper
@@ -375,14 +188,14 @@ class BaseField(object):
     def to_html(self, data):
         if data is None:
             return ''
-        return _str(data)
+        return u_str(data)
 
     def validate(self, data, request=None):
         if isinstance(data, cgi.FieldStorage):
             if data.file:
                 v = data.filename
             else:
-                raise Exception, messages.unsupport_error % type(data)
+                raise Exception, 'Unsupport type %s' % type(data)
         else:
             v = data
         if not v:
@@ -393,7 +206,7 @@ class BaseField(object):
 #                else:
 #                    return True, data
             else:
-                return False, 'This field is required.'
+                return False, _('This field is required.')
         try:
             if isinstance(data, list):
                 v = []
@@ -403,7 +216,7 @@ class BaseField(object):
             else:
                 data = self.to_python(data)
         except:
-            return False, messages.convert_error % (data, self.__class__.__name__)
+            return False, _("Can't convert %r to %s.") % (data, self.__class__.__name__)
         try:
             for v in self.default_validators + self.validators:
                 v(data, request)
@@ -557,9 +370,9 @@ class ListField(StringField):
 
     def to_html(self, data):
         if issubclass(self.build, TextArea):
-            return '\n'.join([_str(x) for x in data])
+            return '\n'.join([u_str(x) for x in data])
         else:
-            return self.delimeter.join([_str(x) for x in data])
+            return self.delimeter.join([u_str(x) for x in data])
 
 class TextField(StringField):
     """
@@ -605,7 +418,7 @@ class TextLinesField(TextField):
     def to_html(self, data):
         if data is None:
             return ''
-        return '\n'.join([_str(x) for x in data])
+        return '\n'.join([u_str(x) for x in data])
 
 class BooleanField(BaseField):
     """
@@ -808,7 +621,7 @@ class DateField(StringField):
                 return datetime.date(*time.strptime(data, format)[:3])
             except ValueError:
                 continue
-        raise ValidationError, messages.date_format_error
+        raise ValidationError, _("The data is not a valid data format.")
     
     def to_html(self, data):
         if data:
@@ -858,7 +671,7 @@ class TimeField(StringField):
                 return datetime.time(*time.strptime(data, format)[3:6])
             except ValueError:
                 continue
-        raise ValidationError, messages.time_format_error
+        raise ValidationError, _("The data is not a valid time format.")
     
     def to_html(self, data):
         if data:
@@ -888,95 +701,6 @@ class FormMetaclass(type):
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls.fields_list = fields_list
 
-class Layout(object):
-    def __init__(self, form, layout=None):
-        self.form = form
-        self.layout = layout
-        
-    def html(self):
-        return ''
-    
-    def __str__(self):
-        return self.html()
-    
-class TableLayout(Layout):
-    def line(self, label, input, help_string='', error=None):
-        tr = Tag('tr')
-        tr << Tag('td', label)
-        td = tr << Tag('td', input)
-        if error:
-            td << Tag('br/')
-            td << Tag('span', error, _class='error')
-        td = tr << Tag('td', help_string)
-        return tr
-
-    def single_line(self, element):
-        tr = Tag('tr')
-        tr << Tag('td', element, colspan=3)
-        return tr
-
-    def buttons_line(self, buttons):
-        tr = Tag('tr', align='center', _class="buttons")
-        td = tr << Tag('td', Tag('label', '&nbsp;', _class='field'), colspan=3)
-        td << buttons
-        return tr
-        
-    def html(self):
-        buf = Buf()
-        buf << self.form.form_begin
-        
-        p = buf << Tag('fieldset')
-        if self.form.form_title:
-            p << Tag('legend', self.form.form_title)
-        table = p << Tag('table')
-        tbody = table << Tag('tbody')
-
-        for name, obj in self.form.fields_list:
-            f = getattr(self.form, name)
-            if isinstance(obj, HiddenField):
-                tbody << f
-            else:
-                tbody << self.line(f.label, f, f.help_string, f.error)
-        
-        tbody << self.buttons_line(self.form.get_buttons())
-        buf << self.form.form_end
-        return str(buf)
-    
-class CSSLayout(Layout):
-    def line(self, obj, label, input, help_string='', error=None):
-        div = Buf()
-        div << label
-        div << input
-        if error:
-            div << Tag('span', error, _class='error')
-        div << Tag('br/')
-        return div
-
-    def buttons_line(self, buttons):
-        div = Buf()
-        div << Tag('label', '&nbsp;', _class='field')
-        div << buttons
-        div << Tag('br/')
-        return div
-
-    def html(self):
-        buf = Buf()
-        buf << self.form.form_begin
-        
-        form = buf << Tag('fieldset')
-        if self.form.form_title:
-            form << Tag('legend', self.form.form_title)
-    
-        for name, obj in self.form.fields_list:
-            f = getattr(self.form, name)
-            if isinstance(obj, HiddenField):
-                form << f
-            else:
-                form << self.line(obj, f.label, f, f.help_string, f.error)
-        
-        form << self.buttons_line(self.form.get_buttons())
-        buf << self.form.form_end
-        return str(buf)
 
 class Form(object):
     """
@@ -997,7 +721,7 @@ class Form(object):
 
     __metaclass__ = FormMetaclass
 
-    layout_class = CSSLayout
+    layout_class = YamlLayout
     layout = None
     form_action = ''
     form_method = 'POST'
@@ -1106,7 +830,7 @@ class Form(object):
     def get_buttons(self):
         b = Buf()
         if self._buttons is None:
-            b << [Submit(value='Submit', _class="button")]
+            b << [Submit(value='Submit', _class="button", name="submit")]
         else:
             b << self._buttons
         return str(b)
