@@ -5,10 +5,8 @@
 {{block content}}
 <div>
 <table>
-    <thead>
-        <tr><th>App Name</th><th>Information</th></tr>
-    </thead>
     <tbody>
+    <tr><th>App Name</th><th>Information</th></tr>
     {{for p in apps:}}
         <tr><td>{{=p}}</td><td></td></tr>
     {{pass}}
