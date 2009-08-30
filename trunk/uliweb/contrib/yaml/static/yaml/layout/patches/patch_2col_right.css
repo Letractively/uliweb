@@ -2,8 +2,8 @@
 /**
  * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
  *
- * (en) IE-Patch stylesheet for "sliding_door" layout example
- * (de) IE-Korrektur-Stylesheet für das "sliding_door" Beispiellayout
+ * (en) IE-Patch stylesheet for "2col_left_13" layout
+ * (de) IE-Korrektur-Stylesheet für das Layout "2col_left_13"
  *
  * @copyright       Copyright 2005-2009, Dirk Jesse
  * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
@@ -31,9 +31,8 @@
    */
 
   * html #col3 { height: 1%; }
-  * html #col1 {margin-right: -3px;}
-  * html #col2 {margin-left: -3px;}
-  * html #col3 { margin-left: 24%; margin-right: 24%; }
+  * html #col1 {margin-right: -3px; }
+  * html #col3 { margin-left: 24%; }
 
  /**
   * min-width/max-width workaround for IE5.x & IE6
