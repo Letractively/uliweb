@@ -48,7 +48,7 @@ class SessionCookie(object):
         self.expiry_time =  self.expiry_time or self.default_expiry_time or self.session.expiry_time
         
 class Session(dict):
-    default_expiry_time = 3600
+    default_expiry_time = 3600*24*365
     default_storage_type = 'file'
     default_options = {'table_name':'uliweb_session'}
     
@@ -74,6 +74,14 @@ class Session(dict):
         mod = __import__(modname, {}, {}, [''])
         _class = getattr(mod, 'Storage', None)
         return _class
+    
+    def _set_remember(self, v):
+        self['_sessiom_remember_'] = v
+        
+    def _get_remember(self):
+        return self.get('_sessiom_remember_', True)
+    
+    remember = property(_get_remember, _set_remember)
     
     @property
     def storage(self):
@@ -132,7 +140,6 @@ class Session(dict):
             return False
         
     def delete(self):
-        self.deleted = True
         if self.key:
             lock = self.storage.get_lock(self.key)
             try:
@@ -140,9 +147,14 @@ class Session(dict):
                 self.storage.delete(self.key)
                 self.clear()
                 self._old_value = self.copy()
-            finally:
-                self.storage.release_write_lock(lock)
-                lock.delete()
+            except:
+                self.storage.release_write_lock(lock, False)
+                raise
+            else:
+                self.storage.release_write_lock(lock, True)
+                self.storage.delete_lock(lock)
+                
+        self.deleted = True
          
     def _check(f):
         def _func(self, *args, **kw):

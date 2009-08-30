@@ -24,6 +24,7 @@ class LoginForm(Form):
     
     username = StringField(label=_('Username:'), required=True)
     password = PasswordField(label=_('Password:'), required=True)
+    rememberme = BooleanField(label=_('Remember Me'))
     next = HiddenField()
     
 class ChangePasswordForm(Form):
