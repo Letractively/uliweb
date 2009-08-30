@@ -163,7 +163,7 @@ class YamlLayout(Layout):
     def html(self):
         buf = Buf()
         if 'yform' not in self.form.html_attrs['_class']:
-            self.form.html_attrs['_class'] = 'yform columnar'
+            self.form.html_attrs['_class'] = 'yform'
         buf << self.form.form_begin
         
         form = buf << Tag('fieldset')

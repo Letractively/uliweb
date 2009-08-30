@@ -57,3 +57,6 @@ class BaseStorage(object):
     def release_write_lock(self, lock, success):
         raise NotImplementedError()
     
+    def delete_lock(self, lock):
+        raise NotImplementedError()
+    

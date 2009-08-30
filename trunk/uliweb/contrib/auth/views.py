@@ -14,6 +14,7 @@ def login():
         if flag:
             f, d = authenticate(request, username=form.username.data, password=form.password.data)
             if f:
+                request.session.remember = form.rememberme.data
                 login(request, form.username.data)
                 next = request.POST.get('next', '/')
                 return redirect(next)

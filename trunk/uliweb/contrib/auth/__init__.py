@@ -90,13 +90,6 @@ def logout(request, backend_id=None):
     """
     result = dispatch.get(request, 'logout', request.user.username, signal=backend_id)
     if result:
-        try:
-            del request.session[_get_auth_key(request)]
-        except KeyError:
-            pass
-        try:
-            del request.session[_get_backend_key(request)]
-        except KeyError:
-            pass
+        request.session.delete()
         request.user = None
     return result

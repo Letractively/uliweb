@@ -68,7 +68,10 @@ class Storage(BaseStorage):
     def delete(self, key):
         if key:
             self.table.delete(self.table.c.key==key).execute()
-
+            
+    def delete_lock(self, lock):
+        pass
+    
 def create_table(url, tablename, create=False):
     db = sa.create_engine(url, strategy='threadlocal')
     meta = sa.MetaData(db)

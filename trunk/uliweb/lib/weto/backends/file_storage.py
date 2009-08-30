@@ -65,3 +65,8 @@ class Storage(BaseStorage):
             session_file = self.get_session_file(key)
             if os.path.exists(session_file):
                 os.unlink(session_file)
+                
+    def delete_lock(self, lock):
+        if lock:
+            lock.delete()
+    

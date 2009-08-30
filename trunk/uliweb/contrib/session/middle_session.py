@@ -36,11 +36,15 @@ class SessionMiddle(Middleware):
             flag = session.save()
             if flag:
                 c = session.cookie
+                if session.remember:
+                    max_age = c.expiry_time
+                else:
+                    max_age = None
                 response.set_cookie(c.cookie_id,
-                        session.key, max_age=c.expiry_time,
+                        session.key, max_age=max_age,
                         expires=None, domain=c.domain,
                         path=c.path,
                         secure=c.secure)
-        
+                print response.headers.get('Set-cookie')
         return response
         

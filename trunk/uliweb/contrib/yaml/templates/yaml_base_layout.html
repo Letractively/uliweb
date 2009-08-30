@@ -15,6 +15,15 @@
 <div class="page_margins">
 	<div class="page">
 		<div id="header">
+            <div id="topnav">
+                {{block topnav}}
+                {{if request.user:}}
+                <span>Welcome, {{=request.user.username}} | <a href="/settings">Settings</a> | <a href="/logout">Logout</a></span>
+                {{else:}}
+                <span><a href="/login">Login</a> | <a href="/register">Register</a></span> 
+                {{pass}}
+                {{end}}
+            </div>
 			{{block header}}<h1>Header</h1>{{end}}
         </div>
 		<!-- begin: main navigation #nav -->
@@ -23,10 +32,7 @@
 			<!-- skiplink anchor: navigation -->
             {{from uliweb.contrib.admin.menu import menu}}
 			<div class="hlist">
-				{{block nav_menu}}<ul>
-					<li id="current"><strong>settings.ini</strong></li>
-					<li><a href="#">Apps Info</a></li>
-				</ul>
+				{{block nav_menu}}
                 {{end}}
 			</div>
 		</div>
