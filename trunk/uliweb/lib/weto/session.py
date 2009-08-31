@@ -13,11 +13,6 @@ try:
 except ImportError:
     from md5 import md5
     
-try:
-    set
-except:
-    from sets import Set as set
-
 class SessionException(Exception):pass
 class SessionKeyException(Exception):pass
 
@@ -115,7 +110,7 @@ class Session(dict):
         self._old_value = self.copy()
             
     def _is_modified(self):
-        return set(self._old_value.items()) != set(self.items())
+        return self._old_value == dict(self)
     
     def _is_not_expiry(self, accessed_time, expiry_time):
         return time.time() < accessed_time + expiry_time
