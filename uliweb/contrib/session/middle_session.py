@@ -45,6 +45,5 @@ class SessionMiddle(Middleware):
                         expires=None, domain=c.domain,
                         path=c.path,
                         secure=c.secure)
-                print response.headers.get('Set-cookie')
         return response
         

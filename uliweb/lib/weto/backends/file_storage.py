@@ -54,7 +54,7 @@ class Storage(BaseStorage):
             f = open(session_file, 'wb')
             try:
                 try:
-                    cPickle.dump((stored_time, expire_time, value), f)
+                    cPickle.dump((stored_time, expiry_time, value), f)
                 except (IOError, OSError, EOFError, cPickle.PickleError, ValueError):
                     pass
             finally:
