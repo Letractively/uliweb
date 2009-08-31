@@ -110,7 +110,7 @@ class Session(dict):
         self._old_value = self.copy()
             
     def _is_modified(self):
-        return self._old_value == dict(self)
+        return self._old_value != dict(self)
     
     def _is_not_expiry(self, accessed_time, expiry_time):
         return time.time() < accessed_time + expiry_time
