@@ -23,14 +23,14 @@ class Storage(file_storage.Storage):
                 finally:
                     f.close()
     
-    def save(self, key, stored_time, expire_time, value, modified):
+    def save(self, key, stored_time, expiry_time, value, modified):
         if key:
             session_file = self.get_session_file(key)
             verify_path(session_file)
             f = self.dbm_module.open(session_file, 'c')
             try:
                 try:
-                    f[key] = cPickle.dumps((stored_time, expire_time, value))
+                    f[key] = cPickle.dumps((stored_time, expiry_time, value))
                 except (IOError, OSError, EOFError, cPickle.PickleError, ValueError):
                     pass
             finally:
