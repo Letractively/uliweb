@@ -27,7 +27,7 @@ from sorteddict import SortedDict
 __all__ = ['SortedDict', 'Section', 'Ini']
 
 try:
-    import set
+    set
 except:
     from sets import Set as set
 
