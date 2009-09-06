@@ -1,5 +1,5 @@
 from uliweb.core.SimpleFrame import expose
-from apps.Portal.modules.menu import menu
+from Portal.modules.menu import menu
 import os
 
 def __begin__():
