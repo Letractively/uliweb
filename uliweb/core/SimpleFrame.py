@@ -696,13 +696,13 @@ class Dispatcher(object):
                     dispatch.bind(**h)(func)
             exposes = d.get('expose', [])
             if exposes:
-                for h in hooks:
+                for h in exposes:
                     try:
                         func = h.pop('function')
                     except:
                         log.error("Can't find function in bind option, %r" % h)
                         continue
-                    dispatch.bind(**h)(func)
+                    expose(**h)(func)
             
     def get_template_dirs(self):
         template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in self.apps]
