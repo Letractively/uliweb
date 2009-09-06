@@ -3,14 +3,17 @@ __all__ = ['dumps', 'C', 'U', 'Buf', 'S', 'Call', 'Function', 'HtmlBuf', 'Line',
     'Quote', 'Var', 'Snippet']
 
 import os
-import simplejson as sj
+try:
+    import json as JSON
+except:
+    import simplejson as JSON
 
 TAB = 4
 SIMPLE_IDEN = True
 
-class ComplexEncoder(sj.JSONEncoder):
+class ComplexEncoder(JSON.JSONEncoder):
     def __init__(self, classes=[], **kwargs):
-        sj.JSONEncoder.__init__(self, **kwargs)
+        JSON.JSONEncoder.__init__(self, **kwargs)
         if not isinstance(classes, (tuple, list)):
             self.classes = [classes]
         else:
@@ -23,7 +26,7 @@ class ComplexEncoder(sj.JSONEncoder):
         return self._iterencode(newobj, markers)
     
 def dumps(obj):
-    return sj.dumps(obj, cls=ComplexEncoder)
+    return JSON.dumps(obj, cls=ComplexEncoder)
 
 class B(object):
     def __init__(self, value=None):

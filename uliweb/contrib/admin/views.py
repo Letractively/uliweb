@@ -47,9 +47,28 @@ import os
 def admin_build():
     from uliweb.utils.common import pkg
     
+    import uliweb.core.SimpleFrame as sf
+    app_apps = sf.get_apps(application.apps_dir)
+    
     contrib_path = pkg.resource_filename('uliweb.contrib', '')
     apps_dirs = [(application.apps_dir, ''), (contrib_path, 'uliweb.contrib')]
-    catalogs, apps = get_apps(application, apps_dirs)
+    
+    #using entry point to find installed apps
+    try:
+        from pkg_resources import iter_entry_points
+    except:
+        iter_entry_points = None
+    if iter_entry_points:
+        #process apps group
+        for p in iter_entry_points('uliweb_apps'):
+            apps_dirs.append((os.path.join(p.dist.location, p.module_name), p.module_name))
+            
+    catalogs, apps = get_apps(application, apps_dirs, app_apps)
+    
+    if iter_entry_points:
+        #proces single app
+        for p in iter_entry_points('uliweb_app'):
+            _get_app(os.path.join(p.dist.location, p.module_name), p.module_name, apps, catalogs, app_apps)
     
     from forms import GenericForm
     
@@ -165,29 +184,36 @@ def del_var(key, ini_obj):
         flag = False
     
     return flag
+
+def _get_app(app_path, modname, apps, catalogs, app_apps, parent_module=''):
+    info_ini = os.path.join(app_path, 'info.ini')
+    if os.path.exists(info_ini):
+        info = get_app_info(modname, app_path, info_ini)
+        if parent_module:
+            info['module'] = parent_module + '.' + modname
+        else:
+            info['module'] = modname
+        if info['module'] in app_apps:
+            info['selected'] = True
+        else:
+            info['selected'] = False
+            
+        apps[modname] = info
+        d = catalogs.setdefault(info['catalog'], [])
+        d.append(info)
    
 def _get_apps(application, path, parent_module, catalogs, apps, app_apps):
+    if not os.path.exists(path):
+        return
     for p in os.listdir(path):
+        if p in ['.svn', 'CVS'] or p.startswith('.') or p.startswith('_'):
+            continue
         app_path = os.path.join(path, p)
         
         if not os.path.isdir(app_path):
             continue
         
-        info_ini = os.path.join(app_path, 'info.ini')
-        if os.path.exists(info_ini) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
-            info = get_app_info(p, app_path, info_ini)
-            if parent_module:
-                info['module'] = parent_module + '.' + p
-            else:
-                info['module'] = p
-            if info['module'] in app_apps:
-                info['selected'] = True
-            else:
-                info['selected'] = False
-                
-            apps[p] = info
-            d = catalogs.setdefault(info['catalog'], [])
-            d.append(info)
+        _get_app(app_path, p, apps, catalogs, app_apps, parent_module)
                
         _path = os.path.join(path, p)
         if is_pyfile_exist(_path, '__init__'):
@@ -197,12 +223,9 @@ def _get_apps(application, path, parent_module, catalogs, apps, app_apps):
                 m = p
             _get_apps(application, _path, m, catalogs, apps, app_apps)
 
-def get_apps(application, apps_dirs):
+def get_apps(application, apps_dirs, app_apps):
     catalogs = {}
     apps = {}
-    
-    import uliweb.core.SimpleFrame as sf
-    app_apps = sf.get_apps(application.apps_dir)
     
     for path, parent_module in apps_dirs:
         _get_apps(application, path, parent_module, catalogs, apps, app_apps)
@@ -243,7 +266,7 @@ def admin_app_conf():
                     ini.read(os.path.join(application.apps_dir, 'settings.ini'))
                     ini_to_form(form, ini)
         
-        except ImportError:
+        except ImportError, e:
             log.exception(e)
     
     return message + str(form)

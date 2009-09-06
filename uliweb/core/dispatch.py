@@ -1,5 +1,6 @@
 import logging
 import inspect
+from uliweb.utils.common import import_func
 
 __all__ = ['HIGH', 'MIDDLE', 'LOW', 'bind', 'call', 'get', 'unbind', 'call_once', 'get_once']
 
@@ -33,7 +34,13 @@ def bind(topic, signal=None, kind=MIDDLE, nice=-1):
                 n = 900
         else:
             n = nice
-        _f = (n, {'func':func, 'signal':signal})
+        if callable(func):
+            func_name = func.__module__ + '.' + func.__name__
+            func = func
+        else:
+            func_name = func
+            func = None
+        _f = (n, {'func':func, 'signal':signal, 'func_name':func_name})
         receivers.append(_f)
         return func
     return f
@@ -46,7 +53,7 @@ def unbind(topic, func):
         receivers = _receivers[topic]
         for i, v in enumerate(receivers):
             nice, f = v
-            if f['func'] is func:
+            if (callable(func) and f['func'] is func) or (f['func_name'] == func):
                 del receivers[i]
                 return
 
@@ -79,6 +86,9 @@ def call(sender, topic, *args, **kwargs):
     for i in range(len(items)):
         nice, f = items[i]
         _f = f['func']
+        if not _f:
+            _f = import_func(f['func_name'])
+            f['func'] = _f
         if callable(_f):
             if not _test(kwargs, f):
                 continue
@@ -111,6 +121,9 @@ def get(sender, topic, *args, **kwargs):
     for i in range(len(items)):
         nice, f = items[i]
         _f = f['func']
+        if not _f:
+            _f = import_func(f['func_name'])
+            f['func'] = _f
         if callable(_f):
             if not _test(kwargs, f):
                 continue

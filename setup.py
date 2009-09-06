@@ -1,5 +1,5 @@
 import uliweb
-from setuptools import setup
+from uliweb.utils.setup import setup
 
 setup(name='Uliweb',
       version=uliweb.version,

@@ -1,5 +1,10 @@
 import os, sys
 
+def import_func(path):
+    module, func = path.rsplit('.', 1)
+    mod = __import__(module, {}, {}, [''])
+    return getattr(mod, func)
+
 def myimport(module):
     m = module.split('.')
     mod = __import__(module)
@@ -172,15 +177,13 @@ def is_pyfile_exist(dir, pymodule):
                 return False
     return True
     
-def wrap(f):
-    def d_wrap(func):
-        func.__name__ = f.__name__
-        func.__dict__.update(f.__dict__)
-        func.__doc__ = f.__doc__
-        func.__module__ = f.__module__
-        func.func_globals.update(f.func_globals)
-        return func
-    return d_wrap
+def wrap_func(des, src):
+    des.__name__ = src.__name__
+    des.func_globals.update(src.func_globals)
+    des.__doc__ = src.__doc__
+    des.__module__ = src.__module__
+    des.__dict__.update(src.__dict__)
+    return des
 
 def sort(alist, default=500):
     """

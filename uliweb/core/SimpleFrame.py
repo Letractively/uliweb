@@ -18,9 +18,13 @@ from rules import Mapping, add_rule
 import template
 from storage import Storage
 import dispatch
-from uliweb.utils.common import pkg, log, sort
+from uliweb.utils.common import pkg, log, sort, wrap_func, import_func
 from uliweb.utils.pyini import Ini
-import simplejson as sj
+
+try:
+    import json as JSON
+except:
+    import simplejson as JSON
 
 class ReservedKeyError(Exception):pass
 
@@ -117,6 +121,36 @@ def expose(rule=None, **kw):
         return f
     return decorate
 
+def pre_view(topic, *args1, **kwargs1):
+    methods = kwargs1.pop('methods', None)
+    signal = kwargs1.pop('signal', None)
+    def _f(f):
+        def _f2(*args, **kwargs):
+            m = methods or []
+            m = [x.upper() for x in m]
+            if not m or (m and local.request.method in m):
+                ret = dispatch.get(local.application, topic, signal=signal, *args1, **kwargs1)
+                if ret:
+                    return ret
+            return f(*args, **kwargs)
+        return wrap_func(_f2, f)
+    return _f
+
+def post_view(topic, *args1, **kwargs1):
+    methods = kwargs1.pop('methods', None)
+    signal = kwargs1.pop('signal', None)
+    def _f(f):
+        def _f2(*args, **kwargs):
+            m = methods or []
+            m = [x.upper() for x in m]
+            ret = f(*args, **kwargs)
+            ret1 = None
+            if not m or (m and local.request.method in m):
+                ret1 = dispatch.get(local.application, topic, signal=signal, *args1, **kwargs1)
+            return ret or ret1
+        return wrap_func(_f2, f)
+    return _f
+    
 def POST(rule, **kw):
     kw['methods'] = ['POST']
     return expose(rule, **kw)
@@ -129,11 +163,6 @@ def url_for(endpoint, _external=False, **values):
     if callable(endpoint):
         endpoint = endpoint.__module__ + '.' + endpoint.__name__
     return local.url_adapter.build(endpoint, values, force_external=_external)
-
-def import_func(path):
-    module, func = path.rsplit('.', 1)
-    mod = __import__(module, {}, {}, [''])
-    return getattr(mod, func)
 
 class HTTPError(Exception):
     def __init__(self, errorpage=None, **kwargs):
@@ -161,7 +190,7 @@ def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
     raise HTTPError(errorpage, **kwargs)
 
 def json(data):
-    return Response(sj.dumps(data), content_type='application/json')
+    return Response(JSON.dumps(data), content_type='application/json')
 
 def static_serve(app, filename, check=True, dir=None):
     from werkzeug.exceptions import Forbidden
@@ -347,6 +376,10 @@ class Dispatcher(object):
 #        Dispatcher.templateplugins_dirs = self.get_templateplugins_dirs()
         Dispatcher.env = self._prepare_env()
         Dispatcher.settings = settings
+        
+        #process dispatch hooks
+        self.dispatch_hooks()
+        
         self.debug = settings.GLOBAL.get('DEBUG', False)
         Dispatcher.template_env = Storage(Dispatcher.env.copy())
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
@@ -513,14 +546,22 @@ class Dispatcher(object):
                 return self.wrap_result(result, request, response, env)
         
         result = self.call_handler(handler, request, response, **values)
-        return result
+        
+        result1 = None
+        if hasattr(mod, '__end__'):
+            f = getattr(mod, '__end__')
+            result1, env = self._call_function(f, request, response)
+            if result1:
+                return self.wrap_result(result1, request, response, env)
+        
+        return result or result1
         
     def wrap_result(self, result, request, response, env=None):
         env = env or self.env
-        #process ajax invoke, return a json response
-        if request.is_xhr and isinstance(result, dict):
-            result = Response(sj.dumps(result), content_type='application/json')
-                
+#        #process ajax invoke, return a json response
+#        if request.is_xhr and isinstance(result, dict):
+#            result = Response(JSON.dumps(result), content_type='application/json')
+
         if isinstance(result, dict):
             result = Storage(result)
             if hasattr(response, 'template'):
@@ -640,6 +681,29 @@ class Dispatcher(object):
         for v in s:
             settings.read(v)
             
+    def dispatch_hooks(self):
+        #process DISPATCH hooks
+        d = settings.get('DISPATCH', None)
+        if d:
+            hooks = d.get('bind', [])
+            if hooks:
+                for h in hooks:
+                    try:
+                        func = h.pop('function')
+                    except:
+                        log.error("Can't find function in bind option, %r" % h)
+                        continue
+                    dispatch.bind(**h)(func)
+            exposes = d.get('expose', [])
+            if exposes:
+                for h in hooks:
+                    try:
+                        func = h.pop('function')
+                    except:
+                        log.error("Can't find function in bind option, %r" % h)
+                        continue
+                    dispatch.bind(**h)(func)
+            
     def get_template_dirs(self):
         template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in self.apps]
         return template_dirs
@@ -681,7 +745,6 @@ class Dispatcher(object):
                 _inss = {}
 
                 #middleware process request
-                #todo: saving the middlewares?
                 middlewares = settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
                 s = []
                 for middleware in middlewares:

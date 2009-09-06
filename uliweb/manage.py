@@ -101,6 +101,21 @@ def make_app(appname=''):
         from uliweb.utils.common import extract_dirs
         extract_dirs('uliweb', 'template_files/app', path)
 
+def make_pkg(pkgname=''):
+    """create a new python package folder according the appname parameter"""
+
+    if not pkgname:
+        pkgname = ''
+        while not pkgname:
+            pkgname = raw_input('Please enter python package name:')
+        
+    if not os.path.exists(pkgname):
+        os.makedirs(pkgname)
+    initfile = os.path.join(pkgname, '__init__.py')
+    if not os.path.exists(initfile):
+        f = open(initfile, 'w')
+        f.close()
+
 def make_project(project_name='', verbose=('v', False)):
     """create a new project directory according the project name"""
     from uliweb.utils.common import extract_dirs
@@ -269,6 +284,7 @@ def main():
     action_runserver = runserver(apps_dir, port=8000)
     action_runadmin = runserver(apps_dir, port=8000, admin=True)
     action_makeapp = make_app
+    action_makepkg = make_pkg
     action_export = export
     action_exportstatic = exportstatic
     from uliweb.i18n.i18ntool import make_extract
