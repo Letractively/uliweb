@@ -87,7 +87,11 @@ def call(sender, topic, *args, **kwargs):
         nice, f = items[i]
         _f = f['func']
         if not _f:
-            _f = import_func(f['func_name'])
+            try:
+                _f = import_func(f['func_name'])
+            except ImportError:
+                logging.error("Can't import function %s" % f['func_name'])
+                raise
             f['func'] = _f
         if callable(_f):
             if not _test(kwargs, f):
@@ -122,7 +126,11 @@ def get(sender, topic, *args, **kwargs):
         nice, f = items[i]
         _f = f['func']
         if not _f:
-            _f = import_func(f['func_name'])
+            try:
+                _f = import_func(f['func_name'])
+            except ImportError:
+                logging.error("Can't import function %s" % f['func_name'])
+                raise
             f['func'] = _f
         if callable(_f):
             if not _test(kwargs, f):
