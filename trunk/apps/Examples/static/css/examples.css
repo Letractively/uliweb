@@ -1,7 +1,0 @@
-table.examplesTable {margin-top:1.7em;}
-.examplesTable td {border:1px solid #dedede; padding:2px; font-size:100%; vertical-align:top;}
-.examplesTable td.title {width:25%;}
-.examplesTable td.description {width:65%;}
-.examplesTable tr.odd {background-color:#DBEBF3;}
-.examplesTable th {border:1px solid #dedede; padding:2px; background-color:#0066CC; color:#CCCCCC; font-weight:bold; font-size:100%;}
-.examplesTable th.title {background-color:#F4F4F4;}

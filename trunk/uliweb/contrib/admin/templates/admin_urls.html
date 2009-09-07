@@ -1,5 +1,6 @@
 {{extend "admin_layout.html"}}
 {{block nav_menu}}
+{{from uliweb.contrib.admin.menu import menu}}
 {{<< menu('Urls')}}
 {{end}}
 {{block content}}

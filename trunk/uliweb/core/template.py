@@ -89,9 +89,13 @@ class Node(object):
             return ''
     
 class BlockNode(Node):
-    def __init__(self, name=''):
+    def __init__(self, name='', parent=None):
         self.nodes = []
-        self.vars = {}
+        self.parent = parent
+        if self.parent:
+            self.vars = self.parent.vars
+        else:
+            self.vars = {}
         self.name = name
         
     def add(self, node):
@@ -243,7 +247,7 @@ class Lexer(object):
                     if name in self.handlers:
                         self.handlers[name](value, top, self.stack, self.vars, self.env, self.dirs, self.writer)
                     elif name == 'block':
-                        node = BlockNode(name=value.strip())
+                        node = BlockNode(name=value.strip(), parent=top)
                         top.add(node)
                         self.stack.append(node)
                     elif name == 'end':

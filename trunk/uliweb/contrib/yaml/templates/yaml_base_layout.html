@@ -19,11 +19,7 @@
 		<div id="header">
             <div id="topnav">
                 {{block topnav}}
-                {{if request.user:}}
-                <span>Welcome, {{=request.user.username}} | <a href="/settings">Settings</a> | <a href="/logout">Logout</a></span>
-                {{else:}}
                 <span><a href="/login">Login</a> | <a href="/register">Register</a></span> 
-                {{pass}}
                 {{end}}
             </div>
 			{{block header}}<h1>Header</h1>{{end}}
@@ -32,9 +28,8 @@
 		{{block nav}}
 		<div id="nav"> <a id="navigation" name="navigation"></a>
 			<!-- skiplink anchor: navigation -->
-            {{from uliweb.contrib.admin.menu import menu}}
 			<div class="hlist">
-				{{block nav_menu}}
+				{{block nav_menu}}<h2>menu</h2>
                 {{end}}
 			</div>
 		</div>
