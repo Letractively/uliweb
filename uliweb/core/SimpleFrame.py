@@ -47,6 +47,22 @@ settings = None
 
 reserved_keys = ['settings', 'redirect', 'application', 'request', 'response', 'error']
 
+def _get_rule(f):
+    import inspect
+    args = inspect.getargspec(f)[0]
+    if args :
+        args = ['<%s>' % x for x in args]
+    if f.__name__ in reserved_keys:
+        raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
+    m = f.__module__.split('.')
+    s = []
+    for i in m:
+        if not i.startswith('views'):
+            s.append(i)
+    appname = '/'.join(s)
+    rule = '/' + '/'.join([appname, f.__name__] + args)
+    return appname, rule
+    
 def expose(rule=None, **kw):
     """
     add a url assigned to the function to url_map, if rule is None, then
@@ -62,19 +78,7 @@ def expose(rule=None, **kw):
         if __use_urls:
             return rule
         f = rule
-        import inspect
-        args = inspect.getargspec(f)[0]
-        if args :
-            args = ['<%s>' % x for x in args]
-        if f.__name__ in reserved_keys:
-            raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
-        m = f.__module__.split('.')
-        s = []
-        for i in m:
-            if not i.startswith('views'):
-                s.append(i)
-        appname = '/'.join(s)
-        rule = '/' + '/'.join([appname, f.__name__] + args)
+        appname, rule = _get_rule(f)
         kw['endpoint'] = f.__module__ + '.' + f.__name__
         _urls.append((rule, kw))
         if static:
@@ -88,13 +92,7 @@ def expose(rule=None, **kw):
         if __use_urls:
             return f
         if not rule:
-            m = f.__module__.split('.')
-            s = []
-            for i in m:
-                if not i.startswith('views'):
-                    s.append(i)
-            appname = '/'.join(s)
-            rule = '/' + '/'.join([appname, f.__name__] + args)
+            appname, rule = _get_rule(f)
         if callable(f):
             f_name = f.__name__
             endpoint = f.__module__ + '.' + f.__name__
@@ -666,7 +664,7 @@ class Dispatcher(object):
     def install_apps(self):
         for p in self.apps:
             try:
-                __import__(p+'.start')
+                __import__(p)
             except ImportError, e:
                 pass
             except Exception, e:
