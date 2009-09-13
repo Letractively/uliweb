@@ -188,7 +188,7 @@ def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
     raise HTTPError(errorpage, **kwargs)
 
 def json(data):
-    return Response(JSON.dumps(data), content_type='application/json')
+    return Response(JSON.dumps(data), content_type='application/json; charset=utf-8')
 
 def static_serve(app, filename, check=True, dir=None):
     from werkzeug.exceptions import Forbidden
@@ -454,6 +454,7 @@ class Dispatcher(object):
             dispatch.call(self, 'before_compile_template', fname, code, vars, e)
             out = template.Out()
             new_e = template._prepare_run(vars, e, out)
+            print code
             if isinstance(code, (str, unicode)):
                 code = _compile(code, fname, 'exec')
             __loader__ = Loader(fname, vars, env, dirs)
