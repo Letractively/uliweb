@@ -1017,7 +1017,7 @@ class Model(object):
                         x = x.id
                     if isinstance(v, DateTimeProperty) and v.auto_now:
                         d[k] = v.now()
-                    elif (x is not None) and (repr(t) != repr(x)):
+                    elif (x is not None) and (t != x):
                         d[k] = x
         
         return d
@@ -1030,9 +1030,10 @@ class Model(object):
         if d:
             if not self.id:
                 obj = self.table.insert().execute(**d)
-                setattr(self, 'id', obj.lastrowid)
             else:
                 self.table.update(self.table.c.id == self.id).execute(**d)
+            for k, v in d.items():
+                setattr(self, k, v)
             self._set_saved()
         return self
     
