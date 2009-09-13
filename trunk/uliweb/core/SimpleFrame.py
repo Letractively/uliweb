@@ -454,7 +454,7 @@ class Dispatcher(object):
             dispatch.call(self, 'before_compile_template', fname, code, vars, e)
             out = template.Out()
             new_e = template._prepare_run(vars, e, out)
-            print code
+
             if isinstance(code, (str, unicode)):
                 code = _compile(code, fname, 'exec')
             __loader__ = Loader(fname, vars, env, dirs)
