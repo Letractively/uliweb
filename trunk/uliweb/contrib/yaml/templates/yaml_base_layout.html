@@ -29,7 +29,11 @@
 		<div id="nav"> <a id="navigation" name="navigation"></a>
 			<!-- skiplink anchor: navigation -->
 			<div class="hlist">
-				{{block nav_menu}}<h2>menu</h2>
+				{{block nav_menu}}
+                <ul>
+                    <li class="active"><strong>Home</strong></li>
+                    <li><a href="/about">About</a></li>
+                </ul>
                 {{end}}
 			</div>
 		</div>

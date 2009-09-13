@@ -5,9 +5,8 @@ from werkzeug.exceptions import Forbidden
 
 __all__ = ['save_file', 'get_filename', 'get_url']
 
-@bind('prepare_default_env')
-@bind('prepare_template_env')
-def prepare_default_env(sender, env):
+@bind('startup_installed')
+def install(sender):
     url = sender.settings.UPLOAD.URL_SUFFIX.rstrip('/')
     expose('%s/<path:filename>' % url, static=True)(file_serving)
  

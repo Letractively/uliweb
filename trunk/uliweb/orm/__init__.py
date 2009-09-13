@@ -735,6 +735,12 @@ class ManyResult(object):
     def clear(self):
         self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
     
+    def filter(self, condition):
+        from sqlalchemy.sql import select
+        s = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
+        ids = [x[0] for x in self.table.bind.execute(s)]
+        return self.modelb.filter(self.modelb.c.id.in_(ids) & condition)
+        
     def all(self):
         from sqlalchemy.sql import select
         s = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
