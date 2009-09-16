@@ -92,8 +92,8 @@ def startup(sender):
     if sender.settings.TEMPLATE.USE_TEMPLATE_TEMP_DIR:
         template.use_tempdir(sender.settings.TEMPLATE.TEMPLATE_TEMP_DIR)
 
-@bind('prepare_template_env')
-def prepare_template_env(sender, env):
+@bind('prepare_default_env')
+def prepare_default_env(sender, env):
     def cycle(*elements):
         while 1:
             for j in elements:

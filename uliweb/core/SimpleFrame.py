@@ -270,9 +270,6 @@ def get_apps(apps_dir, include_apps=None):
 #####################################################################
 
 class RequestProxy(object):
-    def __init__(self, req):
-        local.request = req
-        
     def instance(self):
         return local.request
         
@@ -289,9 +286,6 @@ class RequestProxy(object):
         return repr(local.request)
             
 class ResponseProxy(object):
-    def __init__(self, res):
-        local.response = res
-        
     def instance(self):
         return local.response
         
@@ -379,9 +373,7 @@ class Dispatcher(object):
         self.dispatch_hooks()
         
         self.debug = settings.GLOBAL.get('DEBUG', False)
-        Dispatcher.template_env = Storage(Dispatcher.env.copy())
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
-        dispatch.call(self, 'prepare_template_env', Dispatcher.template_env)
         Dispatcher.default_template = pkg.resource_filename('uliweb.core', 'default.html')
         
         #setup timezone
@@ -395,18 +387,9 @@ class Dispatcher(object):
         env['url_for'] = url_for
         env['redirect'] = redirect
         env['error'] = errorpage
-#        env['url_map'] = url_map
         env['application'] = self
-#        env['render'] = self.render
-#        env['template'] = self.template
         env['settings'] = settings
         env['json'] = json
-#        from werkzeug import html, xhtml
-#        env['html'] = html
-#        env['xhtml'] = xhtml
-#        from uliweb.core import Form
-#        env['Form'] = Form
-#        env['get_file'] = self.get_file
         return env
     
     def get_file(self, filename, request=None, dirname='files'):
@@ -430,7 +413,8 @@ class Dispatcher(object):
     def template(self, filename, vars, env=None, dirs=None, request=None, default_template=None):
         vars = vars or {}
         dirs = dirs or self.template_dirs
-        env = self.get_template_env(env)
+        env = env or self.get_view_env()
+        request = request or local.request
         if request:
             dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
         
@@ -522,41 +506,59 @@ class Dispatcher(object):
             response = e
         return response
     
-    def get_template_env(self, env=None):
-        e = Storage(self.template_env.copy())
-        if env:
-            e.update(env)
-        return e
-    
-    def get_execute_env(self, env=None):
+    def get_env(self, env=None):
         e = Storage(self.env.copy())
         if env:
             e.update(env)
         return e
     
+    def prepare_request(self, request, endpoint):
+        #binding some variable to request
+        request.settings = settings
+        request.application = self
+        
+        #get handler
+        if isinstance(endpoint, (str, unicode)):
+            module, func = endpoint.rsplit('.', 1)
+            mod = __import__(module, {}, {}, [''])
+            handler = getattr(mod, func)
+        elif callable(endpoint):
+            handler = endpoint
+            mod = sys.modules[handler.__module__]
+        
+        request.appname = ''
+        for p in self.apps:
+            t = p + '.'
+            if handler.__module__.startswith(t):
+                request.appname = p
+                break
+        request.function = handler.__name__
+        return mod, handler
     
-    def call_endpoint(self, mod, handler, request, response=None, **values):
+    def call_view(self, mod, handler, request, response=None, **values):
+        #get env
+        env = self.get_view_env()
+        
         #if there is __begin__ then invoke it, if __begin__ return None, it'll
         #continue running
         if hasattr(mod, '__begin__'):
             f = getattr(mod, '__begin__')
-            result, env = self._call_function(f, request, response)
-            if result:
+            result = self._call_function(f, request, response, env)
+            if result is not None:
                 return self.wrap_result(result, request, response, env)
         
-        result = self.call_handler(handler, request, response, **values)
+        result = self.call_handler(handler, request, response, env, **values)
         
         result1 = None
         if hasattr(mod, '__end__'):
             f = getattr(mod, '__end__')
-            result1, env = self._call_function(f, request, response)
-            if result1:
+            result1, env = self._call_function(f, request, response, env)
+            if result1 is not None:
                 return self.wrap_result(result1, request, response, env)
         
         return result or result1
         
-    def wrap_result(self, result, request, response, env=None):
-        env = env or self.env
+    def wrap_result(self, result, request, response, env):
 #        #process ajax invoke, return a json response
 #        if request.is_xhr and isinstance(result, dict):
 #            result = Response(JSON.dumps(result), content_type='application/json')
@@ -582,38 +584,38 @@ class Dispatcher(object):
             response = Response(str(result), content_type='text/html')
         return response
     
-    def _call_function(self, handler, request, response=None, **values):
-        response = response or Response(content_type='text/html')
-        
+    def get_view_env(self):
         #prepare local env
         local_env = {}
-
+        
         #process before view call
-        dispatch.call(self, 'set_local_env', local_env, request)
-
+        dispatch.call(self, 'prepare_view_env', local_env, local.request)
+        
         local_env['application'] = local.application
-        local_env['request'] = RequestProxy(request)
-        local_env['response'] = ResponseProxy(response)
+        local_env['request'] = RequestProxy()
+        local_env['response'] = ResponseProxy()
         local_env['url_for'] = url_for
         local_env['redirect'] = redirect
         local_env['error'] = errorpage
         local_env['settings'] = settings
         local_env['json'] = json
         
+        return self.get_env(local_env)
         
-        for k, v in local_env.iteritems():
+    def _call_function(self, handler, request, response, env, **values):
+        
+        for k, v in env.iteritems():
             handler.func_globals[k] = v
         
-        env = self.get_execute_env(local_env)
         handler.func_globals['env'] = env
         
         result = handler(**values)
         if isinstance(result, ResponseProxy):
             result = local.response
-        return result, env
+        return result
     
-    def call_handler(self, handler, request, response=None, **values):
-        result, env = self._call_function(handler, request, response, **values)
+    def call_handler(self, handler, request, response, env, **values):
+        result = self._call_function(handler, request, response, env, **values)
         return self.wrap_result(result, request, response, env)
             
     def collect_modules(self, check_view=True):
@@ -712,32 +714,18 @@ class Dispatcher(object):
     
     def __call__(self, environ, start_response):
         local.application = self
-        req = Request(environ)
-        
+        local.request = req = Request(environ)
+        local.response = res = Response(content_type='text/html')
         local.url_adapter = adapter = url_map.bind_to_environ(environ)
+        
         try:
             endpoint, values = adapter.match()
             
-            #binding some variable to request
-            req.settings = settings
-            req.application = self
-            
-            #get handler
-            module, func = endpoint.rsplit('.', 1)
-            mod = __import__(module, {}, {}, [''])
-            handler = getattr(mod, func)
-            
-            for p in self.apps:
-                t = p + '.'
-                if handler.__module__.startswith(t):
-                    req.appname = p
-                    break
-            req.function = handler.__name__
+            mod, handler = self.prepare_request(req, endpoint)
             
             #process static
             if endpoint in _static_views:
-                res = Response(content_type='text/html')
-                response = self.call_endpoint(mod, handler, req, res, **values)
+                response = self.call_view(mod, handler, req, res, **values)
             else:
                 response = None
                 _clses = {}
@@ -770,10 +758,9 @@ class Dispatcher(object):
                         if response is not None:
                             break
                 
-                res = Response(content_type='text/html')
                 if response is None:
                     try:
-                        response = self.call_endpoint(mod, handler, req, res, **values)
+                        response = self.call_view(mod, handler, req, res, **values)
                         
                     except Exception, e:
                         for middleware in reversed(middlewares):

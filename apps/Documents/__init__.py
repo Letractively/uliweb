@@ -3,8 +3,8 @@ from uliweb.core.dispatch import bind
 ##################################################
 # insert rst2html function to template environment
 ##################################################
-@bind('prepare_template_env')
-def prepare_template_env(sender, env):
+@bind('prepare_default_env')
+def prepare_default_env(sender, env):
     from uliweb.utils.rst import to_html
     from uliweb.core.SimpleFrame import errorpage
     def rst2html(filename):

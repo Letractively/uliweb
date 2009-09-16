@@ -621,6 +621,12 @@ class ReferenceProperty(Property):
                 return instance
         else:
             return None
+        
+    def get_value_for_datastore(self, model_instance):
+        if not model_instance:
+            return None
+        else:
+            return getattr(model_instance, self._attr_name(), None)
 
     def __set__(self, model_instance, value):
         """Set reference."""
@@ -851,6 +857,11 @@ class Result(object):
             return 0
         return self.model.count(self.condition)
 
+    def delete(self):
+        if not self.model or not self.condition:
+            return
+        return self.model.remove(self.condition)
+        
 class _ReverseReferenceProperty(Property):
     """The inverse of the Reference property above.
 
@@ -985,7 +996,7 @@ class Model(object):
         d = {}
         for k, v in self.properties.items():
             if not isinstance(v, ManyToMany):
-                t = getattr(self, k, None)
+                t = v.get_value_for_datastore(self)
                 if isinstance(t, Model):
                     t = t.id
                 d[k] = t
@@ -998,8 +1009,8 @@ class Model(object):
         if self.id is None:
             d = {}
             for k, v in self.properties.items():
-                x = v.get_value_for_datastore(self)
                 if not isinstance(v, ManyToMany):
+                    x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
                         x = x.id
                     if isinstance(v, DateTimeProperty) and v.auto_now_add:
@@ -1030,10 +1041,15 @@ class Model(object):
         if d:
             if not self.id:
                 obj = self.table.insert().execute(**d)
+                setattr(self, 'id', obj.lastrowid)
             else:
-                self.table.update(self.table.c.id == self.id).execute(**d)
+                _id = d.pop('id')
+                if d:
+                    self.table.update(self.table.c.id == self.id).execute(**d)
             for k, v in d.items():
-                setattr(self, k, v)
+                x = self.properties[k].get_value_for_datastore(self)
+                if x != v:
+                    setattr(self, k, v)
             self._set_saved()
         return self
     

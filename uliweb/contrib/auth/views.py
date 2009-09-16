@@ -1,8 +1,13 @@
 from uliweb.core.SimpleFrame import expose
+from uliweb.i18n import ugettext_lazy as _
 
 def login():
     from uliweb.contrib.auth import authenticate, login
     from forms import LoginForm
+    from uliweb.form import Submit, Tag
+    
+    LoginForm.form_buttons = [Submit(value=_('Login'), _class="button"), 
+        Tag('a', _('Register'), href=url_for(register))]
     
     form = LoginForm()
     
