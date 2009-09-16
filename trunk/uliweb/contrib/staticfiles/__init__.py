@@ -6,9 +6,8 @@ def startup_installed(sender):
     url = sender.settings.wsgi_middleware_staticfiles.STATIC_URL.rstrip('/')
     expose('%s/<path:filename>' % url, static=True)(static)
     
-@bind('prepare_template_env')
 @bind('prepare_default_env')
-def prepare_template_env(sender, env):
+def prepare_default_env(sender, env):
     env['url_for_static'] = url_for_static
     
 def url_for_static(filename=None, **kwargs):

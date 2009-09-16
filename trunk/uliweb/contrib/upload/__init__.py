@@ -10,8 +10,8 @@ def install(sender):
     url = sender.settings.UPLOAD.URL_SUFFIX.rstrip('/')
     expose('%s/<path:filename>' % url, static=True)(file_serving)
  
-@bind('set_local_env')
-def set_local_env(sender, env, request):
+@bind('prepare_view_env')
+def prepare_view_env(sender, env, request):
     d = get_url
     def g(application):
         def f(filename, path_to=None, subfolder='', application=application):

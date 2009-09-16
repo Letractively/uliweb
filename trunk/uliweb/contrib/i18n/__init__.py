@@ -26,8 +26,8 @@ def startup(sender):
     install('uliweb', localedir)
     set_default_language(sender.settings.I18N.LANGUAGE_CODE)
     
-@bind('prepare_template_env')
-def prepare_template_env(sender, env):
+@bind('prepare_default_env')
+def prepare_default_env(sender, env):
     from uliweb.i18n import ugettext_lazy
     env['_'] = ugettext_lazy
 
