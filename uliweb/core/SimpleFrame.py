@@ -9,10 +9,12 @@ __all__ = ['expose', 'Dispatcher', 'url_for', 'get_apps', 'get_app_dir',
     'redirect', 'static_serve']
 
 import os, cgi
-from webob import Request, Response
-#from werkzeug import Request, Response
+#from webob import Request, Response
+from werkzeug import Request as OriginalRequest, Response
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
+from werkzeug.utils import cached_property, url_decode
+from werkzeug.datastructures import CombinedMultiDict, ImmutableMultiDict
 
 from rules import Mapping, add_rule
 import template
@@ -47,6 +49,32 @@ settings = None
 
 reserved_keys = ['settings', 'redirect', 'application', 'request', 'response', 'error']
 
+class Request(OriginalRequest):
+    @cached_property
+    def args(self):
+        """The parsed URL parameters as :class:`ImmutableMultiDict`."""
+        return url_decode(self.environ.get('QUERY_STRING', ''), self.charset,
+                          errors=self.encoding_errors,
+                          cls=ImmutableMultiDict)
+
+    @property
+    def form(self):
+        """Form parameters.  Currently it's not guaranteed that the
+        :class:`ImmutableMultiDict` returned by this function is ordered in
+        the same way as the submitted form data.
+        """
+        self._load_form_data()
+        return self._form
+    
+    @cached_property
+    def values(self):
+        """Combined multi dict for :attr:`args` and :attr:`form`."""
+        return CombinedMultiDict([self.args, self.form])
+    
+    GET = args
+    POST = form
+    params = values
+    
 def _get_rule(f):
     import inspect
     args = inspect.getargspec(f)[0]
@@ -177,7 +205,7 @@ def redirect(location, code=302):
         '<h1>Redirecting...</h1>\n'
         '<p>You should be redirected automatically to target URL: '
         '<a href="%s">%s</a>.  If not click the link.' %
-        (cgi.escape(location), cgi.escape(location)), status=str(code), content_type='text/html')
+        (cgi.escape(location), cgi.escape(location)), status=code, content_type='text/html')
     response.headers['Location'] = location
     return response
 
@@ -476,7 +504,7 @@ class Dispatcher(object):
     {{pass}}
     </table>
     """ % description
-        return Response(template.template(text, kwargs), status='404', content_type='text/html')
+        return Response(template.template(text, kwargs), status=404, content_type='text/html')
         
     def not_found(self, request, e):
         if self.debug:
@@ -492,7 +520,7 @@ class Dispatcher(object):
         tmp_file = template.get_templatefile('404'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
-            response.status = '404'
+            response.status = 404
         else:
             response = e
         return response
@@ -501,7 +529,7 @@ class Dispatcher(object):
         tmp_file = template.get_templatefile('500'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
-            response.status = '500'
+            response.status = 500
         else:
             response = e
         return response

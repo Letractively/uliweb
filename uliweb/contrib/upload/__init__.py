@@ -20,12 +20,14 @@ def prepare_view_env(sender, env, request):
     env['get_url'] = g(request.application)
 
 def file_serving(filename):
-    from uliweb.core.FileApp import return_file
+    from uliweb.utils.filedown import filedown
     from uliweb.utils import files
+    from uliweb.core.SimpleFrame import local
+    
     fname = _get_normal_filename(filename, application=application)
     s = application.settings.GLOBAL
     fname = files.encoding_filename(fname, s.HTMLPAGE_ENCODING, s.FILESYSTEM_ENCODING)
-    return return_file(fname)
+    return filedown(local.request.environ, fname)
     
 def _get_normal_filename(filename, path_to=None, subfolder='', application=None):
     path = path_to or application.settings.UPLOAD.TO_PATH

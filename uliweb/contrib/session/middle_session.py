@@ -25,6 +25,8 @@ class SessionMiddle(Middleware):
         
     def process_request(self, request):
         key = request.cookies.get(SessionCookie.default_cookie_id)
+        if not key:
+            key = request.values.get(SessionCookie.default_cookie_id)
         session = Session(key, options=self.options)
         request.session = session
 

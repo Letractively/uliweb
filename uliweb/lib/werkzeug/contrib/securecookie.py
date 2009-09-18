@@ -14,18 +14,18 @@ r"""
 
     Example usage:
 
-        >>> from werkzeug.contrib.securecookie import SecureCookie
-        >>> x = SecureCookie({"foo": 42, "baz": (1, 2, 3)}, "deadbeef")
+    >>> from werkzeug.contrib.securecookie import SecureCookie
+    >>> x = SecureCookie({"foo": 42, "baz": (1, 2, 3)}, "deadbeef")
 
     Dumping into a string so that one can store it in a cookie:
 
-        >>> value = x.serialize()
+    >>> value = x.serialize()
 
     Loading from that string again:
 
-        >>> x = SecureCookie.unserialize(value, "deadbeef")
-        >>> x["baz"]
-        (1, 2, 3)
+    >>> x = SecureCookie.unserialize(value, "deadbeef")
+    >>> x["baz"]
+    (1, 2, 3)
 
     If someone modifies the cookie and the checksum is wrong the unserialize
     method will fail silently and return a new empty `SecureCookie` object.
@@ -42,7 +42,7 @@ r"""
         from werkzeug import BaseRequest, cached_property
         from werkzeug.contrib.securecookie import SecureCookie
 
-        # don' use this key but a different one.  you could just use
+        # don't use this key but a different one; you could just use
         # os.unrandom(20) to get something random
         SECRET_KEY = '\xfa\xdd\xb8z\xae\xe0}4\x8b\xea'
 
@@ -67,59 +67,99 @@ r"""
                                     httponly=True)
             return response(environ, start_response)
 
+    A less verbose integration can be achieved by using shorthand methods::
 
-    :copyright: 2007 by Armin Ronacher, Thomas Johansson.
+        class Request(BaseRequest):
+
+            @cached_property
+            def client_session(self):
+                return SecureCookie.load_cookie(self, secret_key=COOKIE_SECRET)
+
+        def application(environ, start_response):
+            request = Request(environ, start_response)
+
+            # get a response object here
+            response = ...
+
+            request.client_session.save_cookie(response)
+            return response(environ, start_response)
+
+    :copyright: (c) 2009 by the Werkzeug Team, see AUTHORS for more details.
     :license: BSD, see LICENSE for more details.
 """
-try:
-    from hashlib import sha1
-except ImportError:
-    from sha import new as sha1
-from binascii import Error as BinASCIIError
+import sys
+import cPickle as pickle
+from hmac import new as hmac
 from datetime import datetime
 from time import time, mktime, gmtime
-from random import Random
-from cPickle import loads, dumps, HIGHEST_PROTOCOL
 from werkzeug import url_quote_plus, url_unquote_plus
-from werkzeug.contrib.sessions import ModificationTrackingDict, generate_key
+from werkzeug._internal import _date_to_unix
+from werkzeug.contrib.sessions import ModificationTrackingDict
+
+
+# rather ugly way to import the correct hash method.  Because
+# hmac either accepts modules with a new method (sha, md5 etc.)
+# or a hashlib factory function we have to figure out what to
+# pass to it.  If we have 2.5 or higher (so not 2.4 with a
+# custom hashlib) we import from hashlib and fail if it does
+# not exist (have seen that in old OS X versions).
+# in all other cases the now deprecated sha module is used.
+_default_hash = None
+if sys.version_info >= (2, 5):
+    try:
+        from hashlib import sha1 as _default_hash
+    except ImportError:
+        pass
+if _default_hash is None:
+    import sha as _default_hash
 
 
 class UnquoteError(Exception):
-    pass
-
-
-def pickle_quote(value):
-    """Pickle and url encode a value."""
-    result = None
-    for protocol in xrange(HIGHEST_PROTOCOL + 1):
-        data = ''.join(dumps(value, protocol).encode('base64').splitlines()).strip()
-        if result is None or len(result) > len(data):
-            result = data
-    return result
-
-
-def pickle_unquote(string):
-    """URL decode a string and load it into pickle"""
-    try:
-        return loads(string.decode('base64'))
-    # unfortunately pickle can cause pretty every error here.
-    # if we get one we catch it and convert it into an UnquoteError
-    except Exception, e:
-        raise UnquoteError(str(e))
+    """Internal exception used to signal failures on quoting."""
 
 
 class SecureCookie(ModificationTrackingDict):
     """Represents a secure cookie.  You can subclass this class and provide
-    an alternative hash method.  The import thing is that the hash method
+    an alternative mac method.  The import thing is that the mac method
     is a function with a similar interface to the hashlib.  Required
     methods are update() and digest().
-    """
-    __slots__ = ModificationTrackingDict.__slots__ + ('secret_key', 'new')
 
-    hash_method = sha1
+    Example usage:
+
+    >>> x = SecureCookie({"foo": 42, "baz": (1, 2, 3)}, "deadbeef")
+    >>> x["foo"]
+    42
+    >>> x["baz"]
+    (1, 2, 3)
+    >>> x["blafasel"] = 23
+    >>> x.should_save
+    True
+
+    :param data: the initial data.  Either a dict, list of tuples or `None`.
+    :param secret_key: the secret key.  If not set `None` or not specified
+                       it has to be set before :meth:`serialize` is called.
+    :param new: The initial value of the `new` flag.
+    """
+
+    #: The hash method to use.  This has to be a module with a new function
+    #: or a function that creates a hashlib object.  Such as `hashlib.md5`
+    #: Subclasses can override this attribute.  The default hash is sha1.
+    hash_method = _default_hash
+
+    #: the module used for serialization.  Unless overriden by subclasses
+    #: the standard pickle module is used.
+    serialization_method = pickle
+
+    #: if the contents should be base64 quoted.  This can be disabled if the
+    #: serialization process returns cookie safe strings only.
+    quote_base64 = True
 
     def __init__(self, data=None, secret_key=None, new=True):
         ModificationTrackingDict.__init__(self, data or ())
+        # explicitly convert it into a bytestring because python 2.6
+        # no longer performs an implicit string conversion on hmac
+        if secret_key is not None:
+            secret_key = str(secret_key)
         self.secret_key = secret_key
         self.new = new
 
@@ -131,13 +171,43 @@ class SecureCookie(ModificationTrackingDict):
         )
 
     def should_save(self):
-        """True if the session should be saved."""
+        """True if the session should be saved.  By default this is only true
+        for :attr:`modified` cookies, not :attr:`new`.
+        """
         return self.modified
-    should_save = property(should_save)
+    should_save = property(should_save, doc=should_save.__doc__)
 
-    def new_salt(self, secret_key):
-        """Return a new salt  Return value must be 4 bytes long."""
-        return generate_key()[:4]
+    @classmethod
+    def quote(cls, value):
+        """Quote the value for the cookie.  This can be any object supported
+        by :attr:`serialization_method`.
+
+        :param value: the value to quote.
+        """
+        if cls.serialization_method is not None:
+            value = cls.serialization_method.dumps(value)
+        if cls.quote_base64:
+            value = ''.join(value.encode('base64').splitlines()).strip()
+        return value
+
+    @classmethod
+    def unquote(cls, value):
+        """Unquote the value for the cookie.  If unquoting does not work a
+        :exc:`UnquoteError` is raised.
+
+        :param value: the value to unquote.
+        """
+        try:
+            if cls.quote_base64:
+                value = value.decode('base64')
+            if cls.serialization_method is not None:
+                value = cls.serialization_method.loads(value)
+            return value
+        except:
+            # unfortunately pickle and other serialization modules can
+            # cause pretty every error here.  if we get one we catch it
+            # and convert it into an UnquoteError
+            raise UnquoteError()
 
     def serialize(self, expires=None):
         """Serialize the secure cookie into a string.
@@ -145,60 +215,68 @@ class SecureCookie(ModificationTrackingDict):
         If expires is provided, the session will be automatically invalidated
         after expiration when you unseralize it. This provides better
         protection against session cookie theft.
+
+        :param expires: an optional expiration date for the cookie (a
+                        :class:`datetime.datetime` object)
         """
         if self.secret_key is None:
             raise RuntimeError('no secret key defined')
         if expires:
-            if isinstance(expires, datetime):
-                expires = expires.utctimetuple()
-            elif isinstance(expires, (int, long, float)):
-                expires = gmtime(expires)
-            self['_expires'] = int(mktime(expires))
+            self['_expires'] = _date_to_unix(expires)
         result = []
-        salt = self.new_salt(self.secret_key)
-        hash = self.hash_method(self.secret_key + salt)
-        for key, value in self.iteritems():
+        mac = hmac(self.secret_key, None, self.hash_method)
+        for key, value in sorted(self.items()):
             result.append('%s=%s' % (
                 url_quote_plus(key),
-                pickle_quote(value)
+                self.quote(value)
             ))
-            hash.update('|' + result[-1])
-        return '%s%s?%s' % (
-            salt,
-            hash.digest().encode('base64').strip(),
+            mac.update('|' + result[-1])
+        return '%s?%s' % (
+            mac.digest().encode('base64').strip(),
             '&'.join(result)
         )
 
+    @classmethod
     def unserialize(cls, string, secret_key):
-        """Load the secure cookie from a serialized string."""
+        """Load the secure cookie from a serialized string.
+
+        :param string: the cookie value to unserialize.
+        :param secret_key: the secret key used to serialize the cookie.
+        :return: a new :class:`SecureCookie`.
+        """
         if isinstance(string, unicode):
             string = string.encode('utf-8', 'ignore')
-        salt = string[:4]
         try:
-            base64_hash, data = string[4:].split('?', 1)
+            base64_hash, data = string.split('?', 1)
         except (ValueError, IndexError):
             items = ()
         else:
             items = {}
-            hash = sha1(secret_key + salt)
+            mac = hmac(secret_key, None, cls.hash_method)
             for item in data.split('&'):
-                hash.update('|' + item)
+                mac.update('|' + item)
                 if not '=' in item:
                     items = None
                     break
                 key, value = item.split('=', 1)
-                items[url_unquote_plus(key)] = value
+                # try to make the key a string
+                key = url_unquote_plus(key)
+                try:
+                    key = str(key)
+                except UnicodeError:
+                    pass
+                items[key] = value
 
-            # no parsing error and the hash looks okay, we can now
+            # no parsing error and the mac looks okay, we can now
             # sercurely unpickle our cookie.
             try:
                 client_hash = base64_hash.decode('base64')
             except Exception:
                 items = client_hash = None
-            if items is not None and client_hash == hash.digest():
+            if items is not None and client_hash == mac.digest():
                 try:
                     for key, value in items.iteritems():
-                        items[key] = pickle_unquote(value)
+                        items[key] = cls.unquote(value)
                 except UnquoteError:
                     items = ()
                 else:
@@ -210,22 +288,39 @@ class SecureCookie(ModificationTrackingDict):
             else:
                 items = ()
         return cls(items, secret_key, False)
-    unserialize = classmethod(unserialize)
 
+    @classmethod
     def load_cookie(cls, request, key='session', secret_key=None):
-        """Loads a SecureCookie from a cookie in request. If the cookie is not
-        set, a new SecureCookie instanced is returned.
+        """Loads a :class:`SecureCookie` from a cookie in request.  If the
+        cookie is not set, a new :class:`SecureCookie` instanced is
+        returned.
+
+        :param request: a request object that has a `cookies` attribute
+                        which is a dict of all cookie values.
+        :param key: the name of the cookie.
+        :param secret_key: the secret key used to unquote the cookie.
+                           Always provide the value even though it has
+                           no default!
         """
         data = request.cookies.get(key)
         if not data:
             return SecureCookie(secret_key=secret_key)
         return SecureCookie.unserialize(data, secret_key)
-    load_cookie = classmethod(load_cookie)
 
     def save_cookie(self, response, key='session', expires=None,
                     session_expires=None, max_age=None, path='/', domain=None,
                     secure=None, httponly=False, force=False):
-        """Saves the SecureCookie in a cookie on response."""
+        """Saves the SecureCookie in a cookie on response object.  All
+        parameters that are not described here are forwarded directly
+        to :meth:`~BaseResponse.set_cookie`.
+
+        :param response: a response object that has a
+                         :meth:`~BaseResponse.set_cookie` method.
+        :param key: the name of the cookie.
+        :param session_expires: the expiration date of the secure cookie
+                                stored information.  If this is not provided
+                                the cookie `expires` date is used instead.
+        """
         if force or self.should_save:
             data = self.serialize(session_expires or expires)
             response.set_cookie(key, data, expires=expires, max_age=max_age,
