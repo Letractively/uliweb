@@ -19,5 +19,6 @@ def url_for_static(filename=None, **kwargs):
 from uliweb.core.SimpleFrame import static_serve
 
 def static(filename):
-    return static_serve(application, filename, dir=application.settings.STATICFILES.STATIC_FOLDER)
+#    return static_serve(application, filename, dir=application.settings.STATICFILES.STATIC_FOLDER)
+    pass
 

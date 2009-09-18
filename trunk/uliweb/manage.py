@@ -2,6 +2,7 @@
 import sys, os
 import logging
 from uliweb.utils.common import log, check_apps_dir
+import uliweb.core.conf as conf
         
 apps_dir = 'apps'
 
@@ -43,6 +44,9 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
     
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps)
     
+    conf.application = app
+    conf.settings = app.settings
+    
     #set logger level
     set_log(app)
     
@@ -63,8 +67,6 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
                     mod = __import__(modname, {}, {}, [''])
                     c = getattr(mod, clsname)
                     app = c(app, **args)
-                    #set uliweb Dispatcher to every middleware
-                    app.mainapplication = application
                 except Exception, e:
                     log.exception(e)
                 
