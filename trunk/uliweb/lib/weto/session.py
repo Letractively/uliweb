@@ -71,10 +71,10 @@ class Session(dict):
         return _class
     
     def _set_remember(self, v):
-        self['_sessiom_remember_'] = v
+        self['_session_remember_'] = v
         
     def _get_remember(self):
-        return self.get('_sessiom_remember_', True)
+        return self.get('_session_remember_', True)
     
     remember = property(_get_remember, _set_remember)
     
