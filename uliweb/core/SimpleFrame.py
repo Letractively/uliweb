@@ -3,246 +3,37 @@
 # License: GPLv2
 ####################################################################
 
-#defautl global settings
-
 __all__ = ['expose', 'Dispatcher', 'url_for', 'get_apps', 'get_app_dir', 
     'redirect', 'static_serve']
 
-import os, cgi
+import os, sys
 #from webob import Request, Response
-from werkzeug import Request as OriginalRequest, Response
+from werkzeug import Response
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
-from werkzeug.utils import cached_property, url_decode
-from werkzeug.datastructures import CombinedMultiDict, ImmutableMultiDict
 
-from rules import Mapping, add_rule
 import template
 from storage import Storage
 import dispatch
-from uliweb.utils.common import pkg, log, sort, wrap_func, import_func
+from uliweb.utils.common import pkg, log, sort_list, import_func
 from uliweb.utils.pyini import Ini
-
-try:
-    import json as JSON
-except:
-    import simplejson as JSON
-
-class ReservedKeyError(Exception):pass
+import conf
+from web import Request, HTTPError, redirect, errorpage, json, \
+        POST, GET, post_view, pre_view, url_for, expose, RequestProxy, \
+        ResponseProxy
+from rules import Mapping
 
 try:
     set
 except:
     from sets import Set as set
 
-APPS_DIR = 'apps'
-
-local = Local()
+conf.local = local = Local()
 local_manager = LocalManager([local])
 
-url_map = Mapping()
-_urls = []
-_static_views = []
-__use_urls = False
+conf.url_map = Mapping()
 __app_dirs = {}
-settings = None
-
-reserved_keys = ['settings', 'redirect', 'application', 'request', 'response', 'error']
-
-class Request(OriginalRequest):
-    @cached_property
-    def args(self):
-        """The parsed URL parameters as :class:`ImmutableMultiDict`."""
-        return url_decode(self.environ.get('QUERY_STRING', ''), self.charset,
-                          errors=self.encoding_errors,
-                          cls=ImmutableMultiDict)
-
-    @property
-    def form(self):
-        """Form parameters.  Currently it's not guaranteed that the
-        :class:`ImmutableMultiDict` returned by this function is ordered in
-        the same way as the submitted form data.
-        """
-        self._load_form_data()
-        return self._form
-    
-    @cached_property
-    def values(self):
-        """Combined multi dict for :attr:`args` and :attr:`form`."""
-        return CombinedMultiDict([self.args, self.form])
-    
-    GET = args
-    POST = form
-    params = values
-    
-def _get_rule(f):
-    import inspect
-    args = inspect.getargspec(f)[0]
-    if args :
-        args = ['<%s>' % x for x in args]
-    if f.__name__ in reserved_keys:
-        raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
-    m = f.__module__.split('.')
-    s = []
-    for i in m:
-        if not i.startswith('views'):
-            s.append(i)
-    appname = '/'.join(s)
-    rule = '/' + '/'.join([appname, f.__name__] + args)
-    return appname, rule
-    
-def expose(rule=None, **kw):
-    """
-    add a url assigned to the function to url_map, if rule is None, then
-    the url will be function name, for example:
-        
-        @expose
-        def index(req):
-            
-        will be url_map.add('index', index)
-    """
-    static = kw.get('static', None)
-    if callable(rule):
-        if __use_urls:
-            return rule
-        f = rule
-        appname, rule = _get_rule(f)
-        kw['endpoint'] = f.__module__ + '.' + f.__name__
-        _urls.append((rule, kw))
-        if static:
-            _static_views.append(kw['endpoint'])
-        if 'static' in kw:
-            kw.pop('static')
-        add_rule(url_map, rule, **kw)
-        return f
-        
-    def decorate(f, rule=rule):
-        if __use_urls:
-            return f
-        if not rule:
-            appname, rule = _get_rule(f)
-        if callable(f):
-            f_name = f.__name__
-            endpoint = f.__module__ + '.' + f.__name__
-        else:
-            f_name = f.split('.')[-1]
-            endpoint = f
-            
-        if f_name in reserved_keys:
-            raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f_name
-        kw['endpoint'] = endpoint
-#        if callable(rule):
-#            import inspect
-#            args = inspect.getargspec(f)[0]
-#            if args :
-#                args = ['<%s>' % x for x in args]
-#            appname = f.__module__.split('.')[1]
-#            rule = '/' + '/'.join([appname, f.__name__] + args)
-        _urls.append((rule, kw))
-        if static:
-            _static_views.append(kw['endpoint'])
-        if 'static' in kw:
-            kw.pop('static')
-        add_rule(url_map, rule, **kw)
-        return f
-    return decorate
-
-def pre_view(topic, *args1, **kwargs1):
-    methods = kwargs1.pop('methods', None)
-    signal = kwargs1.pop('signal', None)
-    def _f(f):
-        def _f2(*args, **kwargs):
-            m = methods or []
-            m = [x.upper() for x in m]
-            if not m or (m and local.request.method in m):
-                ret = dispatch.get(local.application, topic, signal=signal, *args1, **kwargs1)
-                if ret:
-                    return ret
-            return f(*args, **kwargs)
-        return wrap_func(_f2, f)
-    return _f
-
-def post_view(topic, *args1, **kwargs1):
-    methods = kwargs1.pop('methods', None)
-    signal = kwargs1.pop('signal', None)
-    def _f(f):
-        def _f2(*args, **kwargs):
-            m = methods or []
-            m = [x.upper() for x in m]
-            ret = f(*args, **kwargs)
-            ret1 = None
-            if not m or (m and local.request.method in m):
-                ret1 = dispatch.get(local.application, topic, signal=signal, *args1, **kwargs1)
-            return ret or ret1
-        return wrap_func(_f2, f)
-    return _f
-    
-def POST(rule, **kw):
-    kw['methods'] = ['POST']
-    return expose(rule, **kw)
-
-def GET(rule, **kw):
-    kw['methods'] = ['GET']
-    return expose(rule, **kw)
-
-def url_for(endpoint, _external=False, **values):
-    if callable(endpoint):
-        endpoint = endpoint.__module__ + '.' + endpoint.__name__
-    return local.url_adapter.build(endpoint, values, force_external=_external)
-
-class HTTPError(Exception):
-    def __init__(self, errorpage=None, **kwargs):
-        self.errorpage = errorpage or settings.GLOBAL.ERROR_PAGE
-        self.errors = kwargs
-
-    def __str__(self):
-        return repr(self.errors)
-   
-def redirect(location, code=302):
-    response = Response(
-        '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">\n'
-        '<title>Redirecting...</title>\n'
-        '<h1>Redirecting...</h1>\n'
-        '<p>You should be redirected automatically to target URL: '
-        '<a href="%s">%s</a>.  If not click the link.' %
-        (cgi.escape(location), cgi.escape(location)), status=code, content_type='text/html')
-    response.headers['Location'] = location
-    return response
-
-def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
-    kwargs.setdefault('message', message)
-    if request:
-        kwargs.setdefault('link', request.url)
-    raise HTTPError(errorpage, **kwargs)
-
-def json(data):
-    return Response(JSON.dumps(data), content_type='application/json; charset=utf-8')
-
-def static_serve(app, filename, check=True, dir=None):
-    from werkzeug.exceptions import Forbidden
-    f = None
-    if dir:
-        fname = os.path.normpath(os.path.join(dir, filename)).replace('\\', '/')
-        if check and not fname.startswith(dir):
-            return Forbidden("You can only visit the files under static directory.")
-        if os.path.exists(fname):
-            f = fname
-    else:
-        for p in app.apps:
-            fname = os.path.normpath(os.path.join('static', filename)).replace('\\', '/')
-            if check and not fname.startswith('static/'):
-                return Forbidden("You can only visit the files under static directory.")
-            
-            ff = pkg.resource_filename(p, fname)
-            if os.path.exists(ff):
-                f = ff
-                break
-    
-    if f:
-        from uliweb.core.FileApp import return_file
-        return return_file(f)
-    
-    return NotFound("Can't found the file %s" % filename)
+_use_urls = False
 
 def get_app_dir(app):
     """
@@ -293,42 +84,6 @@ def get_apps(apps_dir, include_apps=None):
     
     return apps
 
-#####################################################################
-# local functions and classes
-#####################################################################
-
-class RequestProxy(object):
-    def instance(self):
-        return local.request
-        
-    def __getattr__(self, name):
-        return getattr(local.request, name)
-    
-    def __setattr__(self, name, value):
-        setattr(local.request, name, value)
-        
-    def __str__(self):
-        return str(local.request)
-    
-    def __repr__(self):
-        return repr(local.request)
-            
-class ResponseProxy(object):
-    def instance(self):
-        return local.response
-        
-    def __getattr__(self, name):
-        return getattr(local.response, name)
-    
-    def __setattr__(self, name, value):
-        setattr(local.response, name, value)
-
-    def __str__(self):
-        return str(local.response)
-    
-    def __repr__(self):
-        return repr(local.response)
-    
 class Loader(object):
     def __init__(self, tmpfilename, vars, env, dirs, notest=False):
         self.tmpfilename = tmpfilename
@@ -354,10 +109,9 @@ class Loader(object):
     
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir=APPS_DIR, use_urls=None, include_apps=None, start=True):
-        global __use_urls
+    def __init__(self, apps_dir='apps', use_urls=None, include_apps=None, start=True):
         self.debug = False
-        self.use_urls = __use_urls = use_urls
+        self.use_urls = conf.use_urls = use_urls
         self.include_apps = include_apps or []
         if not Dispatcher.installed:
             self.init(apps_dir)
@@ -367,9 +121,7 @@ class Dispatcher(object):
             dispatch.call(self, 'startup')
         
     def init(self, apps_dir):
-        global APPS_DIR, url_map, _static_urls
-        
-        APPS_DIR = apps_dir
+        conf.apps_dir = apps_dir
         Dispatcher.apps_dir = apps_dir
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps)
         self.install_apps()
@@ -379,34 +131,34 @@ class Dispatcher(object):
             try:
                 import urls
                 from uliweb.core import rules
-                url_map = urls.url_map
-                _static_views = rules._static_views
+                conf.url_map = urls.url_map
+                conf.static_views = rules.static_views
                 flag = False
             except ImportError:
                 pass
         Dispatcher.modules = self.collect_modules(flag)
-        Dispatcher.url_map = url_map
+        Dispatcher.url_map = conf.url_map
         if flag:
             self.install_views(self.modules['views'])
-            Dispatcher.url_infos = _urls
+            Dispatcher.url_infos = conf.urls
         else:
             Dispatcher.url_infos = []
         self.install_settings(self.modules['settings'])
         Dispatcher.template_dirs = self.get_template_dirs()
 #        Dispatcher.templateplugins_dirs = self.get_templateplugins_dirs()
         Dispatcher.env = self._prepare_env()
-        Dispatcher.settings = settings
+        Dispatcher.settings = conf.settings
         
         #process dispatch hooks
         self.dispatch_hooks()
         
-        self.debug = settings.GLOBAL.get('DEBUG', False)
+        self.debug = conf.settings.GLOBAL.get('DEBUG', False)
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
         Dispatcher.default_template = pkg.resource_filename('uliweb.core', 'default.html')
         
         #setup timezone
         from uliweb.utils import date
-        date.set_timezone(settings.GLOBAL.TIME_ZONE)
+        date.set_timezone(conf.settings.GLOBAL.TIME_ZONE)
         
         Dispatcher.installed = True
         
@@ -416,7 +168,7 @@ class Dispatcher(object):
         env['redirect'] = redirect
         env['error'] = errorpage
         env['application'] = self
-        env['settings'] = settings
+        env['settings'] = conf.settings
         env['json'] = json
         return env
     
@@ -517,7 +269,7 @@ class Dispatcher(object):
                 urls.append((r.rule, methods, r.endpoint))
             urls.sort()
             return self._page_not_found(url=request.path, urls=urls)
-        tmp_file = template.get_templatefile('404'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('404'+conf.settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
             response.status = 404
@@ -526,7 +278,7 @@ class Dispatcher(object):
         return response
     
     def internal_error(self, request, e):
-        tmp_file = template.get_templatefile('500'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('500'+conf.settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':request.path})
             response.status = 500
@@ -542,7 +294,7 @@ class Dispatcher(object):
     
     def prepare_request(self, request, endpoint):
         #binding some variable to request
-        request.settings = settings
+        request.settings = conf.settings
         request.application = self
         
         #get handler
@@ -596,7 +348,7 @@ class Dispatcher(object):
             if hasattr(response, 'template'):
                 tmpfile = response.template
             else:
-                tmpfile = request.function + settings.GLOBAL.TEMPLATE_SUFFIX
+                tmpfile = request.function + conf.settings.GLOBAL.TEMPLATE_SUFFIX
             
             #if debug mode, then display a default_template
             if self.debug:
@@ -625,7 +377,7 @@ class Dispatcher(object):
         local_env['url_for'] = url_for
         local_env['redirect'] = redirect
         local_env['error'] = errorpage
-        local_env['settings'] = settings
+        local_env['settings'] = conf.settings
         local_env['json'] = json
         
         return self.get_env(local_env)
@@ -702,17 +454,16 @@ class Dispatcher(object):
                 log.exception(e)
             
     def install_settings(self, s):
-        global settings
         inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
         s.insert(0, inifile)
         env = dispatch.get(self, 'init_settings_env')
-        settings = Ini(env=env)
+        conf.settings = Ini(env=env)
         for v in s:
-            settings.read(v)
+            conf.settings.read(v)
             
     def dispatch_hooks(self):
         #process DISPATCH hooks
-        d = settings.get('DISPATCH', None)
+        d = conf.settings.get('DISPATCH', None)
         if d:
             hooks = d.get('bind', [])
             if hooks:
@@ -744,7 +495,7 @@ class Dispatcher(object):
         local.application = self
         local.request = req = Request(environ)
         local.response = res = Response(content_type='text/html')
-        local.url_adapter = adapter = url_map.bind_to_environ(environ)
+        local.url_adapter = adapter = conf.url_map.bind_to_environ(environ)
         
         try:
             endpoint, values = adapter.match()
@@ -752,7 +503,7 @@ class Dispatcher(object):
             mod, handler = self.prepare_request(req, endpoint)
             
             #process static
-            if endpoint in _static_views:
+            if endpoint in conf.static_views:
                 response = self.call_view(mod, handler, req, res, **values)
             else:
                 response = None
@@ -760,7 +511,7 @@ class Dispatcher(object):
                 _inss = {}
 
                 #middleware process request
-                middlewares = settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
+                middlewares = conf.settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
                 s = []
                 for middleware in middlewares:
                     try:
@@ -775,12 +526,12 @@ class Dispatcher(object):
                         log.exception(e)
                         errorpage("Can't import the middleware %s" % middleware)
                     _clses[middleware] = cls
-                middlewares = sort(s)
+                middlewares = sort_list(s)
                 
                 for middleware in middlewares:
                     cls = _clses[middleware]
                     if hasattr(cls, 'process_request'):
-                        ins = cls(self, settings)
+                        ins = cls(self, conf.settings)
                         _inss[middleware] = ins
                         response = ins.process_request(req)
                         if response is not None:
@@ -796,7 +547,7 @@ class Dispatcher(object):
                             if hasattr(cls, 'process_exception'):
                                 ins = _inss.get(middleware)
                                 if not ins:
-                                    ins = cls(self, settings)
+                                    ins = cls(self, conf.settings)
                                 response = ins.process_exception(req, e)
                                 if response:
                                     break
@@ -811,7 +562,7 @@ class Dispatcher(object):
                     if hasattr(cls, 'process_response'):
                         ins = _inss.get(middleware)
                         if not ins:
-                            ins = cls(self, settings)
+                            ins = cls(self, conf.settings)
                         response = ins.process_response(req, response)
 
             #endif

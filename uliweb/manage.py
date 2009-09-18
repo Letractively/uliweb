@@ -35,7 +35,7 @@ def set_log(app):
     log.setLevel(getattr(logging, level, logging.INFO))
     
 def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True):
-    from uliweb.utils.common import sort
+    from uliweb.utils.common import sort_list
     
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
@@ -51,7 +51,7 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
     set_log(app)
     
     if app.settings.GLOBAL.WSGI_MIDDLEWARES:
-        s = sort(app.settings.GLOBAL.WSGI_MIDDLEWARES, default=500)
+        s = sort_list(app.settings.GLOBAL.WSGI_MIDDLEWARES, default=500)
         for w in reversed(s):
             if w in app.settings:
                 args = app.settings[w].dict()

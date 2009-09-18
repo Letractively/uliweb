@@ -8,12 +8,12 @@ def __begin__():
 def index():
     return {}
 
-from uliweb.core.SimpleFrame import static_serve
+from uliweb.utils.filedown import filedown
 
 @expose('/favicon.ico', static=True)
 def favicon():
-    return static_serve(application, 'favicon.ico')
+    return filedown(request.environ, 'favicon.ico')
 
 @expose('/robots.txt', static=True)
 def robots():
-    return static_serve(application, 'robots.txt')
+    return filedown(request.environ, 'robots.txt')

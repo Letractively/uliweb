@@ -185,7 +185,7 @@ def wrap_func(des, src):
     des.__dict__.update(src.__dict__)
     return des
 
-def sort(alist, default=500):
+def sort_list(alist, default=500):
     """
     Sort a list, each element could be a tuple (order, value) or just a value
     for example:
