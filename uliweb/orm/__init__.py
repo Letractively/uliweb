@@ -633,7 +633,7 @@ class ReferenceProperty(Property):
         """Set reference."""
         value = self.validate(value)
         if value is not None:
-            if isinstance(value, int):
+            if isinstance(value, (int, long)):
                 setattr(model_instance, self._attr_name(), value)
                 setattr(model_instance, self._resolved_attr_name(), None)
             else:
@@ -654,7 +654,7 @@ class ReferenceProperty(Property):
                 - Value is not saved.
                 - Object not of correct model type for reference.
         """
-        if isinstance(value, int):
+        if isinstance(value, (int, long)):
             return value
 
         if value is not None and not value.is_saved():
@@ -732,8 +732,8 @@ class ManyResult(object):
         
     def add(self, *objs):
         for o in objs:
-            assert isinstance(o, (int, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
-            if isinstance(o, int):
+            assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
+            if isinstance(o, (int, long)):
                 v = o
             else:
                 v = o.id
@@ -758,8 +758,8 @@ class ManyResult(object):
     def delete(self, *objs):
         ids = []
         for o in objs:
-            assert isinstance(o, (int, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
-            if isinstance(o, int):
+            assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
+            if isinstance(o, (int, long)):
                 ids.append(o)
             else:
                 ids.append(o.id)
@@ -1126,7 +1126,7 @@ class Model(object):
             
     @classmethod
     def get(cls, condition=None, **kwargs):
-        if isinstance(condition, int):
+        if isinstance(condition, (int, long)):
             for obj in cls.filter(cls.c.id==condition):
                 return obj
         else:
@@ -1164,7 +1164,7 @@ class Model(object):
             
     @classmethod
     def remove(cls, condition=None, **kwargs):
-        if isinstance(condition, int):
+        if isinstance(condition, (int, long)):
             cls.table.delete(cls.c.id==condition, **kwargs).execute()
         elif isinstance(condition, (tuple, list)):
             cls.table.delete(cls.c.id.in_(condition)).execute()
