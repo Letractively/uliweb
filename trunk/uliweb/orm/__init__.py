@@ -573,7 +573,8 @@ class ReferenceProperty(Property):
         args['unique'] = self.kwargs.pop('unique', False)
         args['nullable'] = self.kwargs.pop('nullable', True)
         f_type = self._create_type()
-        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
+#        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
+        return Column(self.property_name, f_type, **args)
     
     def __property_config__(self, model_class, property_name):
         """Loads all of the references that point to this model.
@@ -701,7 +702,8 @@ class OneToOne(ReferenceProperty):
         args['unique'] = self.kwargs.pop('unique', True)
         args['nullable'] = self.kwargs.pop('nullable', True)
         f_type = self._create_type()
-        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
+#        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
+        return Column(self.property_name, f_type, **args)
 
     def __property_config__(self, model_class, property_name):
         """Loads all of the references that point to this model.
@@ -783,8 +785,8 @@ class ManyToMany(ReferenceProperty):
         self.table = Table(self.tablename, cls.metadata,
             Column(a, Integer, primary_key=True),
             Column(b, Integer, primary_key=True),
-            ForeignKeyConstraint([a], [a_id]),
-            ForeignKeyConstraint([b], [b_id]),
+#            ForeignKeyConstraint([a], [a_id]),
+#            ForeignKeyConstraint([b], [b_id]),
         )
         cls.manytomany.append(self.table)
         return
