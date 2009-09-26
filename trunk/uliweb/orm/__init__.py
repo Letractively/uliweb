@@ -1003,7 +1003,17 @@ class Model(object):
                     t = t.id
                 d[k] = t
         return d
-            
+    
+    def _dump_field(self, v):
+        if isinstance(v, datetime.datetime):
+            return v.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(v, datetime.date):
+            return v.strftime('%Y-%m-%d')
+        elif isinstance(v, datetime.time):
+            return v.strftime('%H:%M:%S')
+        else:
+            return v
+           
     def _get_data(self):
         """
         Get the changed property, it'll be used to save the object
@@ -1030,7 +1040,7 @@ class Model(object):
                         x = x.id
                     if isinstance(v, DateTimeProperty) and v.auto_now:
                         d[k] = v.now()
-                    elif (x is not None) and (t != x):
+                    elif (x is not None) and (self._dump_field(t) != self._dump_field(x)):
                         d[k] = x
         
         return d
@@ -1050,7 +1060,7 @@ class Model(object):
                     self.table.update(self.table.c.id == self.id).execute(**d)
             for k, v in d.items():
                 x = self.properties[k].get_value_for_datastore(self)
-                if x != v:
+                if self._dump_field(x) != self._dump_field(v):
                     setattr(self, k, v)
             self._set_saved()
         return self

@@ -216,7 +216,7 @@ class BaseField(object):
             else:
                 data = self.to_python(data)
         except:
-            return False, _("Can't convert %r to %s.") % (data, self.__class__.__name__)
+            return False, "Can't convert %r to %s." % (data, self.__class__.__name__)
         try:
             for v in self.default_validators + self.validators:
                 v(data, request)
@@ -254,7 +254,7 @@ class StringField(BaseField):
     </span>
     </label>
     >>> a.validate('')
-    (False, 'This field is required.')
+    (False, gettext_lazy('This field is required.'))
     >>> a.validate('Hello')
     (True, 'Hello')
     >>> a.to_python('Hello')
@@ -298,7 +298,7 @@ class UnicodeField(BaseField):
     </span>
     </label>
     >>> a.validate('')
-    (False, 'This field is required.')
+    (False, gettext_lazy('This field is required.'))
     >>> a.validate('Hello')
     (True, u'Hello')
     >>> a.to_python('Hello')
@@ -503,7 +503,7 @@ class SelectField(BaseField):
     >>> print a.validate('')
     (True, 'a')
     >>> print a.validate('aaaaaaa')
-    (False, 'Select a valid choice. That choice is not one of the available choices.')
+    (False, gettext_lazy('Select a valid choice. That choice is not one of the available choices.'))
     >>> print a.validate('b')
     (True, 'b')
     >>> a = SelectField(name='select', id='field_select', choices=[(1, 'AAA'), (2, 'BBB')], datatype=int)
@@ -540,7 +540,7 @@ class RadioSelectField(SelectField):
     >>> print a.validate('')
     (True, 'a')
     >>> print a.validate('aaaaaaa')
-    (False, 'Select a valid choice. That choice is not one of the available choices.')
+    (False, gettext_lazy('Select a valid choice. That choice is not one of the available choices.'))
     >>> print a.validate('b')
     (True, 'b')
     
@@ -672,6 +672,55 @@ class TimeField(StringField):
             except ValueError:
                 continue
         raise ValidationError, _("The data is not a valid time format.")
+    
+    def to_html(self, data):
+        if data:
+            return data.strftime(self.formats[0])
+        else:
+            return ''
+
+DEFAULT_DATETIME_INPUT_FORMATS = ["%s %s" % (x, y)
+    for x in DEFAULT_DATE_INPUT_FORMATS
+        for y in DEFAULT_TIME_INPUT_FORMATS]
+        
+class DateTimeField(StringField):
+    """
+    >>> a = DateTimeField(name='datetime', id='field_datetime')
+    >>> print a.html(datetime.datetime(2009, 9, 25, 14, 30, 59))
+    <input class="field field_datetime" id="field_datetime" name="datetime" type="text" value="2009-09-25 14:30:59"></input>
+    >>> print a.validate('2009-09-25 14:30:59')
+    (True, datetime.datetime(2009, 9, 25, 14, 30, 59))
+    >>> print a.validate('2009-09-25 14:30')
+    (True, datetime.datetime(2009, 9, 25, 14, 30))
+    >>> print a.validate('')
+    (True, None)
+    """
+    field_css_class = 'field field_datetime'
+    
+    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, format=None, **kwargs):
+        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
+        if not format:
+            self.formats = DEFAULT_DATETIME_INPUT_FORMATS
+        else:
+            self.formats = format
+            if not isinstance(format, (list, tuple)):
+                self.formats = [format]
+        self._default = default
+
+    def _get_default(self):
+        if self._default == 'now':
+            return datetime.datetime.now()
+        else:
+            return self._default
+    default = property(_get_default)
+    
+    def to_python(self, data):
+        for format in self.formats:
+            try:
+                return datetime.datetime(*time.strptime(data, format)[:6])
+            except ValueError:
+                continue
+        raise ValidationError, _("The data is not a valid datetime format.")
     
     def to_html(self, data):
         if data:
