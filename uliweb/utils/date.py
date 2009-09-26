@@ -3,6 +3,8 @@ import datetime
 import pytz
 
 __timezone__ = None
+__local_timezone__ = None
+
 DEFAULT_DATETIME_INPUT_FORMATS = (
     '%Y-%m-%d %H:%M:%S',     # '2006-10-25 14:30:59'
     '%Y-%m-%d %H:%M',        # '2006-10-25 14:30'
@@ -27,6 +29,13 @@ def set_timezone(tz=pytz.utc):
 def get_default_timezone():
     return __timezone__
 
+def set_local_timezone(tz=pytz.utc):
+    global __local_timezone__
+    __local_timezone__ = timezone(tz)
+    
+def get_default_local_timezone():
+    return __local_timezone__
+
 def timezone(tzname):
     if not tzname:
         return None
@@ -46,7 +55,7 @@ def pick_timezone(*args):
             return tz
     
 def now(tzinfo=None):
-    tz = pick_timezone(tzinfo, __timezone__)
+    tz = pick_timezone(tzinfo, __local_timezone__, __timezone__)
     return datetime.datetime.now(tz)
 
 def today(tzinfo=None):
