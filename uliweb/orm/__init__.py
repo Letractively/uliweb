@@ -24,6 +24,8 @@ import datetime
 from uliweb.utils import date
 from sqlalchemy import *
 
+now = date.now
+
 _default_metadata = MetaData()
 
 class Error(Exception):pass
@@ -352,7 +354,7 @@ class DateTimeProperty(Property):
 
     @staticmethod
     def now():
-        return date.now()
+        return now()
 
     def convert(self, value):
         d = date.to_datetime(value, format=self.format)
