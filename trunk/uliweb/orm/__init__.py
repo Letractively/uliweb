@@ -4,10 +4,11 @@
 
 
 __all__ = ['Field', 'get_connection', 'Model', 'create_all',
-    'set_debug_query', 'blob', 'text', 'set_auto_create', 'set_connection',
+    'set_debug_query', 'set_auto_create', 'set_connection',
+    'CHAR', 'BLOB', 'TEXT', 'DECIMAL',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty',
-    'IntegerProperty', 'Property', 'StringProperty',
+    'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
@@ -288,23 +289,26 @@ class Property(object):
             
     def _attr_name(self):
         return '_' + self.name + '_'
-    
-class StringProperty(Property):
+   
+class CharProperty(Property):
     data_type = str
-    field_class = String
+    field_class = CHAR
     
     def __init__(self, verbose_name=None, default='', **kwds):
-        super(StringProperty, self).__init__(verbose_name, default=default, **kwds)
+        super(CharProperty, self).__init__(verbose_name, default=default, **kwds)
     
     def empty(self, value):
         return not value
-
+    
     def _create_type(self):
         if self.max_length:
             f_type = self.field_class(self.max_length, convert_unicode=True)
         else:
             f_type = self.field_class
         return f_type
+    
+class StringProperty(CharProperty):
+    field_class = String
     
 class UnicodeProperty(StringProperty):
     data_type = unicode
@@ -953,14 +957,12 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
             return self
 
 
-class blob(type):pass
-class text(type):pass
-
 _fields_mapping = {
     str:StringProperty,
+    CHAR:CharProperty,
     unicode: UnicodeProperty,
-    text:TextProperty,
-    blob:BlobProperty,
+    TEXT:TextProperty,
+    BLOB:BlobProperty,
 #    file:FileProperty,
     int:IntegerProperty,
     float:FloatProperty,
@@ -969,6 +971,7 @@ _fields_mapping = {
     datetime.date:DateProperty,
     datetime.time:TimeProperty,
     decimal.Decimal:DecimalProperty,
+    DECIMAL:DecimalProperty,
 }
 def Field(type, **kwargs):
     t = _fields_mapping.get(type)
