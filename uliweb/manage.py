@@ -165,7 +165,7 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
         log.error("Error: outputdir should be a directory and can't be empty")
         sys.exit(0)
 
-    application = make_application(False, apps_dir)
+    application = SimpleFrame.Dispatcher(apps_dir=apps_dir, start=False)
     apps = application.apps
     dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in apps]
     copy_dir_with_check(dirs, outputdir, verbose, check)
@@ -176,7 +176,7 @@ def extracturls(urlfile='urls.py'):
     """
     check_apps_dir(apps_dir)
 
-    application = SimpleFrame.Dispatcher(apps_dir=apps_dir, use_urls=False)
+    application = SimpleFrame.Dispatcher(apps_dir=apps_dir, use_urls=False, start=False)
     filename = os.path.join(application.apps_dir, urlfile)
     if os.path.exists(filename):
         answer = raw_input("Error: [%s] is existed already, do you want to overwrite it(y/n):" % urlfile)

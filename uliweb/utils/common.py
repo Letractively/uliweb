@@ -74,6 +74,9 @@ def extract_dirs(mod, path, dst, verbose=False):
 def copy_dir(d, dst, verbose, exact=False):
     import shutil
 
+    if not os.path.exists(dst):
+        os.makedirs(dst)
+    
     for f in d:
         if not os.path.exists(f):
             if verbose:
@@ -103,6 +106,9 @@ def copy_dir(d, dst, verbose, exact=False):
 
 def copy_dir_with_check(d, dst, verbose=False, check=True):
     import shutil
+    
+    if not os.path.exists(dst):
+        os.makedirs(dst)
     
     def _md5(filename):
         import md5

@@ -55,6 +55,28 @@ def action_reset(apps_dir):
             
     return action
 
+class MockDBAPI(object):
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.paramstyle = 'named'
+    def connect(self, **kwargs):
+        print kwargs, self.kwargs
+        for k in self.kwargs:
+            assert k in kwargs, "key %s not present in dictionary" % k
+            assert kwargs[k]==self.kwargs[k], "value %s does not match %s" % (kwargs[k], self.kwargs[k])
+        return MockConnection()
+class MockConnection(object):
+    def close(self):
+        pass
+    def cursor(self):
+        return MockCursor()
+    def run_callable(self, do):
+        print 'xxxxxxxxxxxxxxxx'
+        False
+class MockCursor(object):
+    def close(self):
+        pass
+
 def action_sql(apps_dir):
     def action(appname=''):
         """Display the table creation sql statement"""
