@@ -71,85 +71,57 @@ def extract_dirs(mod, path, dst, verbose=False):
                 continue
             extract_file(mod, fpath, dst, verbose)
 
-def copy_dir(d, dst, verbose, exact=False):
+def copy_dir(src, dst, verbose=False, check=False):
     import shutil
 
-    if not os.path.exists(dst):
-        os.makedirs(dst)
-    
-    for f in d:
-        if not os.path.exists(f):
-            if verbose:
-                log.warn("Warn : %s does not exist, SKIP" % f)
-            continue
-        dd = os.path.join(dst, os.path.basename(f))
-        if exact:
-            shutil.rmtree(dd, True)
-        if not os.path.exists(dd):
-            os.makedirs(dd)
-            if verbose:
-                log.info('Info : Make directory', dst)
-            
-        for r in os.listdir(f):
-            if r in ['.svn', '_svn']:
-                continue
-            fpath = os.path.join(f, r)
-            if os.path.isdir(fpath):
-                copy_dir([fpath], dd, verbose)
-            else:
-                ext = os.path.splitext(fpath)[1]
-                if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
-                    continue
-                shutil.copy2(fpath, dd)
-                if verbose:
-                    log.info("Info : Copy [%s] to [%s]" % (fpath, dd))
-
-def copy_dir_with_check(d, dst, verbose=False, check=True):
-    import shutil
-    
-    if not os.path.exists(dst):
-        os.makedirs(dst)
-    
     def _md5(filename):
         import md5
         a = md5.new()
         a.update(file(filename, 'rb').read())
         return a.digest()
+    
+    if not os.path.exists(dst):
+        os.makedirs(dst)
 
-    for f in d:
-        if not os.path.exists(f):
-            if verbose:
-                log.warn("Warn : %s does not exist, SKIP" % f)
+    if verbose:
+        log.info("Info : Processing %s" % src)
+        
+    for r in os.listdir(src):
+        if r in ['.svn', '_svn']:
             continue
-        if verbose:
-            log.info("Info : Processing %s" % f)
-        for r in os.listdir(f):
-            if r in ['.svn', '_svn']:
+        fpath = os.path.join(src, r)
+        if os.path.isdir(fpath):
+            copy_dir(fpath, os.path.join(dst, r), verbose, check)
+        else:
+            ext = os.path.splitext(fpath)[1]
+            if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
                 continue
-            fpath = os.path.join(f, r)
-            if os.path.isdir(fpath):
-                dd = os.path.join(dst, r)
-                if not os.path.exists(dd):
-                    os.makedirs(dd)
-                    if verbose:
-                        print 'Info : Make directory', dst
-                copy_dir([fpath], dd, verbose, check)
-            else:
-                ext = os.path.splitext(fpath)[1]
-                if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
-                    continue
-                if check:
-                    df = os.path.join(dst, r)
-                    if os.path.exists(df):
-                        a = _md5(fpath)
-                        b = _md5(df)
-                        if a != b:
-                            print ("Error: Target file %s is already existed, and "
-                                "it not same as source one %s, so copy failed" % (fpath, dst))
-                    else:
-                        shutil.copy2(fpath, dst)
+            if check:
+                df = os.path.join(dst, r)
+                if os.path.exists(df):
+                    a = _md5(fpath)
+                    b = _md5(df)
+                    if a != b:
+                        log.error("Error: Target file %s is already existed, and "
+                            "it not same as source one %s, so copy failed" % (fpath, dst))
                 else:
                     shutil.copy2(fpath, dst)
+                    if verbose:
+                        log.info("Info : Copy [%s] to [%s]" % (fpath, dst))
+                    
+            else:
+                shutil.copy2(fpath, dst)
+                if verbose:
+                    log.info("Info : Copy [%s] to [%s]" % (fpath, dst))
+
+def copy_dir_with_check(dirs, dst, verbose=False, check=True):
+    for d in dirs:
+        if not os.path.exists(d):
+            if verbose:
+                log.warn("Warn : %s does not exist, SKIP" % d)
+            continue
+
+        copy_dir(d, dst, verbose, check)
 
 log = None
 FORMAT = "%(levelname)-8s %(asctime)-15s %(filename)s,%(lineno)d] %(message)s"
