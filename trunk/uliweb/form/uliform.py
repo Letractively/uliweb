@@ -173,14 +173,19 @@ class BaseField(object):
             return id
         
     def parse_data(self, request, all_data):
-        if self.multiple:
-            if hasattr(request, 'getlist'):
-                func = getattr(request, 'getlist')
+        if not isinstance(request, (tuple, list)):
+            request = [request]
+        for r in request:
+            if self.multiple:
+                if hasattr(r, 'getlist'):
+                    func = getattr(r, 'getlist')
+                else:
+                    func = getattr(r, 'getall')
+                v = all_data[self.name] = func(self.name)
             else:
-                func = getattr(request, 'getall')
-            all_data[self.name] = func(self.name)
-        else:
-            all_data[self.name] = request.get(self.name, None)
+                v = all_data[self.name] = r.get(self.name, None)
+            if v:
+                break
 
     def get_data(self, all_data):
         return all_data.get(self.name, None)
@@ -191,7 +196,10 @@ class BaseField(object):
         return u_str(data)
 
     def validate(self, data, request=None):
-        if isinstance(data, cgi.FieldStorage):
+        if hasattr(data, 'stream'):
+            data.file = data.stream
+            
+        if hasattr(data, 'file'):
             if data.file:
                 v = data.filename
             else:
@@ -560,9 +568,9 @@ class FileField(BaseField):
         d = D({})
         d['filename'] = os.path.basename(data.filename)
         d['file'] = data.file
-        data.file.seek(0, os.SEEK_END)
-        d['length'] = data.file.tell()
-        data.file.seek(0, os.SEEK_SET)
+#        data.file.seek(0, os.SEEK_END)
+#        d['length'] = data.file.tell()
+#        data.file.seek(0, os.SEEK_SET)
         return d
     
     def html(self, data, py=True):

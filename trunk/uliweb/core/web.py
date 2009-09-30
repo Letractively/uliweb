@@ -8,7 +8,7 @@ try:
 except:
     import simplejson as JSON
 
-from werkzeug.utils import cached_property, url_decode
+from werkzeug.utils import cached_property, url_decode, FileStorage
 from werkzeug import Request as OriginalRequest, Response
 from werkzeug.datastructures import CombinedMultiDict, ImmutableMultiDict
 import conf
@@ -17,30 +17,10 @@ from uliweb.utils.common import wrap_func
 from rules import add_rule
 
 class Request(OriginalRequest):
-    @cached_property
-    def args(self):
-        """The parsed URL parameters as :class:`ImmutableMultiDict`."""
-        return url_decode(self.environ.get('QUERY_STRING', ''), self.charset,
-                          errors=self.encoding_errors,
-                          cls=ImmutableMultiDict)
-
-    @property
-    def form(self):
-        """Form parameters.  Currently it's not guaranteed that the
-        :class:`ImmutableMultiDict` returned by this function is ordered in
-        the same way as the submitted form data.
-        """
-        self._load_form_data()
-        return self._form
-    
-    @cached_property
-    def values(self):
-        """Combined multi dict for :attr:`args` and :attr:`form`."""
-        return CombinedMultiDict([self.args, self.form])
-    
-    GET = args
-    POST = form
-    params = values
+    GET = OriginalRequest.args
+    POST = OriginalRequest.form
+    params = OriginalRequest.values
+    FILES = OriginalRequest.files
     
 class RequestProxy(object):
     def instance(self):
