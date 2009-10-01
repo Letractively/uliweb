@@ -8,7 +8,6 @@ __all__ = ['expose', 'Dispatcher', 'url_for', 'get_apps', 'get_app_dir',
 
 import os, sys
 #from webob import Request, Response
-from werkzeug import Response
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
 
@@ -17,8 +16,8 @@ from storage import Storage
 import dispatch
 from uliweb.utils.common import pkg, log, sort_list, import_func
 from uliweb.utils.pyini import Ini
-import conf
-from web import Request, HTTPError, redirect, errorpage, json, \
+import uliweb as conf
+from web import Request, Response, HTTPError, redirect, errorpage, json, \
         POST, GET, post_view, pre_view, url_for, expose, RequestProxy, \
         ResponseProxy
 from rules import Mapping
@@ -172,17 +171,17 @@ class Dispatcher(object):
         env['json'] = json
         return env
     
-    def get_file(self, filename, request=None, dirname='files'):
+    def get_file(self, filename, dir='static'):
         """
         get_file will search from apps directory
         """
         if os.path.exists(filename):
             return filename
-        if request:
-            dirs = [request.appname] + self.apps
+        if conf.request:
+            dirs = [conf.request.appname] + self.apps
         else:
             dirs = self.apps
-        fname = os.path.join(dirname, filename)
+        fname = os.path.join(dir, filename)
         for d in dirs:
             path = pkg.resource_filename(d, fname)
             if os.path.exists(path):
@@ -372,8 +371,8 @@ class Dispatcher(object):
         dispatch.call(self, 'prepare_view_env', local_env, local.request)
         
         local_env['application'] = local.application
-        local_env['request'] = RequestProxy()
-        local_env['response'] = ResponseProxy()
+        local_env['request'] = conf.request
+        local_env['response'] = conf.response
         local_env['url_for'] = url_for
         local_env['redirect'] = redirect
         local_env['error'] = errorpage
@@ -494,7 +493,9 @@ class Dispatcher(object):
     def __call__(self, environ, start_response):
         local.application = self
         local.request = req = Request(environ)
+        conf.request = RequestProxy()
         local.response = res = Response(content_type='text/html')
+        conf.response = ResponseProxy()
         local.url_adapter = adapter = conf.url_map.bind_to_environ(environ)
         
         try:

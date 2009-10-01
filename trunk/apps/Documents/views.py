@@ -1,5 +1,6 @@
 from uliweb.core.SimpleFrame import expose
 from Portal.modules.menu import menu
+from uliweb import response, request, application
 import os
 
 def __begin__():
@@ -7,9 +8,9 @@ def __begin__():
 
 @expose('/documents')
 def documents():
-    return _show(request, response, 'content.rst', env)
+    return _show('content.rst', env)
 
-def _show(request, response, filename, env, lang=None, render=True):
+def _show(filename, env, lang=None, render=True):
     from uliweb.core.template import template, render_text
     from uliweb.utils.rst import to_html
     from uliweb.i18n import get_language, format_locale
@@ -24,10 +25,10 @@ def _show(request, response, filename, env, lang=None, render=True):
             response.set_cookie(env.settings.I18N.LANGUAGE_COOKIE_NAME, lang)
     if lang:
         lang = format_locale(lang)
-        f = request.application.get_file(os.path.join(lang, filename))
+        f = application.get_file(os.path.join(lang, filename), dir='files')
         if f:
             filename = f
-    _f = request.application.get_file(filename)
+    _f = application.get_file(filename, dir='files')
     if _f:
         content = file(_f).read()
         if render:
@@ -45,4 +46,4 @@ def _show(request, response, filename, env, lang=None, render=True):
 #this is also available
 @expose('/documents/<lang>/<path:filename>')
 def show_document(filename, lang):
-    return _show(request, response, filename, env, lang, False)
+    return _show(filename, env, lang, False)
