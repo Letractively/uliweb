@@ -9,9 +9,9 @@ except:
     import simplejson as JSON
 
 from werkzeug.utils import cached_property, url_decode, FileStorage
-from werkzeug import Request as OriginalRequest, Response
+from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug.datastructures import CombinedMultiDict, ImmutableMultiDict
-import conf
+import uliweb as conf
 import dispatch
 from uliweb.utils.common import wrap_func
 from rules import add_rule
@@ -21,6 +21,10 @@ class Request(OriginalRequest):
     POST = OriginalRequest.form
     params = OriginalRequest.values
     FILES = OriginalRequest.files
+    
+class Response(OriginalResponse):
+    def write(self, value):
+        self.stream.write(value)
     
 class RequestProxy(object):
     def instance(self):

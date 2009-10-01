@@ -58,7 +58,7 @@ class StaticFilesMiddleware(SharedDataMiddleware):
             if f:
                 return f, self._opener(f)
             
-            return NotFound("Can't found the file %s" % filename)
+            return NotFound("Can't found the file %s" % filename), None
         return _loader
     
     def __call__(self, environ, start_response):
