@@ -24,6 +24,7 @@ import threading
 import datetime
 from uliweb.utils import date
 from sqlalchemy import *
+from sqlalchemy.sql import select
 
 now = date.now
 
@@ -727,7 +728,68 @@ class OneToOne(ReferenceProperty):
         setattr(self.reference_class, self.collection_name,
             _OneToOneReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
     
-class ManyResult(object):
+class Result(object):
+    def __init__(self, model=None, condition=None, *args, **kwargs):
+        self.model = model
+        self.condition = condition
+        self.columns = [self.model.table]
+        self.funcs = []
+        self.args = args
+        self.kwargs = kwargs
+        
+    def all(self):
+        return self
+    
+    def count(self):
+        if not self.model or not self.condition:
+            return 0
+        return self.model.count(self.condition)
+
+    def delete(self):
+        if not self.model or not self.condition:
+            return
+        return self.model.remove(self.condition)
+    
+    def filter(self, condition):
+        self.condition = condition & self.condition
+        return self
+    
+    def order_by(self, *args, **kwargs):
+        self.funcs.append(('order_by', args, kwargs))
+        return self
+    
+    def values(self, *args, **kwargs):
+        self.funcs.append(('with_only_columns', (args,), kwargs))
+        return self.run()
+    
+    def distinct(self, *args, **kwargs):
+        self.funcs.append(('distinct', args, kwargs))
+        return self
+    
+    def limit(self, *args, **kwargs):
+        self.funcs.append(('limit', args, kwargs))
+        return self
+
+    def offset(self, *args, **kwargs):
+        self.funcs.append(('offset', args, kwargs))
+        return self
+    
+    def run(self):
+        query = select(self.columns, self.condition)
+        for func, args, kwargs in self.funcs:
+            query = getattr(query, func)(*args, **kwargs)
+        r = query.execute()
+        return r
+
+    def __iter__(self):
+        r = self.run()
+        for obj in r:
+            d = self.model._data_prepare(obj)
+            o = self.model(**d)
+            o._set_saved()
+            yield o
+   
+class ManyResult(Result):
     def __init__(self, modela, modelb, table, fielda, fieldb, valuea):
         self.modela = modela
         self.modelb = modelb
@@ -735,6 +797,9 @@ class ManyResult(object):
         self.fielda = fielda
         self.fieldb = fieldb
         self.valuea = valuea
+        self.columns = [self.modelb.table]
+        self.condition = None
+        self.funcs = []
         
     def add(self, *objs):
         for o in objs:
@@ -746,31 +811,26 @@ class ManyResult(object):
             d = {self.fielda:self.valuea, self.fieldb:v}
             self.table.insert().execute(**d)
     
-    def clear(self):
-        self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
+    def clear(self, *objs):
+        if objs:
+            ids = []
+            for o in objs:
+                assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
+                if isinstance(o, (int, long)):
+                    ids.append(o)
+                else:
+                    ids.append(o.id)
+            self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
+        else:
+            self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
     
     def filter(self, condition):
-        from sqlalchemy.sql import select
-        s = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
-        ids = [x[0] for x in self.table.bind.execute(s)]
-        return self.modelb.filter(self.modelb.c.id.in_(ids) & condition)
+        self.condition = condition & self.condition
+        return self
         
     def all(self):
-        from sqlalchemy.sql import select
-        s = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
-        ids = [x[0] for x in self.table.bind.execute(s)]
-        return self.modelb.filter(self.modelb.c.id.in_(ids))
+        return self
     
-    def delete(self, *objs):
-        ids = []
-        for o in objs:
-            assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
-            if isinstance(o, (int, long)):
-                ids.append(o)
-            else:
-                ids.append(o.id)
-        self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
-        
     def count(self):
         result = self.table.count(self.table.c[self.fielda]==self.valuea).execute()
         count = 0
@@ -781,6 +841,27 @@ class ManyResult(object):
         else:
             count = 0
         return count
+    
+    def values(self, *args, **kwargs):
+        self.funcs.append(('with_only_columns', (args,), kwargs))
+        return self.run()
+    
+    def run(self):
+        query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
+        ids = [x[0] for x in query.execute()]
+        query = select(self.columns, self.modelb.c.id.in_(ids) & self.condition)
+        for func, args, kwargs in self.funcs:
+            query = getattr(query, func)(*args, **kwargs)
+        r = query.execute()
+        return r
+        
+    def __iter__(self):
+        r = self.run()
+        for obj in r:
+            d = self.modelb._data_prepare(obj)
+            o = self.modelb(**d)
+            o._set_saved()
+            yield o
         
 class ManyToMany(ReferenceProperty):
     def create(self, cls):
@@ -850,26 +931,6 @@ def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
 
 SelfReference = SelfReferenceProperty
 
-class Result(object):
-    def __init__(self, model=None, condition=None):
-        self.model = model
-        self.condition = condition
-        
-    def all(self):
-        if not self.model or not self.condition:
-            return []
-        return self.model.filter(self.condition)
-    
-    def count(self):
-        if not self.model or not self.condition:
-            return 0
-        return self.model.count(self.condition)
-
-    def delete(self):
-        if not self.model or not self.condition:
-            return
-        return self.model.remove(self.condition)
-        
 class _ReverseReferenceProperty(Property):
     """The inverse of the Reference property above.
 
@@ -1161,21 +1222,11 @@ class Model(object):
     
     @classmethod
     def all(cls):
-        r = cls.table.select().execute()
-        for obj in r:
-            d = cls._data_prepare(obj)
-            o = cls(**d)
-            o._set_saved()
-            yield o
+        return Result(cls)
         
     @classmethod
     def filter(cls, condition=None, **kwargs):
-        r = select([cls.table], condition, **kwargs).execute()
-        for obj in r:
-            d = cls._data_prepare(obj)
-            o = cls(**d)
-            o._set_saved()
-            yield o
+        return Result(cls, condition, **kwargs)
             
     @classmethod
     def remove(cls, condition=None, **kwargs):
@@ -1185,6 +1236,8 @@ class Model(object):
             cls.table.delete(cls.c.id.in_(condition)).execute()
         else:
             cls.table.delete(condition, **kwargs).execute()
+            
+    delete = remove
             
     @classmethod
     def count(cls, condition=None, **kwargs):
