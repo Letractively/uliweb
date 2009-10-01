@@ -9,6 +9,8 @@ __url__ = 'http://code.google.com/p/uliweb'
 __version__ = '0.0.1a1'
 __license__ = 'GPLv2'
 
+import os, sys
+
 application = None
 settings = None
 urls = []
@@ -19,3 +21,11 @@ apps_dir = 'apps'
 use_urls = False
 response = None
 request = None
+
+workpath = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(workpath, 'lib'))
+
+from uliweb.core.web import Request, Response, redirect, error, json, \
+        POST, GET, post_view, pre_view, url_for, expose
+
+from uliweb.core.SimpleFrame import get_app_dir, get_apps

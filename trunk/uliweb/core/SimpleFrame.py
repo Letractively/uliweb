@@ -3,9 +3,6 @@
 # License: GPLv2
 ####################################################################
 
-__all__ = ['expose', 'Dispatcher', 'url_for', 'get_apps', 'get_app_dir', 
-    'redirect', 'static_serve']
-
 import os, sys
 #from webob import Request, Response
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
@@ -17,9 +14,8 @@ import dispatch
 from uliweb.utils.common import pkg, log, sort_list, import_func
 from uliweb.utils.pyini import Ini
 import uliweb as conf
-from web import Request, Response, HTTPError, redirect, errorpage, json, \
-        POST, GET, post_view, pre_view, url_for, expose, RequestProxy, \
-        ResponseProxy
+from web import Request, Response, HTTPError, redirect, error, json, \
+        url_for, expose, RequestProxy, ResponseProxy
 from rules import Mapping
 
 try:
@@ -165,7 +161,7 @@ class Dispatcher(object):
         env = Storage({})
         env['url_for'] = url_for
         env['redirect'] = redirect
-        env['error'] = errorpage
+        env['error'] = error
         env['application'] = self
         env['settings'] = conf.settings
         env['json'] = json
@@ -187,7 +183,6 @@ class Dispatcher(object):
             if os.path.exists(path):
                 return path
         return None
-#        errorpage("Can't find the file %s" % filename)
 
     def template(self, filename, vars, env=None, dirs=None, request=None, default_template=None):
         vars = vars or {}
@@ -375,7 +370,7 @@ class Dispatcher(object):
         local_env['response'] = conf.response
         local_env['url_for'] = url_for
         local_env['redirect'] = redirect
-        local_env['error'] = errorpage
+        local_env['error'] = error
         local_env['settings'] = conf.settings
         local_env['json'] = json
         
@@ -525,7 +520,7 @@ class Dispatcher(object):
                         s.append((order, middleware))
                     except ImportError, e:
                         log.exception(e)
-                        errorpage("Can't import the middleware %s" % middleware)
+                        error("Can't import the middleware %s" % middleware)
                     _clses[middleware] = cls
                 middlewares = sort_list(s)
                 

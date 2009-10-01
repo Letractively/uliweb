@@ -11,49 +11,54 @@ Hello, Uliweb
 准备
 -----
 
-从 http://code.google.com/p/uliweb 下载最新版本或从svn中下载最新版本，放在一个目录下。
-因为 Uliweb 本身包含 uliwebproject 网站的代码，所以在我们这个简单的例子中其实是不需要的。
-它们都存在于apps目录下。一种方式是你将它全部删除，因为我们会创建新的app。另一种方式就是修
-改apps下的settings.py文件，只让我们新创建的app生效。再一种方法就是将代码导出到其它的工作
-目录下，这样环境比较干净，然后开始工作。这里我们将采用第三种方法。
+安装请看 `安装Uliweb <installation>`_
 
 创建新的项目
 -------------
 
-Uliweb 提供一个命令行工具 manage.py, 它可以执行一些命令。在Uliweb的下载目录下，进入命
-令行，然后执行：
+在安装完毕后，Uliweb 提供一个命令行工具 uliweb, 它可以执行一些命令，它会安装在 Python/Scripts
+目录下，因此要想运行它，要保证 Python/Scripts 在PATH环境变量上，这样我们就可以在命令行
+下使用它了。
 
-::
-
-    python manage.py export ../uliweb_work
-    
-这里export后面是一个目录，我是将它建在与uliweb同级的uliweb_work下了，你可以换成其它的目录。
-
-在执行成功后(成功不会显示任何内容)，在命令行进入新建的目录，在这个目录下是一个完整的Uliweb
-的拷贝，但是没有任何APP存在，所以是一个干净的环境。
-
-创建Hello应用
---------------
-
-然后让我们创建一个Hello的应用。在uliweb_work目录的命令行下执行：
+进入你的工作目录，然后执行：
 
 .. code::
 
-    python manage.py makeapp Hello
+    uliweb makeproject project
     
-在执行成功后，你会在apps下找到::
+执行成功后，在 project 目录下会是这样的：
 
-    apps/
-      __init__.py
-      settings.py
-      Hello/
-        __init__.py
-        settings.py
-        views.py
-        static/
-        templates/
+.. code::
+
+    |-- app.yaml
+    |-- apps/
+    |   `-- settings.ini
+    |-- gae_handler.py
+    |-- runcgi.py
+    `-- wsgi_handler.wsgi
         
-好了，现在 Hello 已经创建好了。再一步就是如何创建“Hello, Uliweb”了。
+创建Hello应用
+--------------
+
+然后让我们创建一个Hello的应用:
+
+.. code::
+
+    cd project
+    uliweb makeapp Hello
+    
+在执行成功后，你会在apps/Hello下看到:
+
+.. code::
+
+    |-- __init__.py
+    |-- conf.py
+    |-- info.ini
+    |-- static/
+    |   `-- readme.txt
+    |-- templates/
+    |   `-- readme.txt
+    `-- views.py
 
 输出"Hello, Uliweb"
 ---------------------
@@ -90,7 +95,7 @@ Hello, Uliweb 的View函数了。
 
 .. code:: console
 
-    python manage.py runserver
+    uliweb runserver
     
 这样就启动了一个开发服务器。然后可以打开浏览器输入: http://localhost:8000 看到结果。
 

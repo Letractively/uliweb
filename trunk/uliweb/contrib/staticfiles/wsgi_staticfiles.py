@@ -1,6 +1,6 @@
 import os
 from werkzeug.utils import SharedDataMiddleware
-import uliweb.core.conf as conf
+from uliweb import settings
 from uliweb.utils.filedown import filedown
 
 class StaticFilesMiddleware(SharedDataMiddleware):
@@ -18,7 +18,7 @@ class StaticFilesMiddleware(SharedDataMiddleware):
         self.exports = {}
         self.cache = cache
         self.cache_timeout = cache_timeout
-        self.exports[self.url_suffix] = self.loader(conf.settings.STATICFILES.STATIC_FOLDER)
+        self.exports[self.url_suffix] = self.loader(settings.STATICFILES.STATIC_FOLDER)
         if disallow is not None:
             from fnmatch import fnmatch
             self.is_allowed = lambda x: not fnmatch(x, disallow)
