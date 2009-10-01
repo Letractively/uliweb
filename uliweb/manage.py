@@ -2,12 +2,13 @@
 import sys, os
 import logging
 from uliweb.utils.common import log, check_apps_dir
-import uliweb.core.conf as conf
+import uliweb as conf
         
 apps_dir = 'apps'
 
-workpath = os.path.dirname(__file__)
-sys.path.insert(0, os.path.join(workpath, 'lib'))
+workpath = os.path.join(os.path.dirname(__file__), 'lib')
+if workpath not in sys.path:
+    sys.path.insert(0, os.path.join(workpath, 'lib'))
 
 from werkzeug import script
 from uliweb.core import SimpleFrame
@@ -44,8 +45,8 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
     
     application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps)
     
+    #settings global application object
     conf.application = app
-    conf.settings = app.settings
     
     #set logger level
     set_log(app)
@@ -138,21 +139,6 @@ def make_project(project_name='', verbose=('v', False)):
     if ans == 'y':
         extract_dirs('uliweb', 'template_files/project', project_name)
     
-def export(outputdir=('o', ''), verbose=('v', False)):
-    """
-    Export Uliweb to a directory.
-    """
-    from uliweb.utils.common import extract_dirs
-    
-    if not outputdir:
-        log.error("Error: outputdir can't be empty")
-        sys.exit(0)
-
-    if not os.path.exists(outputdir):
-        os.makedirs(outputdir)
-        
-    extract_dirs('uliweb', '', outputdir, verbose)
-        
 def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     """
     Export all installed apps' static directory to outputdir directory.
@@ -197,7 +183,7 @@ def extracturls(urlfile='urls.py'):
     f.close()
 
 def collcet_commands():
-    from uliweb.core.SimpleFrame import get_apps
+    from uliweb import get_apps
     actions = {}
     for f in get_apps(apps_dir):
         m = '%s.commands' % f
@@ -218,7 +204,7 @@ def call_commands(command=''):
     if not command:
         log.error("Error: There is no command module name behind call command.")
         return
-    from uliweb.core.SimpleFrame import get_apps
+    from uliweb import get_apps
     actions = {}
     for f in get_apps(apps_dir):
         m = '%s.%s' % (f, command)
@@ -242,7 +228,7 @@ def collect_files(apps_dir, apps):
                 if ext in ['.py', '.ini']:
                     files.append(fpath)
     
-    from uliweb.core.SimpleFrame import get_app_dir
+    from uliweb import get_app_dir
     for p in apps:
         path = get_app_dir(p)
         files.append(os.path.join(path, 'config.ini'))
@@ -259,7 +245,7 @@ def runserver(apps_dir, hostname='localhost', port=5000,
         check_apps_dir(apps_dir)
 
         from werkzeug.serving import run_simple
-        from uliweb.core.SimpleFrame import get_apps
+        from uliweb import get_apps
 
         if admin:
             include_apps = ['uliweb.contrib.admin']
@@ -287,7 +273,6 @@ def main():
     action_runadmin = runserver(apps_dir, port=8000, admin=True)
     action_makeapp = make_app
     action_makepkg = make_pkg
-    action_export = export
     action_exportstatic = exportstatic
     from uliweb.i18n.i18ntool import make_extract
     action_i18n = make_extract(apps_dir)

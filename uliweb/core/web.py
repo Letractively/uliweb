@@ -1,4 +1,4 @@
-__all__ = ['Request', 'HTTPError', 'redirect', 'errorpage', 'json',
+__all__ = ['Request', 'HTTPError', 'redirect', 'error', 'json',
     'POST', 'GET', 'post_view', 'pre_view', 'url_for', 'expose']
 
 import cgi
@@ -8,9 +8,7 @@ try:
 except:
     import simplejson as JSON
 
-from werkzeug.utils import cached_property, url_decode, FileStorage
 from werkzeug import Request as OriginalRequest, Response as OriginalResponse
-from werkzeug.datastructures import CombinedMultiDict, ImmutableMultiDict
 import uliweb as conf
 import dispatch
 from uliweb.utils.common import wrap_func
@@ -77,7 +75,7 @@ def redirect(location, code=302):
     response.headers['Location'] = location
     return response
 
-def errorpage(message='', errorpage=None, request=None, appname=None, **kwargs):
+def error(message='', errorpage=None, request=None, appname=None, **kwargs):
     kwargs.setdefault('message', message)
     if request:
         kwargs.setdefault('link', request.url)
