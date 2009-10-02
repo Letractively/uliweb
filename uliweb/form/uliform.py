@@ -299,12 +299,7 @@ class StringField(BaseField):
         """
         Convert a data to python format. 
         """
-        if data is None:
-            return data
-        if isinstance(data, unicode):
-            return data.encode(DEFAULT_ENCODING)
-        else:
-            return data
+        return data
     
 class UnicodeField(BaseField):
     """
