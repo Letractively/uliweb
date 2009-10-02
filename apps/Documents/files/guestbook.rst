@@ -13,12 +13,13 @@ use database simply.
 Prepare
 ---------
 
-There is already the whole GuestBook source code in Uliweb demos directory.
-Just download the newest source code of Uliweb, then start developing server:
+There is already the whole GuestBook source code in uliweb-tests project. So you
+can checkout from it:
 
 ::
 
-    cd demos/guestbook
+    svn checkout http://uliweb-tests.googlecode.com/svn/trunk/guestbook guestbook
+    cd guestbook
     uliweb runserver
     
 Enter http://localhost:8000/guestbook in the browser, then you'll find it.
@@ -34,7 +35,7 @@ Ok, let's begin to write code.
 Create Project
 ----------------
 
-I suggest that you begin your work in a new directory, for example: samples:
+I suggest that you begin your work in a new directory, for example:
 
 ::
 

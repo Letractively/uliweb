@@ -12,6 +12,7 @@ from layout import *
 DEFAULT_FORM_CLASS = 'form'
 REQUIRED_CAPTION = '(*)'
 REQUIRED_CAPTION_AFTER = True
+DEFAULT_ENCODING = 'utf-8'
 
 class ReservedWordError(Exception):pass
 
@@ -294,6 +295,17 @@ class StringField(BaseField):
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
 
+    def to_python(self, data):
+        """
+        Convert a data to python format. 
+        """
+        if data is None:
+            return data
+        if isinstance(data, unicode):
+            return data.encode(DEFAULT_ENCODING)
+        else:
+            return data
+    
 class UnicodeField(BaseField):
     """
     >>> a = UnicodeField(name='title', label='Title:', required=True, id='field_title')

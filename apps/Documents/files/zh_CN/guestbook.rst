@@ -12,11 +12,13 @@
 准备
 ------
 
-在Uliweb的源码中已经有一个留言板的代码。下载后，启动服务器。
+在 uliweb-tests 项目中已经有完整的GuestBook的源代码，你可以从它里面检出:
 
 ::
 
-    python manage.py runserver
+    svn checkout http://uliweb-tests.googlecode.com/svn/trunk/guestbook guestbook
+    cd guestbook
+    uliweb runserver
     
 然后在浏览器输入 http://localhost:8000/guestbook 这样就可以看到了。目前缺省是使用
 sqlite3。如果你安装了python 2.5它已经是内置的。否则要安装相应的数据库和Python的绑定模
@@ -28,78 +30,59 @@ sqlite3。如果你安装了python 2.5它已经是内置的。否则要安装相
 创建工程
 -----------
 
-因为Uliweb中已经包含了GuestBook的代码，所以你可能不希望在Uliweb目录下进行工作。那么Uliweb
-可以让你将整个项目干净地导出到一个目录下。执行:
+建议在一个空目录下开始你的工作，例如:
 
 ::
 
-    python manage.py export 目录
-    
-这样，整个Uliweb的环境就完全导到一个新的环境下了。然后进入这个新的目录，开始工作吧。
+    uliweb makeproject guestbook
 
 创建APP
 -----------
 
-进入前面创建的目录，这时apps可能还不存在，那么Uliweb提供了makeapp命令可以创建一个空的app结构。
-执行:
+进入前面创建的目录，然后使用 makeapp 建一个新的App。执行:
 
 ::
 
-    python manage.py makeapp GuestBook
+    cd guestbook
+    uliweb makeapp GuestBook
     
-这样就自动会创建apps和相关的GuestBook目录。
+这样就自动会在项目的apps目录下创建一个 ``GuestBook`` 的App。
 
 配置数据库
 ------------
 
-Uliweb中的数据库不是缺省生效的，因此你需要配置一下才可以使用。并且Uliweb虽然提供了自已的
+Uliweb中的数据库不是缺省生效的，因此你需要配置一下才可以使用。Uliweb虽然提供了自已的
 ORM，但是你可以不使用它。Uliweb提供了插件机制，可以让你容易地在适当的时候执行初始化的工作。
-打开GuestBook/settings.py文件，这里你可以看到已经存在：
+打开 ``apps/GuestBook/settings.ini`` 文件，修改 ``INSTALLED_APPS`` 的内容为::
 
-.. code:: python
+    INSTALLED_APPS = [
+        'GuestBook',
+        'uliweb.contrib.orm',
+        ]
 
-    from uliweb.core.plugin import plugin
+然后添加下面的内容::
+
+    [ORM]
+    CONNECTION = 'sqlite:///guestbook.db'
+
+所以 ``settings.ini`` 将看上去象::
+
+    [GLOBAL]
+    DEBUG = True
     
-plugin是一个decorator，象expose一样，你可以用它来修饰函数，这样就可以来挂接函数到一个
-执行的入口上，并且当程序执行到这个点时，会自动执行所挂接的函数。好，加入以下内容：
-
-.. code:: python
-
-    connection = {'connection':'sqlite:///database.db'}
-    #connection = {'connection':'mysql://root:limodou@localhost/test'}
+    INSTALLED_APPS = [
+        'GuestBook',
+        'uliweb.contrib.orm',
+        ]
     
-    DEBUG_LOG = True
+    [ORM]
+    CONNECTION = 'sqlite:///guestbook.db'
     
-    @plugin('prepare_template_env')
-    def prepare_template_env(sender, env):
-        from uliweb.utils.textconvert import text2html
-        env['text2html'] = text2html
-        
-    @plugin('startup')
-    def startup(sender):
-        from uliweb import orm
-        orm.set_debug_query(DEBUG_LOG)
-        orm.set_auto_bind(True)
-        orm.set_auto_migrate(True)
-        orm.get_connection(**connection)
-        
-让我一点点来解释。
-
-数据库连接参数
-~~~~~~~~~~~~~~
-
-connection 用来设置数据库连接配置，它是一个字典。其中connection是必需的，对应一个数据库
-连接字符串。如果还有其它不方便写在连接串的参数，可以将它加在connection这个字典中。
-
-这里我们使用了sqlite数据库，如果是mysql，可以是按它下面那行注释的格式来写。
-
-连接字符串的基本格式为：
-
-::
+ORM.CONNECTION 是ORM的连联字符串，它和SQLAlchemy包使用的一样。通常的格式看上去象::
 
     provider://username:password@localhost:port/dbname?argu1=value1&argu2=value2
-    
-    对于Sqlite连接字符串有些不同：
+
+对于Sqlite，连接信息有些不同::
     
     sqlite_db = create_engine('sqlite:////absolute/path/to/database.txt')
     sqlite_db = create_engine('sqlite:///d:/absolute/path/to/database.txt')
@@ -107,6 +90,8 @@ connection 用来设置数据库连接配置，它是一个字典。其中connec
     sqlite_db = create_engine('sqlite://')  # in-memory database
     sqlite_db = create_engine('sqlite://:memory:')  # the same
     
+这里我们使用相对路径格式，所以 ``guestbook.db`` 将会在guestbook目录下被创建。
+
 数据库初始化
 ~~~~~~~~~~~~
 
