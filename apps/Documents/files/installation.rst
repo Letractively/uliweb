@@ -22,6 +22,8 @@ Requirement
 Installation
 ---------------
 
+#. easy_install Uliweb
+
 #. Download Uliweb package from http://code.google.com/p/uliweb/downloads/list or
    get the source files from svn::
 
