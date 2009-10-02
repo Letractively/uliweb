@@ -38,8 +38,6 @@ other developers, for example:
 
 * `Werkzeug <http://werkzeug.pocoo.org/>`_ Used to handle core processes in the framework. 
   For example: command line tools , URL Mapping, Debug, etc.
-* `webob <http://pythonpaste.org/webob/>`_  Used to create Request, Response
-  objects and static file processing.
 * `SqlAlchemy <http://www.sqlalchemy.org>`_ The ORM based on it. Developers can access
   databases, or use the module separately.
 
@@ -147,7 +145,7 @@ Features
     It includes all core codes and also all source code of `uliwebproject <http://uliwebproject.appspot.com>`_ , 
     and some other demo codes, which can be used directly/freely as you wish.
   * Uliweb supports static file access directly, and it can also process
-    HTTP_IF_MODIFIED_SINCE and return static file content in trunk.
+    HTTP_IF_MODIFIED_SINCE.
     
 Goals
 ----------

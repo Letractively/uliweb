@@ -1,7 +1,13 @@
 安装说明
 ==========
 
-目前 Uliweb 还没有发布正式版本，因此你要首先从svn下载代码，
+最简单的方法是使用easy_install，如:
+
+.. code::
+
+    easy_install Uliweb
+    
+另外如果你想跟踪最新的代码，可以使用svn来下载代码，
 
 .. code::
 
