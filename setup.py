@@ -157,7 +157,7 @@ Goals
 """
 
 setup(name='Uliweb',
-      version=uliweb.__version__,
+      version='0.0.1a1',
       description="Easy python web framework",
       long_description=__doc__,
       classifiers=[
