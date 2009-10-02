@@ -7,7 +7,19 @@ manage.py 使用指南
 .. sectnum::
 
 
-manage.py是Uliweb提供的命令行工具，你可以用它做许多的事情。
+``uliweb`` 是Uliweb提供的命令行工具，你可以用它做许多的事情。在使用它之前，你应该要先安装
+Uliweb，如::
+
+    python setup.py develop
+    
+or::
+
+    python setup.py install
+    
+or::
+
+    easy_install uliweb
+
 
 runserver
 -------------
@@ -16,7 +28,7 @@ runserver
 
 ::
 
-    Usage: python manage.py runserver [options] 
+    Usage: uliweb runserver [options] 
     
     options:
     
@@ -40,8 +52,30 @@ runserver
 
 ::
 
-    python manage.py runserver #启动缺省服务器
+    uliweb runserver #启动缺省服务器
     
+runadmin
+--------------
+
+功能同runserver，但是会自动包含admin这个App。
+
+makeproject
+-------------
+
+生成一个project框架，它将自动按给定的名字生成一个project目录，同时包含有初始子目录和文件。
+
+::
+
+    Usage: uliweb makeproject projectname
+  
+示例：
+
+::
+
+    uliweb makeproject project 
+    
+创建project项目目录。
+
 makeapp
 -------------
 
@@ -49,52 +83,25 @@ makeapp
 
 ::
 
-    Usage: python manage.py makeapp appname
+    Usage: uliweb makeapp appname
   
 示例：
 
 ::
 
-    python manage.py makeapp Hello 
+    uliweb makeapp Hello 
     
 创建Hello应用，将在apps目录下创建一个Hello的目录，并带有初始的文件和结构。
 
-export
---------
+makepkg
+-------------
 
-这个命令，可以将Uliweb的核心代码导出到你指定的outputdir目录下去。可以用于初始项目的创建。
-
-::
-
-    Usage: python manage.py export [options] outputdir
-    
-    options:
-    
-    -e
-        完全同步操作。使用它将删除目标目录下原有的版本，然后再进行拷贝。
-    
-    -v 
-
-        是否输出冗余信息。缺省为不输出。一旦设定将在执行时显示一些处理情况。
-        
-    -a appname
-    
-        导出某个app到指定目录下。
-        
-示例：
+生成一个Python包结构目录，即带有__init__.py文件。
 
 ::
 
-    python manage.py export -e ../uliweb_test   
-    #完全导出到../uliweb_test目录下，以前的内容将删除
-    
-    python manage.py export -e -a Hello ../uliweb_test
-    #完全导出Hello到../uliweb_test目录下，以前的内容将删除
-    
-    python manage.py export -a Hello ../uliweb_test
-    #导出Hello到../uliweb_test目录下，内容将被覆盖
-    
-    
+    Usage: uliweb makepkg pkgname
+
 exportstatic
 ---------------
 
@@ -106,7 +113,7 @@ settings.py中设定了INSTALLED_APPS参数，则所有设定的app将被处理�
 
 ::
 
-    Usage: python manage.py exportstatic [options] outputdir
+    Usage: uliweb exportstatic [options] outputdir
     
     options:
     
@@ -123,7 +130,7 @@ settings.py中设定了INSTALLED_APPS参数，则所有设定的app将被处理�
 
 ::
 
-    python manage.py exportstatic ../uliweb_test   
+    uliweb exportstatic ../uliweb_test   
     #将所有已安装的app下的static文件拷贝到../uliweb_test目录下。
         
 i18n
@@ -135,7 +142,7 @@ i18n处理工具，用来从项目中提取_()形式的信息，并生成.pot文
 
 ::
 
-    Usage: python manage.py i18n [options]
+    Usage: uliweb i18n [options]
     
     options:
     
@@ -163,9 +170,9 @@ i18n处理工具，用来从项目中提取_()形式的信息，并生成.pot文
 
 ::
 
-    manage.py i18n -a appname -l zh #单个app的处理
-    manage.py i18n --all -l zh      #全部已安装app的处理
-    manage.py i18n -w               #整个apps目录的处理，缺省locale为en
+    uliweb i18n -a appname -l zh #单个app的处理
+    uliweb i18n --all -l zh      #全部已安装app的处理
+    uliweb i18n -w               #整个apps目录的处理，缺省locale为en
     
 extracturls
 -------------
@@ -176,6 +183,15 @@ extracturls
 
 ::
 
-    Usage: python manage.py extracturls
+    Usage: uliweb extracturls
     
 如果已经在apps目录下存在urls.py文件，它将提示你是否你想要覆盖。
+
+call
+--------
+
+::
+
+    Usage: uliweb call name
+    
+执行所有安装的App下的<name>.py程序。
