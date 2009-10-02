@@ -92,33 +92,20 @@ view的环境
   板。当然直接导入template也是可以的。不过application.template()已经预设了环境进去。
 * request 请求对象。
 * response 应答对象。这个对象在传入时是一个空对象，你可以使用它，也可以自行构造一个Response
-  的对象进行返回。目前Uliweb是缺省使用webob的Response类，你也可以使用werkzeug的Response
-  类。
+  的对象进行返回。
 * url_for 它是与expose是相反的，它用来生根据view函数生成反向的URL。详情见 `URL映射 <url_mapping>`_ 的文档。
 * redirect 用于重定义处理，后面为一个URL信息。
 * error 用于输出错误信息，它将自动查找出错页面。你只要在任何app下的templates中增加
   error.html，然后出错信息可以自已来定制。它也不需要前面加return，也将抛出一个异常。
 * settings 是定义在所有有效的app settings.py文件中的配置项。注意，一个配置项的名称必须是
   大写的。
-* env 这是可扩展的环境，它只保存公共的对象，目前缺省为：
-
-    * url_for 同上
-    * redirect 同上
-    * error 同上
-    * url_map 它是所有URL定义汇总的类，是werkzeug的Map对象
-    * render 功能同template，但是缺省设置了env的环境，因此env中的对象都可以在模板中直接
-      使用。同时它将返回一个Response对象，而不是渲染后的结果。
-    * template 同上。也是包含了evn的环境，只是不返回Response对象，而是渲染后的结果。
-    * settings 同上
-    * html 它是werkzeug提供的生成HTML代码的库
-    * xhtml 它是werkzeug提供的生成XHTML代码的库
-    * Form 用于对数据校验和生成相应的HTML代码的库
-    * get_file 可以获得某个目录下的文件。它是将所有app看成一个整体，首先在当前app中
-      查找(需要传入request对象)，然后再到其它的app中查找。缺省是在files目录下查找，
-      可以换成其它的目录。
+* json 用于将dict对象包装成json格式并返回。
     
-有了这个环境，你就可以直接使用许多的对象。其中env是一个字典，但是你可以使用env.Form的
-形式，它等同于env['Form']。
+.. note::
+
+    要注意，以上的环境只能用在view函数中，当view调用其它的方法时，还是需要传入相应的参数。
+    有些全局性的对象将放在 uliweb/__init__.py 中，因此可以直接导入。详情见 `全局环境 <globals>`_
+    的文档。
 
 view环境的扩展
 ---------------
@@ -128,8 +115,8 @@ env.object的方式来使用它。你需要在某个app的settings.py文件中�
 
 .. code:: python
 
-    from uliweb.core.plugin import plugin
-    @plugin('prepare_default_env')
+    from uliweb.core.dispatch import bind
+    @bind('prepare_default_env')
     def prepare_default_env(sender, env):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
@@ -148,6 +135,7 @@ view的返回
 * response 对象。记得上面说过的吗？你可以直接使用response对象，比如调用它的response.write()
   方法来写入返回的内容。
 * 字符串。你可以直接返回一个字符串，这样将被封装为一个普通的文本返回。
+* json 对象，使用前面讲的json函数对dict对象进行包装。
 * Reseponse实例。你可以主动创建一个Response的实例并返回。
 
 在某些情况下，你可以调用象redirect, error来中止view的运行。
@@ -157,7 +145,16 @@ view模块的入口处理
 
 我建议将不同的view函数按照功能和处理分为不同的文件来存放。
 
-Uliweb支持一种view模块的入口的处理。即你可以在view模块中定义名为 ``__begin__`` 的特殊的
-方法，它没有参数，但是就象普通的view函数一样，也是在view环境中运行的。一旦view模块中存
-在这个特殊的方法，在执行每个view函数之前都会先调用这个函数。因此你可以把它理解为初始化处
-理，比如给一些对象赋值。
+Uliweb支持一种view模块的入口和出口的处理。即你可以在view模块中定义名为 ``__begin__`` 和
+``__end__`` 的特殊的方法，它没有参数，但是就象普通的view函数一样，也是在view环境中运行的。
+一旦view模块中存在这个特殊的方法，在执行每个view函数之前都会先调用这个函数。因此你可以
+把它理解为初始化处理，比如给一些对象赋值。举例如下：
+
+.. code:: python
+
+    def __begin__():
+        from uliweb.contrib.auth.views import login
+        
+        if not request.user:
+            return redirect(url_for(login) + '?next=%s' % url_for(doto_index))
+    
