@@ -295,7 +295,7 @@ class CharProperty(Property):
     data_type = str
     field_class = CHAR
     
-    def __init__(self, verbose_name=None, default='', **kwds):
+    def __init__(self, verbose_name=None, default='', max_length=30, **kwds):
         super(CharProperty, self).__init__(verbose_name, default=default, **kwds)
     
     def empty(self, value):
@@ -324,8 +324,14 @@ class UnicodeProperty(StringProperty):
 class TextProperty(StringProperty):
     field_class = Text
     
+    def __init__(self, verbose_name=None, default='', **kwds):
+        super(TextProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
+    
 class BlobProperty(StringProperty):
     field_class = BLOB
+    
+    def __init__(self, verbose_name=None, default='', **kwds):
+        super(BlobProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
     
 class DateTimeProperty(Property):
     data_type = datetime.datetime
@@ -1236,8 +1242,6 @@ class Model(object):
             cls.table.delete(cls.c.id.in_(condition)).execute()
         else:
             cls.table.delete(condition, **kwargs).execute()
-            
-    delete = remove
             
     @classmethod
     def count(cls, condition=None, **kwargs):

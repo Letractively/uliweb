@@ -175,15 +175,10 @@ uliweb.core.SimpleFrame
   Dispatcher has already startuped, will be executed when creating every Dispatcher
   instance.
 
-* **dispatch.call(application, 'prepare_default_env', Dispatcher.env)**
+* **dispatch.call(application, 'prepare_view_env', Dispatcher.env)**
 
-  Used for prepare global view execution environment. All objects in env can 
+  Used for prepare global view and template execution environment. All objects in env can 
   be used in any view function directly.
-
-* **dispatch.call(application, 'prepare_template_env', Dispatcher.template_env)**
-
-  Used for prepare global template execution environment. All objects in env 
-  can be used in any template directly.
 
 * **dispatch.get(application, 'get_template_tag_handlers')**
 
