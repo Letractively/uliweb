@@ -1,6 +1,9 @@
 import uliweb
 from uliweb.utils.setup import setup
 
+import ez_setup
+ez_setup.use_setuptools()
+
 __doc__ = """
 =====================
 Uliweb Introduction
