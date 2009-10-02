@@ -110,7 +110,7 @@ Template Environment Extension
 Because we want to enable user input plain text and output them as HTML code,
 so we'll use uliweb.utils.text2html function to convert text to HTML code, and
 we can indeed import this function in template file, but we can also bind
-``prepare_template_env`` dispatch point, and inject a ``text2html`` function object to 
+``prepare_view_env`` dispatch point, and inject a ``text2html`` function object to 
 template environment, so that you can use ``text2html`` directly in template.
 Open ``GuestBook/__init__.py`` and adding below codes:
 
@@ -119,12 +119,12 @@ Open ``GuestBook/__init__.py`` and adding below codes:
     from uliweb.core.dispatch import bind
     
     @bind('prepare_template_env')
-    def prepare_template_env(sender, env):
+    def prepare_template_env(sender, env, request):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
 
 This is a dispatch receiver function usage example, and there are some others plugin hook you can
-use.
+use. And this hook point is global availabe, so other apps can also use it.
 
 Prepare Model
 ----------------
@@ -137,22 +137,22 @@ Creating a ``models.py`` file in GuestBook directory, and add below code:
     import datetime
     
     class Note(Model):
-        username = Field(str)
-        message = Field(text)
-        homepage = Field(str)
-        email = Field(str)
-        datetime = Field(datetime.datetime)
+        username = Field(CHAR)
+        message = Field(TEXT)
+        homepage = Field(str, max_length=128)
+        email = Field(str, max_length=128)
+        datetime = Field(datetime.datetime, auto_now_add=True)
         
 It's easy now, right?
 
-First, you should import something from ``uliweb.orm``.
+First, you should import something from ``uliweb.orm``, and here import everything.
 
 Then, you need to import datetime module. Why you need it? Because Uliorm
 supports two ways to define field:
 
 * One way is using internal Python data type, e.g. int, float, unicode,
   datetime.datetime, datetime.date, datetime.time, decimal.Decimal, str, bool, etc.
-  And I also extend some other types, such as: blob, text.
+  And I also extend some other types, such as: BLOB, CHAR, TEXT, DECIMAL.
 
   So you can use Python data type directly.
 
@@ -182,6 +182,9 @@ Each field may also has other arguments, for example:
 
 etc. 
 
+Fields like CharProperty and StringProperty should have max_length attribute, and
+if you don't give it, the default value will be 30.
+
 .. note::
 
     When you define Model class, Uliorm will automatically add a ``id`` field for
@@ -207,53 +210,42 @@ begin with ``/static/``. Now the ``settings.ini`` will look like::
     [ORM]
     CONNECTION = 'sqlite:///guestbook.db'
     
-Just a Test
----------------
-
-Now we can test it. Just run the command line::
-
-    uliweb runadmin
+As soon as you've added ``uliweb.contrib.staticfiles``, you can call ``url_for_static()``
+in views or template. This function will create url for files in static folder of
+each App.
     
-Then we can visit the http://localhost:8000 the result will be:
-
-.. image:: /static/guestbook01.jpg
-
 Display Comments
 -----------------------
 
-Add guestbook() function to view
+Change index() function in view
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Open ``views.py`` in ``GuestBook`` directory, and add displaying comments code:
+Open ``views.py`` in ``GuestBook`` directory, and change it to:
 
 .. code:: python
 
-    @expose('/guestbook')
-    def guestbook():
-        from models import Note
-        from sqlalchemy import desc
-        
-        notes = Note.filter(order_by=[desc(Note.c.datetime)])
-        return locals()
+    #coding=utf-8
+    from uliweb import expose
+    from models import Note
+    
+    @expose('/')
+    def index():
+        notes = Note.all().order_by(Note.c.datetime.desc())
+        return {'notes':notes}
 
-Here we define the ULR is ``/guestbook`` .
-
-Then we define ``guestbook()`` function.
-
-In function, we import ``Note`` class, then get all comments via its ``filter()`` 
-method. In order to display the comments descend, we add some condition to 
-``order_by`` argument. This is SqlAlchemy query expression usage. 
+In beginning, we import ``Note`` class, then get all comments in index() 
+via ``Note.all()`` statement. In order to display the comments descend to datetime, 
+we add ``order_by()`` clause. This is SqlAlchemy query expression usage. 
 
 Here are some simple usages:
 
 .. code:: python
 
-    notes = Note.all()               #Gain all records, with no condition
-    note = Note.get(3)                  #Gain records with id equals 3
+    notes = Note.all()                          #Gain all records, with no condition
+    note = Note.get(3)                          #Gain records with id equals 3
     note = Note.get(Note.c.username=='limodou') #Gain records with username equals 'limodou'
     
-Then we'll return locals() (locals() will return a dict variable, it's
-easy then return {'a':1} format). Remember, when you return a dict variable,
+Then we'll return ``{'notes':notes}``. Remember, when you return a dict variable,
 Uliweb will automatically find a matched template to render the HTML page.
 
 .. note::
@@ -270,44 +262,57 @@ Uliweb will automatically find a matched template to render the HTML page.
     use it to create a URL according view function string like above format. We
     will see its usage in template later.
 
-Create guestbook.html Template File
+Create Layout Template File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+I don't want to repeat myself again, because I've already made a YAML layout template
+file before, and it's in uliweb.contrib now, so you can also use this CSS framework
+to get beautiful representation.
+
+Create a ``base.html`` file in ``GuestBook/templates`` directory, the content should be::
+
+    {{extend "yaml_base_layout.html"}}
+    {{block nav}}{{end}}
+    {{block topnav}}{{end}}
+    {{block header}}<h1><a href="{{=url_for('GuestBook.views.index')}}">
+    Uliweb Guest Book</a></h1>{{end}}
+
+So you can see, we extend ``yaml_base_layout.html`` template, and override some blocks
+defined in parent template. Here we use ``url_for`` to get reversed URL according
+the view function name.
+
+Create index.html Template File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create a ``guestbook.html`` file in ``GuestBook/templates`` directory, it's main filename
-should be the same with ``guestbook()`` function. And add below code to it:
+Create a ``index.html`` file in ``GuestBook/templates`` directory, it'll be matched
+to index() function. And add below content to it:
 
 .. code:: django+html
 
-    {{extend "base.html"}}
-    {{block main}}
-    <h1>Uliweb Guest Book</h1>
-    <h2><a href="{{=url_for('%s.views.new_comment' % request.appname)}}">New Comment</a></h2>
-    {{for n in notes:}}
-        <div class="message">
-        <h3><a href="{{= url_for('%s.views.del_comment' % request.appname, id=n.id) }}">
-        <img src="{{= url_for_static('delete.gif') }}"/>
-        </a> {{=n.username}} at {{=n.datetime.strftime('%Y/%m/%d %H:%M:%S')}} say:</h3>
-        <p>{{=text2html(n.message)}}</p>
-        </div>
-    {{pass}}
-    {{end}}
+    1     {{extend "base.html"}}
+    2     {{block content}}
+    3     <h2><a href="{{=url_for('GuestBook.views.new_comment')}}">New Comment</a></h2>
+    4     {{for n in notes:}}
+    5     	<div class="info">
+    6     	<h3><a href="{{= url_for('GuestBook.views.del_comment', id=n.id) }}">
+    7     	<img src="{{= url_for_static('delete.gif') }}"/>
+    8     	</a> {{=n.username}} at {{=n.datetime.strftime('%Y/%m/%d %H:%M:%S')}} say:</h3>
+    9     	<p>{{<<text2html(n.message)}}</p>
+    10    	</div>
+    11    {{pass}}
+    12    {{end}}
     
-    
-The first line means this template will inherit from ``base.html``. I don't want to 
-say so much about it, you just need to notice in ``base.html`` should has a 
-``{{include}}`` in it, it means the child template insertion position will be there.
-You can copy base.html from ``apps/GuestBook/templates`` to ``yourproject/apps/GuestBook/templates`` 
-directory.
+The first line means this template will inherit from ``base.html``. 
 
-h2 tag will display an URL, this URL will link to add comment view function. 
-Notice that I didn't put the display code with add comment Form code together,
-because the code will be much in that way. And if there are some errors when
-user input the comment, it'll display all comments again, so the process will
-be slow, so I separate them into different processes.
+And ``{{block content}}`` means that we'll override the "content" block defined
+in parent template. But you may ask, why I haven't seen the "content" block
+definition in ``base.html``. Because it's defined in ``yaml_base_layout.html``.
 
-``{{for}}`` is a loop. Remember Uliweb uses web2py template module, but makes some
+Line 3 will display an URL for add new comment.
+
+Line 4 tills line 11 are a loop. Remember Uliweb uses web2py template module, but makes some
 improvements. The code between {{}} can be any Python code, so they should
-follow the Python syntax. Thus, the ``:`` at the end of line can't be omitted.
+follow the Python syntax. Thus, the ``:`` at the end of block statement can't be omitted.
 You can also put html code in {{}}, but can't use them directly, you should
 output them using ``out.write(htmlcode)``. When the block is ended, don't forget
 to add a ``{{pass}}`` statement. And you don't need to worry about the indent,
@@ -317,29 +322,22 @@ In loop, it'll process the notes object, and then display a delete link, and
 then user info and user comments.
 
 Have you seen ``{{=text2html(n.message)}}``? It uses ``text2html`` function which we
-defined in settings.py to convert plain text to html code.
+defined in __init__.py to convert plain text to html code.
 
-``{{pass}}`` is must.
-
-Good, after above working, display comments is finished. But for now, you can
+Ok, after above working, displaying comments is finished. But for now, you can't
 add comment yet, so let's see how to adding comment.
 
-.. note::
-
-    Because there are some CSS and image files used in base.html and guestbook.html,
-    so you can copy them from Uliweb source directory to your project.
-    
 Add comment
 --------------
 
 Add new_comment() function to view
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In the guestbook.htmk, we've already add some code to create add comment URL:
+In the index.html, we've already add some code to create ``New Comment`` URL:
 
 .. code:: html
 
-    <a href="{{=url_for('%s.views.new_comment' % request.appname)}}">New Comment</a>
+    <a href="{{=url_for('GuestBook.views.new_comment')}}">New Comment</a>
     
 You can see, I use ``url_for`` to create reversed URL. ``url_for`` we've covered before,
 the only thing you need notice here is the function named ``new_comment``, so we 
@@ -349,96 +347,88 @@ Open the views.py file, and add below code:
 
 .. code:: python
 
-    @expose('/guestbook/new_comment')
-    def new_comment():
-        from models import Note
-        from forms import NoteForm
-        import datetime
-        
-        form = NoteForm()
-        if request.method == 'GET':
-            return {'form':form.html(), 'message':''}
-        elif request.method == 'POST':
-            flag, data = form.validate(request.params)
-            if flag:
-                n = Note(**data)
-                n.put()
-                return redirect(url_for('%s.views.guestbook' % request.appname))
-            else:
-                message = "There is something wrong! Please fix them."
-                return {'form':form.html(request.params, data, py=False), 'message':message}
+    1     @expose('/new')
+    2     def new_comment():
+    3         from forms import NoteForm
+    4         import datetime
+    5         
+    6         form = NoteForm()
+    7         if request.method == 'GET':
+    8             return {'form':form, 'message':''}
+    9         elif request.method == 'POST':
+    10            flag = form.validate(request.params)
+    11            if flag:
+    12                n = Note(**form.data)
+    13                n.save()
+    14                return redirect(url_for(index))
+    15            else:
+    16                message = "There is something wrong! Please fix them."
+    17                return {'form':form, 'message':message}
 
-The URL will be ``/guestbook/new_comment`` for ``new_comment()`` function.
+The URL will be ``/new`` for ``new_comment()`` function.
 
-First, we import some class, including ``Note`` Model. So what's NoteForm? It's a
-form class, we can use it to validate data, and even output HTML form code. I'll
-introduce it later.
+Line 3 will import NoteForm, what's it? It's a form class, we can use it to
+validate data, and even output HTML form code. I'll introduce it later.
 
-Then creating an instance from NoteForm.
+Line 6 will create an instance from NoteForm.
 
 According to ``request.method`` is ``GET`` or ``POST``, we can decide to execute different
-process. For GET method, I'll display an empty Form, for POST method, it means
-user has submitted data, need to process. Through judging GET or POST, you can 
-do different process under the same URL, for GET, means read operation, for
-POST, means write operation.
+process. For ``GET`` method, we'll display an empty Form, for ``POST`` method, it means
+user has submitted data, and need to be processed. And for ``GET``, it also means 
+read operation, for ``POST``, it means write operation.
 
-If the ``request.method`` is ``GET``, we just return empty form HTML code, and 
-empty message variable. ``form.html()`` can return empty form html code, while
-message will be used for display error message.
+Line 8, we'll pass a dict to template, and it'll show and empty Form page.
 
 If the ``request.method`` is ``POST``, we'll invoke ``form.validate(request.params)`` 
-to validate submitted data by user. It'll return two element tuple, and first is
-result flag, means success or fail, second will be the converted Python data or 
-error messages according to the result flag.
+to validate submitted data by user. And if you want only validate request.POST,
+you can only pass request.POST to validate() function. It'll return the validation
+result, if ``True``, it means the validation is successful. And the submitted data will
+be parsed to Python data type, and be bound to relative Form fields.
 
-When the flag is ``True``, it means the validation is successful. We can
-see there is no ``datetime`` field, so we add it manually, it'll be used for the submited
-datetime of the comment. Then we can invoke ``n = Note(**data)`` to create a new
-Note record, but we have not commit it to the database yet, so we can invoke
-``n.put()`` to store the record to the database. You can also use ``n.save()`` to 
-store the record, it's the same.
+If you want to access certain field, you can use ``form.field.data`` to get the parsed
+value. And if you want to get all data, you can use ``form.data``. And if the validation
+is failed, the error message will also be bound to each field.
 
-After that, we will invoke ``return redirect`` to jump another page, it's the homepage of
-GuestBook. Here we use ``url_for`` again to create reversed URL. 
+Then we can invoke ``n = Note(**data)`` to create a new
+Note record, after that the new Note object is not be insert into database
+yet, so you need to invoke ``n.save()`` or ``n.put()`` to commit it.
+
+Then, we will invoke ``return redirect`` to jump another page, it's the homepage of
+GuestBook. Here we use ``url_for`` again to create reversed URL. And this time we use
+``index()`` function object but not function string.
     
-If the flag is ``False``, it means validation is failed. So we assign an error message
-to ``message`` variable, then invoke ``form.html(request.params, data, py=False)`` 
-to create a form with error message. And data is the error details of each 
-field. ``py=False`` means we will use submitted data directly but not Python
-data. Because if the validation is failed,  the valid Python data has not 
-existed yet. If you want to render valid Python data, you can just use
-``form.html(data)``.
+If the validation is failed, the flag variable should be ``False``. We'll assign
+an error message to message variable, then show the form again.
 
 Define Form
 ~~~~~~~~~~~~~
 
 In order to interact with server, uesr can through browser to input data,
-so you should provide Form HTML element to receive the input. For an experienced
+so you should provide Form HTML element to receive the input data. For an experienced
 web developer, he can write HTML code manually, but it's difficult for newbies.
 And you should also think about how to deal with error, data format conversion, etc.
-So many frameworks supply such Form helper tool, Uliweb also provides such thing.
+So many frameworks provide such Form helper tool, Uliweb also provides such thing.
 The Form module will be used for this.
 
 Creating a ``forms.py`` file in ``GuestBook`` directory, then add below code:
 
 .. code:: python
 
-    from uliweb.core import Form
+    from uliweb.form import *
     
-    Form.Form.layout_class = Form.CSSLayout
-    
-    class NoteForm(Form.Form):
-        message = Form.TextAreaField(label='Message:', required=True)
-        username = Form.TextField(label='Username:', required=True)
-        homepage = Form.TextField(label='Homepage:')
-        email = Form.TextField(label='Email:')
+    class NoteForm(Form):
+        message = TextField(label='Message:', required=True)
+        username = StringField(label='Username:', required=True)
+        homepage = StringField(label='Homepage:')
+        email = StringField(label='Email:')
 
-First, importing ``Form`` module, then set CSSLayout. For now, Uliweb supports two
-form layout, one it table layout which uses ``table`` tag, the other is css layout
-which uses ``div`` tag. And table layout is default.
+First, importing ``Form`` module. For now, Uliweb supports several form layout,
+one is table layout which uses ``table`` tag, other is css layout which uses
+``div`` tag. And another will use ``div`` tag, but suit for YAML CSS framework.
+The default layout is just yaml form layout.
 
 Then, we'll create NoteForm class, here I define 4 fields, each field maps a 
-type. For example, TextAreaField means multilines text input, TextField means
+type. For example, TextField means multilines text input, StringField means
 single line text input, and you can also use: HiddenField, SelectField,
 FileField, IntField, PasswordField, RadioSelectField, etc. 
 
@@ -450,7 +440,7 @@ Each field may has some arguments, for example:
 
 * label used to display a label tag
 * required if a field can't be empty
-* default default vallue
+* default default value
 * validators used to validate the data
 
 It likes the definition of Model, but they are different.
@@ -463,39 +453,39 @@ Creating a ``new_comment.html`` file in ``GuestBook/templates`` directory, then 
 .. code:: html
 
     {{extend "base.html"}}
-    {{block main}}
+    {{block content}}
     {{if message:}}
-        <p class="message">{{=message}}</p>
+    	<p class="warning">{{=message}}</p>
     {{pass}}
     <h1>New Comment</h1>
     <div class="form">
-    {{Xml(form)}}
+    {{<<form}}
     </div>
     {{end}}
 
 First line is ``{{extend "base.html"}}``, it means that you'll extend from ``base.html``
 template file.
 
-Then it's a if statement, it'll test if the message is not empty, if not, then
-display it. Notice the ``:`` at the end of the line.
+Next it'll override content block.
 
-Then display form element, here I used ``{{<<form}}``. ``form`` is passwd from view
-function, but ``Xml()`` is a builtin function define in template system, you can 
-use it directly, it'll output the code directly without any escape process.
-For ``{{= variable}}`` will escape the output, it'll convert HTML tag to HTML entities.
-So if you don't want the output be escaped, you should use ``Xml()``.
+Next is a if statement, it'll test if the message is not empty, if not, then
+display it. Notice the ``:`` at the end of the line. And here we use ``class="warning"``,
+this CSS class also comes from YAML.
+
+Then display form element, here I used ``{{<<form}}``. Because we don't want the
+form code be escaped, so we need to use ``{{<<}}`` tag.
 
 Now, you can try current work in the browser.
 
 Delete Comment
 ---------------
 
-In ``guestbook.html``, we defined a link which will be used to delete comment, the format
+In ``index.html``, we've defined a link which will be used to delete comment, the format
 is:
 
 .. code::
 
-    <a href="{{=url_for('%s.views.new_comment' % request.appname)}}">New Comment</a>
+    <h3><a href="{{= url_for('GuestBook.views.del_comment', id=n.id) }}">
     
 So let's implement it.
 
@@ -503,19 +493,18 @@ Open ``GuestBook/views.py`` file, and append below code:
 
 .. code:: python
 
-    @expose('/guestbook/delete/<id>')
+    @expose('/delete/<id>')
     def del_comment(id):
-        from models import Note
-    
         n = Note.get(int(id))
         if n:
             n.delete()
-            return redirect(url_for('%s.views.guestbook' % request.appname))
+            return redirect(url_for(index))
         else:
             error("No such record [%s] existed" % id)
 
-Delete is simple, just import Note model, then invoke ``Note.get(int(id))`` to 
-get the object, next invoke ``delete()`` function of object to delete the record.
+Delete is simple, first get the object according the ``id`` parameter passwd from 
+view function. ``Note.get(int(id))`` will get the object, then if the object
+existed, then call ``n.delete()`` to delete the record. Or display an error page.
 
 URL Arguments Definition
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -543,62 +532,65 @@ your app templates directory, and add something like:
 
 .. code:: html
 
-    {{title="Error"}}
     {{extend "base.html"}}
-    <h1>Error!</h1>
+    {{block title}}Error{{end}}
+    {{block header}}<h1>Error!</h1>{{end}}
+    {{block content}}
     <p>{{=message}}</p>
+    {{end}}
 
+It's simple right, we extend from ``base.html``, then override title block, header
+block and content block. And this page need a ``message`` variable.
 
-It's simple right, we just define a ``title`` variable and then extend the ``base.html``,
-then output the message.
-
-But here is an imortant trick, that's if you write something before ``{{extend}}``,
-these things will be placed at the top of the template rendering output. So 
-if there are some variables used in parent template, but you didn't pass them
-through view funcion, however define them in child template, by this trick,
-you can put the variables definition in front of the using statements, and 
-this will not cause syntax error.
-
-.. note::
-
-    This is my extension for web2py template system. In the past, web2py requires
-    ``{{extend}}`` should be the first statement, but for now, you can put something
-    in front of it. This way can easy deal with defining variable in child tamplte.
-    
 Run
 ------
 
-In previous developing process, you can also start a developing server to test
+In previous developing procedure, you can also start a developing server to test
 your project. The command of starting a developing server is:
 
 ::
 
-    python manage.py runserver
+    uliweb runserver
     
-When it starting, you can input ``http://localhost:8000/guestbook`` to test this
+When it starting, you can input ``http://localhost:8000/`` to test this
 GuestBook demo.
 
-Notice, here is not begin with ``/``.
-    
+Screen Casts
+----------------
+
+Let's see some screen casts, this will make more sense.
+
+Homepage:
+
+.. image:: /static/image01.jpg
+
+New Comment Page:
+
+.. image:: /static/image02.jpg
+
+Error Comment Page:
+
+.. image:: /static/image03.jpg
+
 Conclusion
 -------------
 
-Wow, we've learnt so much things for now:
+Wow, we've learnt so many things for now:
 
-#. ORM usage, including: ORM initilization, Model definition, simple add, delete, qurry.
+#. ORM usage, including: ORM initilization, Model definition, simple add, delete, query.
 #. Form usage, including: Form definition, Form layout, HTML creation, data validation, error process.
-#. Template usage, including: {{extend}} usage, add custom variables to template.
+#. Template usage, including: {{extend}} and {{block}} usage, add custom variables to template.
    environment, define variables in child template, write Python code in template.
 #. View usage, including: redirect usage, error usage, static files serving.
 #. URL mapping usage, including: expose usage, arguments definition.
-#. manage.py usage, including: export and makeapp usage.
+#. uliweb command line tool usage, including: makeproject, makeapp, runserver usage.
 #. Architecture knowledge, including: the organization of Uliweb, settings process.
    flow mechanism, the mapping between view function and template file.
 
-Yes, there are too much things. However these are not the whole stuff of Uliewb yet.
-Along with the application becomes more complex, the functionalities of frameworks
-will be more and more. But I think a good framework should enable experienced 
-developers build an environment which should be easy to use and easy to manage,
-then the others of this team could work under this environment,
-and the duty of those expericenced developers should to change to make this environment better
-and powerful. I hope Uliweb can step foward to this goal.
+Yes, there are too much things. However these are not the whole stuff of Uliewb
+yet. Along with the application becomes more complex, the functionalities of
+frameworks will be more and more. But I think a good framework should enable
+experienced developers build an environment which should be easy to use and easy
+to manage, then the others of this team could work under this environment, and
+the duty of those expericenced developers should to change to make this
+environment better and powerful. I hope Uliweb can step foward to this goal.
