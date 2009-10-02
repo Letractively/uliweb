@@ -818,11 +818,11 @@ class Form(object):
         if func and callable(func):
             self.validators.append(func)
 
-    def validate(self, data, request=None):
+    def validate(self, *data, **kwargs):
         """
         request should provide get() and getall() functions
         """
-        self.request = request
+        self.request = request = kwargs.pop('request', None)
 
         all_data = {}
         for k, v in self.fields.items():
