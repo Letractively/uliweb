@@ -53,6 +53,7 @@ class User(Model):
         salt = get_hexdigest(algo, str(random.random()), str(random.random()))[:5]
         hsh = get_hexdigest(algo, salt, raw_password)
         self.password = '%s$%s$%s' % (algo, salt, hsh)
+        self.save()
     
     def check_password(self, raw_password):
         """

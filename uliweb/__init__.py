@@ -25,7 +25,6 @@ request = None
 workpath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(workpath, 'lib'))
 
-from uliweb.core.web import Request, Response, redirect, error, json, \
-        POST, GET, post_view, pre_view, url_for, expose
-
-from uliweb.core.SimpleFrame import get_app_dir, get_apps
+from uliweb.core.SimpleFrame import (Request, Response, redirect, error, json, 
+        POST, GET, post_view, pre_view, url_for, expose, get_app_dir, get_apps
+    )

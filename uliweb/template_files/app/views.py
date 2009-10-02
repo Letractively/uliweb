@@ -1,5 +1,5 @@
 #coding=utf-8
-from uliweb.core.SimpleFrame import expose
+from uliweb import expose
 
 @expose('/')
 def index():
