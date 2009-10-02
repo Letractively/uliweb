@@ -751,8 +751,6 @@ class Dispatcher(object):
             #endif
             
         except HTTPError, e:
-            import traceback
-            traceback.print_exc()
             response = self.render(e.errorpage, Storage(e.errors), request=req)
         except NotFound, e:
             response = self.not_found(req, e)

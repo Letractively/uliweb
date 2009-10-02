@@ -150,16 +150,14 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 
 .. code:: python
 
-    @plugin('prepare_template_env')
-    def prepare_template_env(env):
+    @plugin('prepare_view_env')
+    def prepare_view_env(sender, env, request):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
 
 这也是一个插件的使用示例，它将向模板的环境中注入一个新的函数 ``text2html``, 这样你就可以
-在模板中直接使用text2html这个函数了。并且因为这个插入点是全局生效的，所以其它的APP可以
+在模板中直接使用text2html这个函数了。并且因为这个插入点是全局生效的，所以其它的App可以
 复用它。
-
-``text2html`` 的作用就是将文本转为HTML格式，包含Link的处理。这是我以前在开发Django时写的。
 
 准备Model
 -----------
@@ -172,20 +170,20 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
     import datetime
     
     class Note(Model):
-        username = Field(str)
-        message = Field(text)
-        homepage = Field(str)
-        email = Field(str)
-        datetime = Field(datetime.datetime, auto)
+        username = Field(CHAR)
+        message = Field(TEXT)
+        homepage = Field(str, max_length=128)
+        email = Field(str, max_length=128)
+        datetime = Field(datetime.datetime, auto_now_add=True)
         
 很简单。
 
-首先要从 uliweb.orm 中导入全部东西，这样简单。
+首先要从 uliweb.orm 中导入一些东西，这是是全部导入。
 
 然后是导入datetime模块。为什么会用到它，因为Uliorm在定义Model时支持两种定义方式：
 
 * 使用内部的Python类型，如：int, float, unicode, datetime.datetime, datetime.date,
-  datetime.time, decimal.Decimal, str, bool。另外还扩展了一些类型，如：blob, text。
+  datetime.time, decimal.Decimal, str, bool。另外还扩展了一些类型，如：BLOB, CHAR, TEXT, DECIMAL。
   所以你在定义时只要使用Python的类型就好了。
 * 然后就是象GAE一样的使用各种Property类，如：StringProperty, UnicodeProperty,
   IntegerProperty, BlobProperty, BooleanProperty, DateProperty, DateTimeProperty,
@@ -209,50 +207,33 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 * max_length 最大值
 * verbose_name 提示信息
 
+象CharProperty和StringProperty，需要有一个max_length属性，如果没有给出，缺省是30。
+
 等。具体的回头我会详细在数据文档中进行说明。
 
 .. note::
 
-    在定义Model时，Uliorm会自动为你添加id字段的定义，它将是一个主键，这一点与Django一样。
+    在定义Model时，Uliorm会自动为你添加 ``id`` 字段的定义，它将是一个主键，这一点与Django一样。
     
 静态文件处理
 --------------
 
-打开GuestBook下的views.py文件，已经有内容了：
+我们将在后面显示静态文件，现在只需要把 ``uliweb.contrib.staticfiles`` 添加到 ``INSTALLED_APPS``
+中就可以了。使用这个App，所有有效的app的static目录将被处理为静态目录，并且URL链接将添加 
+``/static/`` 。现在 ``settings.ini`` 看上去象::
 
-.. code:: python
-
-    #coding=utf-8
-    from uliweb.core.SimpleFrame import expose
+    [GLOBAL]
+    DEBUG = True
     
-    @expose('/')
-    def index():
-        return '<h1>Hello, Uliweb</h1>'
+    INSTALLED_APPS = [
+        'GuestBook',
+        'uliweb.contrib.orm',
+        'uliweb.contrib.staticfiles',
+        ]
     
-将不需要的index()代码删除。只保留前两行。
-
-然后加入静态文件支持的代码：
-
-.. code:: python
-
-    from uliweb.core.SimpleFrame import static_serve
-    @expose('/static/<path:filename>')
-    def static(filename):
-        return static_serve(request, filename)
-
-Uliweb已经提供了静态文件的支持，因此一种方式你直接使用Uliweb来进行静态文件的服务，另
-一种就是让Web server来做这事。Uliweb中的每个APP都有自已的static目录，这样的目的主要
-是为了可以让每个APP尽可能独立。使用Uliweb在处理静态文件时，当访问一个静态文件时，它会
-先到当前APP的目录下查找文件，如果没有找到会到其它可用的APP下查询文件，因此APP间的static
-目录是共享的。并且Uliweb的静态文件支持可以对于已经下载到本地的文件返回304从而避免再次
-下载，这一点在开发服务器可以看到。另外支持trunk的分块方式文件下传。
-
-如果你决定使用web server来处理静态文件，那么上面的代码就不需要了，同时要将所有static下
-的文件进行汇总到同一个目录下，然后在web server的配置中增加对静态URL的映射。这块因为教
-程中没有用到，就不多说了。
-
-上面的expose中使用到了正则匹配，一时不太明白没有关系，照猫画虎就成了。
-
+    [ORM]
+    CONNECTION = 'sqlite:///guestbook.db'
+    
 显示留言
 -----------------------
 
@@ -564,12 +545,10 @@ int将自动转化为 ``\d+`` 这种形式的正则式。Uliweb内置了象: int
 
 ::
 
-    python manage.py runserver
+    uliweb runserver
     
-当启动后，在浏览器输入： ``http://localhost:8000/guestbook``
+当启动后，在浏览器输入： ``http://localhost:8000/``
 
-注意，这里不是从/开始的。
-    
 结论
 -------
 
