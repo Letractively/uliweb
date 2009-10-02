@@ -42,6 +42,7 @@ pass
 * `部署指南 <{{= index('deployment') }}>`_
 * `manage.py使用指南 <{{= index('manage_guide') }}>`_
 * `I18n <{{= index('i18n') }}>`_
+* `全局环境 <{{= index('globals') }}>`_
 
 高级话题
 -----------------------------

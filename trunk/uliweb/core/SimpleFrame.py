@@ -211,9 +211,10 @@ def GET(rule, **kw):
     kw['methods'] = ['GET']
     return expose(rule, **kw)
 
-def url_for(endpoint, _external=False, **values):
+def url_for(endpoint, **values):
     if callable(endpoint):
         endpoint = endpoint.__module__ + '.' + endpoint.__name__
+    _external = values.pop('_external', False)
     return conf.local.url_adapter.build(endpoint, values, force_external=_external)
 
 def get_app_dir(app):
