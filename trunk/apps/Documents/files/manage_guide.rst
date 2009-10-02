@@ -14,6 +14,10 @@ many works. When you install Uliweb from::
     
 or::
 
+    python setup.py install
+    
+or::
+
     easy_install uliweb
     
 it'll create a script named ``uliweb`` in Python/Scripts folder. So if you
@@ -58,6 +62,18 @@ Example:
 
     uliweb runserver
     
+runadmin
+-------------
+
+Start developing server with admin app.
+
+::
+
+    Usage: uliweb runadmin
+    
+It's very like ``runserver`` command, but the difference is it'll automatically
+add admin app to your project.
+    
 makeproject
 --------------
 
@@ -101,6 +117,16 @@ Example:
     
 It'll create a Hello app in ``./test/apps`` directory of ``test`` project folder, 
 the app folder name is ``Hello``.
+
+makepkg
+----------
+
+::
+
+    Usage: uliweb makepkg pkgname
+
+Creating a directory according Python package structure, that's including a 
+__init__.py in it.
 
 exportstatic
 ---------------
@@ -197,14 +223,11 @@ apps/urls.py, Uliweb will automatically import it then disable expose().
 If there is already a urls.py file in apps directory, it'll prompte you
 to confirm you want to overwrite it.
 
-runadmin
--------------
-
-Start developing server with admin app.
+call
+-------
 
 ::
 
-    Usage: uliweb runadmin
+    Usage: uliweb call name
     
-It's very like ``runserver`` command, but the difference is it'll automatically
-add admin app to your project.
+Executing all <name>.py from every installed App.

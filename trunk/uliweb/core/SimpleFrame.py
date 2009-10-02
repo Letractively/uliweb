@@ -371,7 +371,7 @@ class Dispatcher(object):
                 return path
         return None
 
-    def template(self, filename, vars, env=None, dirs=None, request=None, default_template=None):
+    def template(self, filename, vars=None, env=None, dirs=None, request=None, default_template=None):
         vars = vars or {}
         dirs = dirs or self.template_dirs
         env = env or self.get_view_env()

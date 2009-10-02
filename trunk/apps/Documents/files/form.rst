@@ -263,8 +263,12 @@ You can use Form.validate() to validate the submmited data. For example:
         return {'form':f}
         
 Above example demonstrates how to validate the submitted data. You should pass
-``request.GET`` or ``request.POST`` or ``request.params`` (for WebOb module) to Form.validate() 
-function.
+``request.GET`` or ``request.POST`` or ``request.params`` or ``request.FILES`` to Form.validate() 
+function. Or you can also pass multiple vars to Form.validate(), just like:
+
+.. code:: python
+
+    f.validate(request.POST, request.FILES)
 
 .. note::
 

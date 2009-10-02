@@ -16,8 +16,8 @@ Uliweb目前内置的模板系统采用web2py的，所以语法与web2py的模�
 * 可以嵌入Python代码
 * 不用过分关心Python代码的缩近，只要注意块结束时加pass，模板会自动对缩近进行重排
 * Python代码与HTML可以交叉使用
-* 支持模板的嵌套
-* 支持在子模板中定义变量(此功能由Uliweb扩展)
+* 支持模板的继承
+* 支持类django的block的功能(此功能由Uliweb扩展)
 * 提供一些方便的内置方法
 * 支持环境的扩展(可以扩展可以直接在模板中使用的对象和方法)
 * 先编译成Python代码，然后再执行
@@ -27,17 +27,17 @@ Uliweb目前内置的模板系统采用web2py的，所以语法与web2py的模�
 
 Uliweb的模板的语法很简单，只有四种类型的标记：
 
-* {{＝ result}} 这是用来输出的标记。其中result可以是变量也可以是一个函数调用，它会自动
+* ``{{＝ result}}`` 这是用来输出的标记。其中result可以是变量也可以是一个函数调用，它会自动
   对输出的内容进行转义
-* {{ }} 只使用{{}}的话表示里面为Python代码，可以是任何的Python代码，如：import之类的。
+* ``{{<< result}}`` 这是用来输出非转义的内容，与上面相反。
+* ``{{ }}`` 只使用{{}}的话表示里面为Python代码，可以是任何的Python代码，如：import之类的。
   如果是块语句，需要在块结束时使用pass。
-* {{extend template}} 其中template可以是字符串，如 ``"layout.html"`` 或变量。它表示从
-  父模板继承。使用它，需要在父模板中定义一个 ``{{include}}`` ，这样在{{extend}}之后的所有
-  内容将插入到这个位置。但是如果在 {{extend}} 之前还有内容将插入到父模板的最前面去。通过
-  这种方式就可以在子模板中定义变量，但是在父模板中使用。就是将变量的定义放在 {{extend}} 
-  之前就行了。
-* {{include template}} 包括其它的模板。如果template省略，表示是子模板插入的位置。一个
+* ``{{extend template}}`` 其中template可以是字符串，如 ``"layout.html"`` 或变量。它表示从
+  父模板继承。
+* ``{{include template}}`` 包括其它的模板。如果template省略，表示是子模板插入的位置。一个
   父模板只能定义一个插入点。
+* ``{{block blockname}}{{end}}`` 用于定义一个块。在子模板中，对于要覆盖的block需要进行定义，
+  则生成的结果将用子模板中的block定义替换父模板的。
 
 模板环境
 -----------
@@ -49,9 +49,9 @@ Uliweb的模板在运行时也象view一样会运行在一个环境中，在这�
 
 .. code:: python
 
-    from uliweb.core.plugin import plugin
+    from uliweb.core.dispatch import bind
 
-    @plugin('prepare_template_env')
+    @bind('prepare_view_env')
     def prepare_template_env(sender, env):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
@@ -66,9 +66,8 @@ Uliweb的模板在运行时也象view一样会运行在一个环境中，在这�
 
 Uliweb的模板本身已经定义了一些方法可以直接使用。
 
-* Xml(text) 它用来输出不转义的字符串，可以用来输出HTML代码。
 * out对象 它可以用来输出信息，详见下面的说明。
-* cycle(*args) 可以在给定的值中进行循环输出，每次返回一个。
+* ``cycle(*args)`` 可以在给定的值中进行循环输出，每次返回一个。
 
 out 对象
 ----------
@@ -106,7 +105,7 @@ out 对象是模板中内置的用来输出文本的对象。你可以在模板�
 
 .. code:: django
 
-    {{Xml(html)}}
+    {{<< html}}
     
 3. Python代码示例
 
@@ -115,3 +114,41 @@ out 对象是模板中内置的用来输出文本的对象。你可以在模板�
     {{import os
     out.write("<h1>Hello</h1>")
     }}
+    
+4. 模板继承
+
+父模板 (layout.html)
+
+.. code:: python+django
+
+    <html>
+    <head>
+    <title>Title</title>
+    </head>
+    <body>
+    {{block main}}{{end}}
+    </body>
+    </html>
+    
+子模板 (index.html)
+
+.. code:: python+django
+
+    {{extend "layout.html"}}
+    {{block main}}
+    <p>This is child template.</p>
+    {{end}}
+    
+5. 包括其它的模板
+
+.. code:: python+django
+
+    <html>
+    <head>
+    <title>Title</title>
+    </head>
+    <body>
+    {{include "child.html"}}
+    </body>
+    </html>
+    
