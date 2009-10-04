@@ -1041,9 +1041,7 @@ _fields_mapping = {
     DECIMAL:DecimalProperty,
 }
 def Field(type, **kwargs):
-    t = _fields_mapping.get(type)
-    if t is None:
-        raise BadPropertyTypeError('This type(%s) cannot be supported' % type)
+    t = _fields_mapping.get(type, type)
     return t(**kwargs)
 
 class Model(object):

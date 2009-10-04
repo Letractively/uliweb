@@ -1,7 +1,3 @@
-import uliweb
-from uliweb.utils.setup import setup
-
-__doc__ = """
 =====================
 Uliweb Introduction
 =====================
@@ -35,6 +31,8 @@ other developers, for example:
 
 * `Werkzeug <http://werkzeug.pocoo.org/>`_ Used to handle core processes in the framework. 
   For example: command line tools , URL Mapping, Debug, etc.
+* `webob <http://pythonpaste.org/webob/>`_  Used to create Request, Response
+  objects and static file processing.
 * `SqlAlchemy <http://www.sqlalchemy.org>`_ The ORM based on it. Developers can access
   databases, or use the module separately.
 
@@ -142,7 +140,7 @@ Features
     It includes all core codes and also all source code of `uliwebproject <http://uliwebproject.appspot.com>`_ , 
     and some other demo codes, which can be used directly/freely as you wish.
   * Uliweb supports static file access directly, and it can also process
-    HTTP_IF_MODIFIED_SINCE.
+    HTTP_IF_MODIFIED_SINCE and return static file content in trunk.
     
 Goals
 ----------
@@ -152,34 +150,3 @@ Goals
 * The web framework should be able to be deployed in different platforms.
 * Provision of enough sample code.
 * Provision of concise and easy to understand documentation.
-"""
-
-setup(name='Uliweb',
-      version='0.0.1a1',
-      description="Easy python web framework",
-      long_description=__doc__,
-      classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: GNU General Public License (GPL)",
-        "Topic :: Internet :: WWW/HTTP :: WSGI",
-        "Programming Language :: Python",
-        "Operating System :: OS Independent",
-      ],
-      packages = ['uliweb'],
-      install_requires = ['SQLAlchemy', 'docutils', 'Pygments', 'pytz'],
-      platforms = 'any',
-      keywords='wsgi web framework',
-      author=uliweb.__author__,
-      author_email=uliweb.__author_email__,
-      url=uliweb.__url__,
-      license=uliweb.__license__,
-      include_package_data=True,
-      zip_safe=False,
-      entry_points = {
-          'console_scripts': [
-              'uliweb = uliweb.manage:main',
-          ],
-      },
-      
-      )
