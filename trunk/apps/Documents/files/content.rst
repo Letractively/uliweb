@@ -31,11 +31,12 @@ References
 * `URL Mapping <{{= index('url_mapping') }}>`_
 * `Views <{{= index('views') }}>`_
 * `Templates <{{= index('template') }}>`_
-* Database and ORM
+* `Database and ORM <{{= index('orm') }}>`_
 * `Deployment Guide <{{= index('deployment') }}>`_
 * `uliweb Command Guide <{{= index('manage_guide') }}>`_
 * `I18n <{{= index('i18n') }}>`_
 * `Form <{{= index('form') }}>`_
+* `Global Environment <{{= index('globals') }}>`_
 
 Advanced Topics
 -----------------------------
