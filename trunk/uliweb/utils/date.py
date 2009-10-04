@@ -1,6 +1,9 @@
 import time
 import datetime
-import pytz
+try:
+    import pytz
+except:
+    pytz = None
 
 __timezone__ = None
 __local_timezone__ = None
@@ -22,14 +25,14 @@ DEFAULT_DATETIME_INPUT_FORMATS = (
     '%H:%M',                 # '14:30'
 )
 
-def set_timezone(tz=pytz.utc):
+def set_timezone(tz):
     global __timezone__
     __timezone__ = timezone(tz)
     
 def get_default_timezone():
     return __timezone__
 
-def set_local_timezone(tz=pytz.utc):
+def set_local_timezone(tz):
     global __local_timezone__
     __local_timezone__ = timezone(tz)
     
@@ -40,7 +43,11 @@ def timezone(tzname):
     if not tzname:
         return None
     if isinstance(tzname, (str, unicode)):
-        return pytz.timezone(tzname)
+        if pytz:
+            return pytz.timezone(tzname)
+        else:
+            #not pytz module imported, so just return None
+            return None
     else:
         return tzname
     
