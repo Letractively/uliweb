@@ -6,7 +6,7 @@
 .. contents:: 
 .. sectnum::
 
-Uliweb提供了必要的环境环境和运行对象，因此我称之为全局环境。
+Uliweb提供了必要的运行环境和运行对象，因此我称之为全局环境。
 
 对象
 --------
@@ -30,7 +30,7 @@ apps_dir
     当前application的apps的目录。
     
 template_dirs
-    缺省为当前application所有有效的App的template的集合。
+    缺省为当前application所有有效的App的template搜索目录的集合。
     
 get_file(filename, dir='static')
     从所有App下的相应的目录，缺省是从static目录下查找一个文件。并且会先在当前请求对应
@@ -68,7 +68,7 @@ request
 
 request 是上面 Request 类的实例的一个代理对象，并不是一个真正的 Request 对象，
 response 也是。但是你可以把它当成真正的 Request 和 Response 一样来使用。那么为什
-么要这样，为了线程安全。真正的 Request 和 Response 对象会在收到一个请求时被创建
+么要这样，为了方便。真正的 Request 和 Response 对象会在收到一个请求时被创建
 ，然后存放到 local 中，这样不同的线程将有不同实例。为了方便使用，采用代理方式，
 这样用户就不用直接调用 local.reuqest 和 local.response ，而是简单使用 request 和
 response 就可以根据不同的线程使用不同的对象了。

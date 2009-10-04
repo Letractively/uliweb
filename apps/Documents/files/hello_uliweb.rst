@@ -27,35 +27,43 @@ Uliweb project,  then execute:
 
 ::
 
-    uliweb makeproject hello_project
+    uliweb makeproject project
     
 If the command execution is successful, it'll output nothing and create a
 directory named ``hello_project``. A clean workspace is created with relevant files
 for the project in this directory.
+
+The project folder will be::
+
+    |-- app.yaml
+    |-- apps/
+    |   `-- settings.ini
+    |-- gae_handler.py
+    |-- runcgi.py
+    `-- wsgi_handler.wsgi
 
 Creating the 'Hello' app
 ---------------------------
 
 .. code::
 
-    cd hello_project
+    cd project
     uliweb makeapp Hello
     
-Go into ``hello_project`` directory, create a new app following the command as
+Go into ``project`` directory, create a new app following the command as
 shown. You can substitute the name of the app, ``Hello`` with another name of your choice.
 
 After the command above is executed successfully, 
-you can find the following files in ``apps`` directory::
+you can find the following files in ``apps/Hello`` directory::
 
-    apps/
-      __init__.py
-      settings.ini
-      Hello/
-        __init__.py
-        views.py
-        static/
-        templates/
-        
+    |-- __init__.py
+    |-- conf.py
+    |-- info.ini
+    |-- static/
+    |   `-- readme.txt
+    |-- templates/
+    |   `-- readme.txt
+    `-- views.py
 
 Starting the server
 -----------------------
@@ -82,7 +90,7 @@ Open it in your favourite editor, then you will see:
 .. code:: python
 
     #coding=utf-8
-    from uliweb.core.SimpleFrame import expose
+    from uliweb import expose
     
     @expose('/')
     def index():
