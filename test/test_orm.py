@@ -72,23 +72,23 @@ def test_3():
     >>> a1 = Test(username='limodou1').save()
     >>> a2 = Test(username='limodou2').save()
     >>> a3 = Test(username='limodou3').save()
-    >>> b1 = Test1(name='zoom', test=a1).save()
+    >>> b1 = Test1(name='user', test=a1).save()
     >>> b2 = Test1(name='aaaa', test=a1).save()
     >>> b3 = Test1(name='bbbb', test=a2).save()
     >>> a1
     <Test {'username':'limodou1','year':0,'id':1}>
     >>> list(a1.test1_set.all())[0]
-    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'zoom','id':1}>
+    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'user','id':1}>
     >>> a1.test1_set.count()
     2
     >>> b1.test
     <Test {'username':'limodou1','year':0,'id':1}>
-    >>> a1.username = 'zoom'
+    >>> a1.username = 'user'
     >>> Test.get(1)
     <Test {'username':'limodou1','year':0,'id':1}>
     >>> x = a1.save()
     >>> Test.get(1)
-    <Test {'username':'zoom','year':0,'id':1}>
+    <Test {'username':'user','year':0,'id':1}>
     """
     
 #testing many2one using collection_name
@@ -103,12 +103,12 @@ def test_4():
     ...     test = Reference(Test, collection_name='tttt')
     ...     name = Field(str)
     >>> a1 = Test(username='limodou1').save()
-    >>> b1 = Test1(name='zoom', test=a1).save()
+    >>> b1 = Test1(name='user', test=a1).save()
     >>> b2 = Test1(name='aaaa', test=a1).save()
     >>> a1
     <Test {'username':'limodou1','year':0,'id':1}>
     >>> list(a1.tttt.all())[0]   #here we use tttt but not test1_set
-    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'zoom','id':1}>
+    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'user','id':1}>
     >>> a1.tttt.count()
     2
     >>> b3 = Test1(name='aaaa').save()
@@ -155,11 +155,11 @@ def test_6():
     ...     test = OneToOne(Test)
     ...     name = Field(str)
     >>> a1 = Test(username='limodou1').save()
-    >>> b1 = Test1(name='zoom', test=a1).save()
+    >>> b1 = Test1(name='user', test=a1).save()
     >>> a1
     <Test {'username':'limodou1','year':0,'id':1}>
     >>> a1.test1
-    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'zoom','id':1}>
+    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'user','id':1}>
     >>> b1.test
     <Test {'username':'limodou1','year':0,'id':1}>
     """
@@ -176,7 +176,7 @@ def test_7():
     ...     name = Field(str)
     ...     users = ManyToMany(User)
     >>> a = User(username='limodou').save()
-    >>> b = User(username='zoom').save()
+    >>> b = User(username='user').save()
     >>> c = User(username='abc').save()
     >>> g1 = Group(name='python').save()
     >>> g2 = Group(name='perl').save()
@@ -189,7 +189,7 @@ def test_7():
     ...     print e
     (IntegrityError) columns group_id, user_id are not unique u'INSERT INTO group_user_users (group_id, user_id) VALUES (?, ?)' [1, 1]
     >>> list(g1.users.all())
-    [<User {'username':u'limodou','id':1}>, <User {'username':u'zoom','id':2}>, <User {'username':u'abc','id':3}>]
+    [<User {'username':u'limodou','id':1}>, <User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
     >>> g1.users.delete(a)
     >>> g1.users.clear()
     >>> g1.users.count()
@@ -203,7 +203,7 @@ def test_7():
     [<Group {'name':'python','id':1}>, <Group {'name':'perl','id':2}>, <Group {'name':'java','id':3}>]
     >>> g1.users.delete(a)
     >>> list(g1.users.all())
-    [<User {'username':u'zoom','id':2}>, <User {'username':u'abc','id':3}>]
+    [<User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
     >>> list(g2.users.all())
     [<User {'username':u'limodou','id':1}>]
     >>> list(a.group_set.all())

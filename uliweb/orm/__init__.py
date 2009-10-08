@@ -18,6 +18,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'create_all',
 __default_connection__ = None  #global connection instance
 __auto_create__ = True
 __debug_query__ = None
+__default_encoding__ = 'utf-8'
 
 import decimal
 import threading
@@ -49,6 +50,10 @@ def set_auto_create(flag):
 def set_debug_query(flag):
     global __debug_query__
     __debug_query__ = flag
+    
+def set_encoding(encoding):
+    global __default_encoding__
+    __default_encoding__ = encoding
 
 def get_connection(connection='', metadata=_default_metadata, default=True, debug=None, **args):
     """
@@ -172,13 +177,15 @@ class Property(object):
     creation_counter = 0
 
     def __init__(self, verbose_name=None, name=None, default=None,
-         required=False, validator=None, choices=None, max_length=None, **kwargs):
+         required=False, validators=None, choices=None, max_length=None, **kwargs):
         self.verbose_name = verbose_name
         self.property_name = None
         self.name = name
         self.default = default
         self.required = required
-        self.validator = validator
+        self.validators = validators or []
+        if not isinstance(self.validators, (tuple, list)):
+            self.validators = [self.validators]
         self.choices = choices
         self.max_length = max_length
         self.kwargs = kwargs
@@ -252,8 +259,8 @@ class Property(object):
                 raise BadValueError('Property %s must be convertible '
                     'to a string or unicode (%s)' % (self.name, err))
         
-        if self.validator is not None:
-            self.validator(value)
+        for v in self.validators:
+            v(value)
         return value
 
     def empty(self, value):
@@ -267,7 +274,7 @@ class Property(object):
     
     def convert(self, value):
         if isinstance(value, unicode):
-            return value.encode('utf-8')
+            return value.encode(__default_encoding__)
         else:
             return self.data_type(value)
     
@@ -816,8 +823,11 @@ class ManyResult(Result):
                 v = o.id
             d = {self.fielda:self.valuea, self.fieldb:v}
             self.table.insert().execute(**d)
-    
-    def clear(self, *objs):
+            
+    def clear(self):
+        self.delete()
+            
+    def delete(self, *objs):
         if objs:
             ids = []
             for o in objs:
