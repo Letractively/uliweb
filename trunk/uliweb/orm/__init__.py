@@ -303,7 +303,7 @@ class CharProperty(Property):
     field_class = CHAR
     
     def __init__(self, verbose_name=None, default='', max_length=30, **kwds):
-        super(CharProperty, self).__init__(verbose_name, default=default, **kwds)
+        super(CharProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
     
     def empty(self, value):
         return not value
