@@ -517,10 +517,12 @@ count()
 delete()
     It'll delete all the records which matched the condition.
     
-order_by(field)
+order_by(\*field)
     It'll add an ORDER_BY clause to the select. For example::
     
         result.order_by(User.c.year.desc()).order_by(User.c.username.asc())
+        #or
+        result.order_by(User.c.year.desc(), User.c.username.asc())
     
 limit(n)
     It'll add an LIMIT clause to the select. n should be an integer.
@@ -528,7 +530,7 @@ limit(n)
 offset(n)
     It'll add an OFFSET clause to the select. n should be an integer.
     
-values(fields)
+values(\*fields)
     It'll return an iteration of records list, and each row will only contain
     the values of the listed fields. It's different from the common query result(
     common query result will be the model objects interation)::
