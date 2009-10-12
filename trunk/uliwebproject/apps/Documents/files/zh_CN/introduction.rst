@@ -19,7 +19,7 @@ Uliweb是一个新的Python Web Framework，它之所以会产生是因为现有
 License
 ------------
 
-Uliweb按照GPL v2进行发布。
+Uliweb按照BSD进行发布。
 
 基础组件
 ------------

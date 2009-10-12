@@ -1,7 +1,7 @@
 #####################################################################
 # COPY FROM http://www.gnome.org/~jdub/bzr/planet/2.0/planet/htmltmpl.py
 # and inspired from http://www.python.org/pypi/zc.lockfile
-# LICENSE: GPL
+# LICENSE: BSD
 # Modified by: Limodou(limodou@gmail.com)
 #####################################################################
 

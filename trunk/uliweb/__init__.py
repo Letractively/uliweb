@@ -1,13 +1,12 @@
 ####################################################################
 # Author: Limodou@gmail.com
-# License: GPLv2
+# License: BSD
 ####################################################################
 
 __author__ = 'limodou'
 __author_email__ = 'limodou@gmail.com'
 __url__ = 'http://code.google.com/p/uliweb'
-__version__ = '0.0.1a1'
-__license__ = 'GPLv2'
+__license__ = 'BSD'
 
 import os, sys
 

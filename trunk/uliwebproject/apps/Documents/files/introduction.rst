@@ -21,7 +21,7 @@ from several other developers around the world.
 License
 ------------
 
-Uliweb is released under GPL v2 license.
+Uliweb is released under BSD license.
 
 Infrastructure
 ----------------
