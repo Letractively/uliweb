@@ -13,11 +13,7 @@ Uliweb Introduction
 About Uliweb
 ----------------
 
-Uliweb is a relatively new Python based web framework. Before I started to create 
-this framework,I had used a few other frameworks such as Karrigell, Cherrypy, 
-Django and web2py, but they did not satisfy my needs due to several reasons. I then decided 
-to create a web framework that combined the strengths of these frameworks, keeping in mind
-that the main focus is to make Uliweb easy to use yet powerful.
+Uliweb is a relatively new Python based web framework.
 
 This project was created and lead by Limodou <limodou@gmail.com>. It is in constant development 
 from several other developers around the world.
@@ -25,7 +21,7 @@ from several other developers around the world.
 License
 ------------
 
-Uliweb is released under GPL v2 license.
+Uliweb is released under BSD license.
 
 Infrastructure
 ----------------
@@ -155,13 +151,13 @@ Goals
 """
 
 setup(name='Uliweb',
-      version='0.0.1a1',
+      version='0.0.2',
       description="Easy python web framework",
       long_description=__doc__,
       classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: GNU General Public License (GPL)",
+        "License :: OSI Approved :: BSD License",
         "Topic :: Internet :: WWW/HTTP :: WSGI",
         "Programming Language :: Python",
         "Operating System :: OS Independent",
