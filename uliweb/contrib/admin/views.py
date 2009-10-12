@@ -92,7 +92,7 @@ def admin_build():
 def admin_edit_app():
     ini = Ini(os.path.join(application.apps_dir, 'settings.ini'))
     flag = False
-    module = request.GET['module']
+    module = str(request.GET['module'])
     
     import uliweb.core.SimpleFrame as sf
     app_apps = sf.get_apps(application.apps_dir)
