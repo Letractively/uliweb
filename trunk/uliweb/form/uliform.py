@@ -299,6 +299,10 @@ class StringField(BaseField):
         """
         Convert a data to python format. 
         """
+        if isinstance(data, unicode):
+            data = data.encode(DEFAULT_ENCODING)
+        else:
+            data = str(data)
         return data
     
 class UnicodeField(BaseField):
