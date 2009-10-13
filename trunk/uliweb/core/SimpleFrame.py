@@ -120,8 +120,8 @@ def _get_rule(f):
     for i in m:
         if not i.startswith('views'):
             s.append(i)
-    appname = '/'.join(s)
-    rule = '/' + '/'.join([appname, f.__name__] + args)
+    appname = '.'.join(s)
+    rule = '/' + '/'.join(['/'.join(s), f.__name__] + args)
     return appname, rule
     
 def expose(rule=None, **kw):
@@ -134,6 +134,21 @@ def expose(rule=None, **kw):
             
         will be url_map.add('index', index)
     """
+    def fix_url(module, url):
+        m = module.split('.')
+        s = []
+        for i in m:
+            if not i.startswith('views'):
+                s.append(i)
+        appname = '.'.join(s)
+        
+        if 'URL' in conf.settings and appname in conf.settings.URL:
+            suffix = conf.settings.URL[appname]
+            url = url.lstrip('/')
+            return os.path.join(suffix, url).replace('\\', '/')
+        else:
+            return url
+        
     static = kw.get('static', None)
     if callable(rule):
         if conf.use_urls:
@@ -141,6 +156,7 @@ def expose(rule=None, **kw):
         f = rule
         appname, rule = _get_rule(f)
         kw['endpoint'] = f.__module__ + '.' + f.__name__
+        rule = fix_url(appname, rule)
         conf.urls.append((rule, kw))
         if static:
             conf.static_views.append(kw['endpoint'])
@@ -152,18 +168,23 @@ def expose(rule=None, **kw):
     def decorate(f, rule=rule):
         if conf.use_urls:
             return f
+        if callable(f):
+            appname, x = _get_rule(f)
         if not rule:
-            appname, rule = _get_rule(f)
+            rule = x
         if callable(f):
             f_name = f.__name__
             endpoint = f.__module__ + '.' + f.__name__
+            module = appname
         else:
             f_name = f.split('.')[-1]
             endpoint = f
+            module = f
             
         if f_name in reserved_keys:
             raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f_name
         kw['endpoint'] = endpoint
+        rule = fix_url(module, rule)
         conf.urls.append((rule, kw))
         if static:
             conf.static_views.append(kw['endpoint'])
@@ -319,17 +340,17 @@ class Dispatcher(object):
             except ImportError:
                 pass
         Dispatcher.modules = self.collect_modules(flag)
+        self.install_settings(self.modules['settings'])
+        Dispatcher.settings = conf.settings
+        Dispatcher.env = self._prepare_env()
+        Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.url_map = conf.url_map
         if flag:
             self.install_views(self.modules['views'])
             Dispatcher.url_infos = conf.urls
         else:
             Dispatcher.url_infos = []
-        self.install_settings(self.modules['settings'])
-        Dispatcher.template_dirs = self.get_template_dirs()
 #        Dispatcher.templateplugins_dirs = self.get_templateplugins_dirs()
-        Dispatcher.env = self._prepare_env()
-        Dispatcher.settings = conf.settings
         
         #process dispatch hooks
         self.dispatch_hooks()
