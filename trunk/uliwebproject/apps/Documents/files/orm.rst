@@ -6,12 +6,24 @@ Database and ORM
 .. contents:: 
 .. sectnum::
 
+
 Uliweb don't bind any ORM, but you can use dispatch, App to encapsulate your
 own usage of database or ORM. But Uliweb indeed has its own ORM, and also provide
 an App, so you can easily use it. But please remember, Uliweb ORM is not forced,
 and if you don't like it, you don't need to use it at all. But I want to make it
 suit for many simple tasks. And Uliweb ORM is based on SQLAlchemy, so you can also
 use many features from SQLAlchemy.
+
+Installation
+----------------
+
+Because Uliweb ORM is built on SQLAlchemy, and it also needs pytz when you want
+to process timezone, so you should install them first before you want to use
+Uliweb ORM. Of cause, Uliweb has also provided such install command for you::
+
+    uliweb call -a uliweb.contrib.orm install
+    
+After executing it, it'll automatically install SQLAlchemy and pytz for you.
 
 ORM Configuration
 ---------------------
