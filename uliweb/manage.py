@@ -197,16 +197,20 @@ def collcet_commands():
                 actions[t] = getattr(mod, t)(apps_dir)
     return actions
 
-def call_commands(command=''):
+def call_commands(command='', appname=('a', '')):
     """
     Call <command>.py for each installed app according the command argument.
     """
     if not command:
         log.error("Error: There is no command module name behind call command.")
         return
-    from uliweb import get_apps
+    if not appname:
+        from uliweb import get_apps
+        apps = get_apps(apps_dir)
+    else:
+        apps = [appname]
     actions = {}
-    for f in get_apps(apps_dir):
+    for f in apps:
         m = '%s.%s' % (f, command)
         try:
             mod = __import__(m, {}, {}, [''])

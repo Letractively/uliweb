@@ -12,6 +12,12 @@ def myimport(module):
         mod = getattr(mod, i)
     return mod
 
+def install(packages):
+    from pkg_resources import load_entry_point
+    
+    load = load_entry_point('setuptools', 'console_scripts', 'easy_install')
+    load(packages)
+
 class MyPkg(object):
     @staticmethod
     def resource_filename(module, path):
