@@ -1,6 +1,18 @@
 安装说明
 ==========
 
+要求
+--------------
+
+* Python 2.5+
+* setuptools 0.6c9
+        
+额外要求
+------------------
+
+* SQLAlchemy 0.5+ (如果使用Uliweb ORM需要安装它)
+* pytz (用在uliweb.utils.date和ORM中进行时区的处理)
+
 最简单的方法是使用easy_install，如:
 
 .. code::
