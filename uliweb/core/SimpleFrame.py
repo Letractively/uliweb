@@ -327,7 +327,6 @@ class Dispatcher(object):
         conf.apps_dir = apps_dir
         Dispatcher.apps_dir = apps_dir
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps)
-        self.install_apps()
         #add urls.py judgement
         flag = True
         if self.use_urls is None or self.use_urls is True:
@@ -344,6 +343,7 @@ class Dispatcher(object):
         Dispatcher.settings = conf.settings
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_dirs = self.get_template_dirs()
+        self.install_apps()
         Dispatcher.url_map = conf.url_map
         if flag:
             self.install_views(self.modules['views'])
