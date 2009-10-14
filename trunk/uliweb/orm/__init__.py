@@ -5,7 +5,7 @@
 
 __all__ = ['Field', 'get_connection', 'Model', 'create_all',
     'set_debug_query', 'set_auto_create', 'set_connection',
-    'CHAR', 'BLOB', 'TEXT', 'DECIMAL',
+    'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
@@ -23,6 +23,7 @@ __default_encoding__ = 'utf-8'
 import decimal
 import threading
 import datetime
+import types
 from uliweb.utils import date
 from sqlalchemy import *
 from sqlalchemy.sql import select
@@ -115,16 +116,68 @@ def check_reserved_word(f):
             "Cannot define property using reserved word '%s'. " % f
             )
 
-__models = {}
+__models__ = {}
 
 def create_all(db=None):
-    global __models
-    for cls in __models.values():
-        cls.bind(db.metadata, auto_create=True)
+    global __models__
+    for cls in __models__.values():
+        if not cls['created'] and cls['model']:
+            cls['model'].bind(db.metadata, auto_create=True)
+            cls['created'] = True
         
-def set_model(model):
-    global __models
-    __models[model.tablename] = model
+def set_model(model, tablename=None, created=None):
+    """
+    Register an model and tablename to a global variable.
+    model could be a string format, i.e., 'uliweb.contrib.auth.models.User'
+    """
+    global __models__
+    if isinstance(model, type) and issubclass(model, Model):
+        tablename = model.tablename
+    item = __models__.setdefault(tablename, {})
+    if created is not None:
+        item['created'] = created
+    else:
+        item['created'] = None
+    if isinstance(model, (str, unicode)):
+        model_name = model
+        model = None
+    else:
+        model_name = ''
+    item['model'] = model
+    item['model_name'] = model_name
+    
+def get_model(model):
+    """
+    Return a real model object, so if the model is already a Model class, then
+    return it directly. If not then import it.
+    """
+    global __models__
+    if model is _SELF_REFERENCE:
+        return model
+    if isinstance(model, type) and issubclass(model, Model):
+        return model
+    if model in __models__:
+        item = __models__[model]
+        m = item['model']
+        if isinstance(m, type)  and issubclass(m, Model):
+            return m
+        else:
+            m, name = item['model_name'].rsplit('.', 1)
+            try:
+                mod = __import__(m, {}, {}, [''])
+                model = getattr(mod, name)
+                item['model'] = model
+                return model
+            except:
+                raise Error("Can't import the model %s from %s" % (name, m))
+    else:
+        raise Error("Can't found the model %s" % model)
+    
+def valid_model(model):
+    global __models__
+    if isinstance(model, type) and issubclass(model, Model):
+        return True
+    return model in __models__
         
 class ModelMetaclass(type):
     def __init__(cls, name, bases, dct):
@@ -577,11 +630,13 @@ class ReferenceProperty(Property):
 
         if reference_class is None:
             reference_class = Model
-        if not ((isinstance(reference_class, type) and
-                         issubclass(reference_class, Model)) or
-                        reference_class is _SELF_REFERENCE):
+            
+        if not (
+                (isinstance(reference_class, type) and issubclass(reference_class, Model)) or
+                reference_class is _SELF_REFERENCE or
+                valid_model(reference_class)):
             raise KindError('reference_class must be Model or _SELF_REFERENCE')
-        self.reference_class = self.data_type = reference_class
+        self.reference_class = self.data_type = get_model(reference_class)
         
     def create(self, cls):
         args = self.kwargs.copy()
@@ -885,9 +940,12 @@ class ManyToMany(ReferenceProperty):
         self.fieldb = b = "%s_id" % self.reference_class.tablename
         a_id = "%s.id" % self.model_class.tablename
         b_id = "%s.id" % self.reference_class.tablename
+        
+        #add autoincrement=False according to:
+        #http://www.sqlalchemy.org/docs/05/reference/dialects/mysql.html#keys
         self.table = Table(self.tablename, cls.metadata,
-            Column(a, Integer, primary_key=True),
-            Column(b, Integer, primary_key=True),
+            Column(a, Integer, primary_key=True, autoincrement=False),
+            Column(b, Integer, primary_key=True, autoincrement=False),
 #            ForeignKeyConstraint([a], [a_id]),
 #            ForeignKeyConstraint([b], [b_id]),
         )
@@ -1188,15 +1246,25 @@ class Model(object):
                 t = cls.metadata.tables.get(cls.tablename, None)
                 if t:
                     cls.metadata.remove(t)
-                cls.table = Table(cls.tablename, cls.metadata, *cols)
+                args = getattr(cls, '__table_args__', {})
+                args['mysql_charset'] = 'utf8'
+                cls.table = Table(cls.tablename, cls.metadata, *cols, **args)
                 
                 cls.c = cls.table.c
                 cls.columns = cls.table.c
+                
+                if hasattr(cls, 'OnInit'):
+                    cls.OnInit()
+                
                 cls._bound = True
             if cls._bound:
                 if auto_create:
+                    #only metadata is _default_metadata and bound 
+                    #then the table will be created
+                    #otherwise the creation of tables will be via: create_all(db)
                     if cls.metadata == _default_metadata and cls.metadata.bind:
                         cls.create()
+                        set_model(cls, created=True)
                     else:
                         set_model(cls)
         finally:

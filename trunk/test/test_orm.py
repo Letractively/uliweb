@@ -67,21 +67,24 @@ def test_3():
     ...     username = Field(str)
     ...     year = Field(int)
     >>> class Test1(Model):
-    ...     test = Reference(Test)
+    ...     test1 = Reference(Test, collection_name='test1')
+    ...     test2 = Reference(Test, collection_name='test2')
     ...     name = Field(str)
     >>> a1 = Test(username='limodou1').save()
     >>> a2 = Test(username='limodou2').save()
     >>> a3 = Test(username='limodou3').save()
-    >>> b1 = Test1(name='user', test=a1).save()
-    >>> b2 = Test1(name='aaaa', test=a1).save()
-    >>> b3 = Test1(name='bbbb', test=a2).save()
+    >>> b1 = Test1(name='user', test1=a1, test2=a1).save()
+    >>> b2 = Test1(name='aaaa', test1=a1, test2=a2).save()
+    >>> b3 = Test1(name='bbbb', test1=a2, test2=a3).save()
     >>> a1
     <Test {'username':'limodou1','year':0,'id':1}>
-    >>> list(a1.test1_set.all())[0]
-    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'user','id':1}>
-    >>> a1.test1_set.count()
+    >>> list(a1.test1.all())[0]
+    <Test1 {'test1':<Test {'username':'limodou1','year':0,'id':1}>,'test2':<Test {'username':'limodou1','year':0,'id':1}>,'name':'user','id':1}>
+    >>> a1.test1.count()
     2
-    >>> b1.test
+    >>> list(a2.test2.all())
+    [<Test1 {'test1':<Test {'username':'limodou1','year':0,'id':1}>,'test2':<Test {'username':'limodou2','year':0,'id':2}>,'name':'aaaa','id':2}>]
+    >>> b1.test1
     <Test {'username':'limodou1','year':0,'id':1}>
     >>> a1.username = 'user'
     >>> Test.get(1)
@@ -281,12 +284,12 @@ def test_9():
 #    'hello uliweb'
 #    """
 
-if __name__ == '__main__':
-    set_debug_query(True)
-    db = get_connection('sqlite://')
-    db.metadata.drop_all()
-    import datetime
-    class Test(Model):
-        username = Field(unicode)
-    a = Test(username='limodou').save()
-    print list(Test.all())
+#if __name__ == '__main__':
+#    set_debug_query(True)
+#    db = get_connection('sqlite://')
+#    db.metadata.drop_all()
+#    import datetime
+#    class Test(Model):
+#        username = Field(unicode)
+#    a = Test(username='limodou').save()
+#    print list(Test.all())

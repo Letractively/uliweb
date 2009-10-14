@@ -1,4 +1,5 @@
 from uliweb.core.dispatch import bind
+import uliweb
 
 @bind('startup')
 def startup(sender):
@@ -6,4 +7,8 @@ def startup(sender):
     
     orm.set_debug_query(sender.settings.ORM.DEBUG_LOG)
     orm.set_auto_create(sender.settings.ORM.AUTO_CREATE)
-    orm.get_connection(sender.settings.ORM.CONNECTION)
+    orm.get_connection(sender.settings.ORM.CONNECTION, encoding='utf8')
+
+    if 'MODELS' in uliweb.settings:
+        for k, v in uliweb.settings.MODELS.items():
+            orm.set_model(v, k)
