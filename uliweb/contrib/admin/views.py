@@ -118,7 +118,7 @@ def ini_to_form(form, ini):
     for k, obj in form.fields.items():
         if 'key' in obj.kwargs:
             key = obj.kwargs['key']
-            v = get_var(key, ini)
+            v = ini.get_var(key)
             if v:
                 getattr(form, k).data = v
 
@@ -127,64 +127,21 @@ def form_to_ini(form, ini, default=None):
     for k, obj in form.fields.items():
         if 'key' in obj.kwargs:
             key = obj.kwargs['key']
-            v = get_var(key, ini)
+            v = ini.get_var(key)
             if default:
-                d = get_var(key, default)
+                d = default.get_var(key)
             else:
                 d = None
             value = getattr(form, k).data
             if default:
                 if value == d:
-                    flag = del_var(key, ini) or flag
+                    flag = ini.del_var(key) or flag
                     continue
             if value != v:
-                flag = set_var(key, value, ini) or flag
+                flag = ini.set_var(key, value) or flag
     
     return flag
     
-def get_var(key, ini_obj):
-    s = key.split('/')
-    obj = ini_obj
-    for i in s:
-        k = obj.get(i)
-        if k is not None:
-            obj = k
-        else:
-            return None
-        
-    return obj
-
-def set_var(key, value, ini_obj):
-    s = key.split('/')
-    obj = ini_obj
-    for i in s[:-1]:
-        k = obj.add(i)
-        if k:
-            obj = k
-        else:
-            return False
-    obj[s[-1]] = value
-    
-    return True
-    
-def del_var(key, ini_obj):
-    s = key.split('/')
-    obj = ini_obj
-    for i in s[:-1]:
-        k = obj.get(i)
-        if k:
-            obj = k
-        else:
-            return False
-    
-    if s[-1] in obj:
-        del obj[s[-1]]
-        flag = True
-    else:
-        flag = False
-    
-    return flag
-
 def _get_app(app_path, modname, apps, catalogs, app_apps, parent_module=''):
     info_ini = os.path.join(app_path, 'info.ini')
     if os.path.exists(info_ini):
