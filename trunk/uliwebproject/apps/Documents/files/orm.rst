@@ -119,6 +119,28 @@ model class. For example:
     class Note(Model):
     
         __tableame__ = 't_note'
+        
+Tabel Arguments
+~~~~~~~~~~~~~~~~~
+
+In SQLAlchemy, when you creating a Table, you may pass some extra arguments, just
+like: mysql_engine, etc. So you could define ``__table_args__`` in Model, for example::
+
+    class Todo(Model):
+        __table_args__ = dict(mysql_charset='utf8')
+        
+OnInit Method
+~~~~~~~~~~~~~~~
+
+Uliweb ORM also enable you do some initialization works before doing the creation
+of the table. Just write a class method OnInit, for example::
+
+    class Todo(Model):
+        @classmethod
+        def OnInit(cls):
+            Index('my_indx', cls.c.title, cls.c.owner, unique=True)
+
+For now, I only test ``Index``, and you can also import it from uliweb.orm.
 
 Property Definition
 ~~~~~~~~~~~~~~~~~~~~~
@@ -400,7 +422,7 @@ Many to Many
     
 You can use ``ManyToMany`` to reference a many to many relation. Uliweb ORM will
 work like Django, it'll create the third table automatically, for example, the
-third table of above example will be: group_user_users, it's the twe table names
+third table of above example will be: group_user_users, it's the two table names
 (user and group) and ManyToMany property name (users). The table structure of 
 the third table will be::
 
@@ -660,3 +682,31 @@ And if there are exceptions, the transaction will be rollbacked.
 
 How to use ORM in your program
 ----------------------------------
+
+Mysql Issues
+----------------
+
+Encoding Setting
+~~~~~~~~~~~~~~~~~
+
+Uliweb ORM will default use utf8 encoding when creating the table in Mysql even
+if the default charset of mysql is not utf8. So that if you are using Mysql
+you should check if the default charset of your sechma is utf8 encoding, if not
+you should add charset in connection string, just like::
+
+    [ORM]
+    CONNECTION = 'mysql://root:limodou@localhost/new?charset=utf8'
+    
+The charset=utf8 is needed when the default charset of server is not utf8, 
+otherwise you don't need to set it.
+    
+API
+------
+
+set_auto_create(flag)
+    Set auto create table flag. The flag default is True.
+    
+set_debug_query(flag)
+    Set debug mode. If set, the SQL statements will be ouputed in logs.
+    If you've gotten a db instance from get_connection(), you can also
+    simply set ``db.echo = True`` to enable the debug mode.

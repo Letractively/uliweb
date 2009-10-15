@@ -326,10 +326,7 @@ class Property(object):
         return value
     
     def convert(self, value):
-        if isinstance(value, unicode):
-            return value.encode(__default_encoding__)
-        else:
-            return self.data_type(value)
+        return self.data_type(value)
     
     def __repr__(self):
         return ("<%s 'type':%r, 'verbose_name':%r, 'name':%r, " 
@@ -352,7 +349,7 @@ class Property(object):
         return '_' + self.name + '_'
    
 class CharProperty(Property):
-    data_type = str
+    data_type = unicode
     field_class = CHAR
     
     def __init__(self, verbose_name=None, default='', max_length=30, **kwds):
@@ -360,6 +357,14 @@ class CharProperty(Property):
     
     def empty(self, value):
         return not value
+    
+    def convert(self, value):
+        if isinstance(value, str):
+            return unicode(value, __default_encoding__)
+        elif isinstance(value, unicode):
+            return value
+        else:
+            return self.data_type(value)
     
     def _create_type(self):
         if self.max_length:
@@ -371,15 +376,8 @@ class CharProperty(Property):
 class StringProperty(CharProperty):
     field_class = String
     
-class UnicodeProperty(StringProperty):
-    data_type = unicode
+class UnicodeProperty(CharProperty):
     field_class = Unicode
-    
-    def convert(self, value):
-        if isinstance(value, str):
-            return unicode(value, 'utf-8')
-        else:
-            return self.data_type(value)
     
 class TextProperty(StringProperty):
     field_class = Text

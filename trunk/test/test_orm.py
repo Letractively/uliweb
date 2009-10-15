@@ -77,21 +77,21 @@ def test_3():
     >>> b2 = Test1(name='aaaa', test1=a1, test2=a2).save()
     >>> b3 = Test1(name='bbbb', test1=a2, test2=a3).save()
     >>> a1
-    <Test {'username':'limodou1','year':0,'id':1}>
+    <Test {'username':u'limodou1','year':0,'id':1}>
     >>> list(a1.test1.all())[0]
-    <Test1 {'test1':<Test {'username':'limodou1','year':0,'id':1}>,'test2':<Test {'username':'limodou1','year':0,'id':1}>,'name':'user','id':1}>
+    <Test1 {'test1':<Test {'username':u'limodou1','year':0,'id':1}>,'test2':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>
     >>> a1.test1.count()
     2
     >>> list(a2.test2.all())
-    [<Test1 {'test1':<Test {'username':'limodou1','year':0,'id':1}>,'test2':<Test {'username':'limodou2','year':0,'id':2}>,'name':'aaaa','id':2}>]
+    [<Test1 {'test1':<Test {'username':u'limodou1','year':0,'id':1}>,'test2':<Test {'username':u'limodou2','year':0,'id':2}>,'name':u'aaaa','id':2}>]
     >>> b1.test1
-    <Test {'username':'limodou1','year':0,'id':1}>
+    <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.username = 'user'
     >>> Test.get(1)
-    <Test {'username':'limodou1','year':0,'id':1}>
+    <Test {'username':u'limodou1','year':0,'id':1}>
     >>> x = a1.save()
     >>> Test.get(1)
-    <Test {'username':'user','year':0,'id':1}>
+    <Test {'username':u'user','year':0,'id':1}>
     """
     
 #testing many2one using collection_name
@@ -109,9 +109,9 @@ def test_4():
     >>> b1 = Test1(name='user', test=a1).save()
     >>> b2 = Test1(name='aaaa', test=a1).save()
     >>> a1
-    <Test {'username':'limodou1','year':0,'id':1}>
+    <Test {'username':u'limodou1','year':0,'id':1}>
     >>> list(a1.tttt.all())[0]   #here we use tttt but not test1_set
-    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'user','id':1}>
+    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>
     >>> a1.tttt.count()
     2
     >>> b3 = Test1(name='aaaa').save()
@@ -119,9 +119,9 @@ def test_4():
     2
     >>> b3.test = a1
     >>> b3.save()
-    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'aaaa','id':3}>
+    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'aaaa','id':3}>
     >>> Test1.get(3)
-    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'aaaa','id':3}>
+    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'aaaa','id':3}>
     """
     
 #testing transaction
@@ -160,11 +160,11 @@ def test_6():
     >>> a1 = Test(username='limodou1').save()
     >>> b1 = Test1(name='user', test=a1).save()
     >>> a1
-    <Test {'username':'limodou1','year':0,'id':1}>
+    <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.test1
-    <Test1 {'test':<Test {'username':'limodou1','year':0,'id':1}>,'name':'user','id':1}>
+    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>
     >>> b1.test
-    <Test {'username':'limodou1','year':0,'id':1}>
+    <Test {'username':u'limodou1','year':0,'id':1}>
     """
     
 #test ManyToMany
@@ -200,17 +200,17 @@ def test_7():
     >>> g1.users.add(a, b, c)
     >>> g2.users.add(a)
     >>> list(a.group_set.all())
-    [<Group {'name':'python','id':1}>, <Group {'name':'perl','id':2}>]
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
     >>> a.group_set.add(g3)
     >>> list(a.group_set.all())
-    [<Group {'name':'python','id':1}>, <Group {'name':'perl','id':2}>, <Group {'name':'java','id':3}>]
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
     >>> g1.users.delete(a)
     >>> list(g1.users.all())
     [<User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
     >>> list(g2.users.all())
     [<User {'username':u'limodou','id':1}>]
     >>> list(a.group_set.all())
-    [<Group {'name':'perl','id':2}>, <Group {'name':'java','id':3}>]
+    [<Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
     """
 
 #test SelfReference
@@ -269,20 +269,16 @@ def test_9():
     
     """
     
-#def test_10():
-#    """
-#    >>> set_debug_query(True)
-#    >>> db = get_connection('sqlite://')
-#    >>> db.metadata.drop_all()
-#    >>> import datetime
-#    >>> class Test(Model):
-#    ...     file = Field(file)
-#    >>> import StringIO
-#    >>> buf = StringIO.StringIO('hello uliweb')
-#    >>> a = Test(file=buf).save()
-#    >>> Test.get(1).file.read()
-#    'hello uliweb'
-#    """
+def test_10():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> a = CharProperty()
+    >>> a.convert(u'abc')
+    u'abc'
+    >>> a.convert('abc')
+    u'abc'
+    """
 
 #if __name__ == '__main__':
 #    set_debug_query(True)
@@ -292,4 +288,5 @@ def test_9():
 #    class Test(Model):
 #        username = Field(unicode)
 #    a = Test(username='limodou').save()
+#    print repr(a.username)
 #    print list(Test.all())
