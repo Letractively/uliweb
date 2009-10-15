@@ -70,7 +70,23 @@ def test_section():
     <BLANKLINE>
     """
     
-def test_ini():
+def test_ini1():
+    """
+    >>> x = Ini()
+    >>> s = x.add('default')
+    >>> print x
+    #coding=utf-8
+    [default]
+    <BLANKLINE>
+    >>> s['abc'] = 'name'
+    >>> print x
+    #coding=utf-8
+    [default]
+    abc = 'name'
+    <BLANKLINE>
+    
+    """
+def test_ini2():
     """
     >>> x = Ini()
     >>> x['default'] = Section('default', "#comment")
@@ -122,4 +138,38 @@ def test_replace():
     option <= ['c']
     <BLANKLINE>
     
+    """
+
+def test_set_var():
+    """
+    >>> x = Ini()
+    >>> x.set_var('default/key', 'name')
+    True
+    >>> print x
+    #coding=utf-8
+    [default]
+    key = 'name'
+    <BLANKLINE>
+    >>> x.set_var('default/key/name', 'hello')
+    True
+    >>> print x
+    #coding=utf-8
+    [default]
+    key = 'name'
+    key/name = 'hello'
+    <BLANKLINE>
+    >>> x.get_var('default/key')
+    'name'
+    >>> x.get_var('default/no')
+    >>> x.get_var('defaut/no', 'no')
+    'no'
+    >>> x.del_var('default/key')
+    True
+    >>> print x
+    #coding=utf-8
+    [default]
+    key/name = 'hello'
+    <BLANKLINE>
+    >>> x.get_var('default/key/name')
+    'hello'
     """

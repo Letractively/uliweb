@@ -171,7 +171,7 @@ def del_var(key, ini_obj):
     s = key.split('/')
     obj = ini_obj
     for i in s[:-1]:
-        k = obj.add(i)
+        k = obj.get(i)
         if k:
             obj = k
         else:
