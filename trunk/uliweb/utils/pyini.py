@@ -353,3 +353,38 @@ class Ini(SortedDict):
         self.save(buf)
         return buf.getvalue()
     
+    def get_var(self, key, default=None):
+        obj = self
+        for i in key.split('/', 1):
+            obj = obj.get(i)
+            if obj is None:
+                break
+          
+        if obj is None:
+            return default
+        return obj
+    
+    def set_var(self, key, value):
+        s = key.split('/', 1)
+        obj = self
+        for i in s[:-1]:
+            obj = obj.add(i)
+        obj[s[-1]] = value
+        
+        return True
+        
+    def del_var(self, key):
+        s = key.split('/', 1)
+        obj = self
+        for i in s[:-1]:
+            obj = obj.get(i)
+            if obj is None:
+                return False
+        
+        if s[-1] in obj:
+            del obj[s[-1]]
+            flag = True
+        else:
+            flag = False
+        
+        return flag

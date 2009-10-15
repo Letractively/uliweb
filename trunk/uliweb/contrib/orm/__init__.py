@@ -7,7 +7,7 @@ def startup(sender):
     
     orm.set_debug_query(sender.settings.ORM.DEBUG_LOG)
     orm.set_auto_create(sender.settings.ORM.AUTO_CREATE)
-    orm.get_connection(sender.settings.ORM.CONNECTION, encoding='utf8')
+    orm.get_connection(sender.settings.ORM.CONNECTION)
 
     if 'MODELS' in uliweb.settings:
         for k, v in uliweb.settings.MODELS.items():
