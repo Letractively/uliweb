@@ -236,17 +236,6 @@ def test_8():
     <User {'username':u'c','parent':<User {'username':u'a','parent':None,'id':1}>,'id':3}>
     """
     
-def test_10():
-    """
-    >>> db = get_connection('sqlite://')
-    >>> db.metadata.drop_all()
-    >>> a = CharProperty()
-    >>> a.convert(u'abc')
-    u'abc'
-    >>> a.convert('abc')
-    u'abc'
-    """
-
 def test_floatproperty():
     """
     >>> db = get_connection('sqlite://')
@@ -286,6 +275,8 @@ def test_datetime_property():
     >>> #test to_dict function
     >>> print a.to_dict()
     {'date1': '2009-01-01 14:00:05', 'date3': '14:00:05', 'date2': '2009-01-01', 'id': None}
+    >>> print a.to_dict('date1', 'date2')
+    {'date1': '2009-01-01 14:00:05', 'date2': '2009-01-01'}
     >>> print repr(a.date1)
     datetime.datetime(2009, 1, 1, 14, 0, 5)
     >>> print repr(a.date2)

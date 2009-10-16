@@ -7,19 +7,20 @@ Database and ORM
 .. sectnum::
 
 
-Uliweb don't bind any ORM, but you can use dispatch, App to encapsulate your
-own usage of database or ORM. But Uliweb indeed has its own ORM, and also provide
-an App, so you can easily use it. But please remember, Uliweb ORM is not forced,
-and if you don't like it, you don't need to use it at all. But I want to make it
-suit for many simple tasks. And Uliweb ORM is based on SQLAlchemy, so you can also
-use many features from SQLAlchemy.
+Uliweb don't bind any ORM, but you can use dispatch, app tech to encapsulate
+your own usage of database or ORM. Of cause Uliweb indeed has its own ORM, I
+call it **uliorm**, and also provide an orm App, so you can easily use it. But
+please remember, uliorm is not forced, and if you don't like it, you don't
+need to use it at all. But I want to make it suit for many simple tasks. And
+uliorm is based on SQLAlchemy, so you can also use many features from
+SQLAlchemy.
 
 Installation
 ----------------
 
-Because Uliweb ORM is built on SQLAlchemy, and it also needs pytz when you want
+Because uliorm is built on SQLAlchemy, and it also needs pytz when you want
 to process timezone, so you should install them first before you want to use
-Uliweb ORM. Of cause, Uliweb has also provided such install command for you::
+uliorm. Of cause, Uliweb has also provided such install command for you::
 
     uliweb call -a uliweb.contrib.orm install
     
@@ -132,7 +133,7 @@ like: mysql_engine, etc. So you could define ``__table_args__`` in Model, for ex
 OnInit Method
 ~~~~~~~~~~~~~~~
 
-Uliweb ORM also enable you do some initialization works before doing the creation
+uliorm also enable you do some initialization works before doing the creation
 of the table. Just write a class method OnInit, for example::
 
     class Todo(Model):
@@ -145,10 +146,10 @@ For now, I only test ``Index``, and you can also import it from ``uliweb.orm``.
 Property Definition
 ~~~~~~~~~~~~~~~~~~~~~
 
-Uliweb ORM define a model field as Property, but you can also use field concept, 
+uliorm define a model field as Property, but you can also use field concept, 
 it's no problem. 
 
-Uliweb ORM can define property of a model in two ways. One is very like GAE data
+uliorm can define property of a model in two ways. One is very like GAE data
 store, just ``*Property`` class. The other is just using Field() function.
 
 Below are real properties defined in Uliewb ORM::
@@ -188,7 +189,7 @@ instance of ``*Peroperty`` class.
 ID Property
 ~~~~~~~~~~~~~~
 
-By default, Uliweb ORM will automatically create an ``ID`` property for you, and you
+By default, uliorm will automatically create an ``ID`` property for you, and you
 don't need to define it in model.
 
 Property Constuctor
@@ -213,7 +214,7 @@ required
     if this property is needed.
     
 validators
-    when you set a value to this property, Uliweb ORM will validate the value
+    when you set a value to this property, uliorm will validate the value
     according this parameter. It should be a function list, the function should
     be::
     
@@ -321,7 +322,7 @@ Common Attributes of the Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 table
-    An Uliweb ORM model will be mapped to an Table object of SQLAlchemy, and ``table``
+    An uliorm model will be mapped to an Table object of SQLAlchemy, and ``table``
     will be the underlying Table instance of the model. So you can use this
     attribute do table level operation.
     
@@ -337,7 +338,7 @@ metadata
 Relation Definition
 ------------------------
 
-Uliweb ORM also supports relation definition: OneToOne, ManyToOne, ManyToMany.
+uliorm also supports relation definition: OneToOne, ManyToOne, ManyToMany.
 
 One to One
 ~~~~~~~~~~~~~
@@ -390,7 +391,7 @@ a ``collection_name`` parameter, if you don't give it, the referenced model will
 object_test.test1_set to get reversed data set. And if there are two and above
 relation on same model, you need to define different ``collection_name`` for each
 relation. So ``a1`` could use ``a1.tttt`` to get the reversed data set relation to it.
-For now, Uliweb ORM will not create Foreign Key constrain, because when creating 
+For now, uliorm will not create Foreign Key constrain, because when creating 
 a table, if there is a foreign key constrain, the foreign table should be created
 first, then this table. And it has some difficult for distributed apps.
 
@@ -426,7 +427,7 @@ Many to Many
     >>> g1.users.add(a)
     >>> g1.users.add(b)
     
-You can use ``ManyToMany`` to reference a many to many relation. Uliweb ORM will
+You can use ``ManyToMany`` to reference a many to many relation. uliorm will
 work like Django, it'll create the third table automatically, for example, the
 third table of above example will be: group_user_users, it's the two table names
 (user and group) and ManyToMany property name (users). The table structure of 
@@ -519,6 +520,18 @@ Update an instance
     user.uesrname = 'user'
     user.save()
     
+Other APIs
+^^^^^^^^^^^^
+
+to_dict([\*fields])
+    Dumps instance to a dict object. If there is no ``fields`` parameter, it'll dump
+    all fields of the instance. And you can pass fields which you want to dumps, 
+    for example::
+    
+        a = User.get(1)
+        a.to_dict() #this will dump all fields 
+        a.to_dict('name', 'age')    #this will only dump 'name' and 'age' fields
+        
 Model Level
 ~~~~~~~~~~~~~~~~
 
@@ -598,6 +611,16 @@ calling all() or filter() first.
 .. code:: python
 
     User.count(User.c.year<18)
+    
+Other APIs
+^^^^^^^^^^^^^
+
+bind(metadata=None, auto_create=False)
+    Binds current class to a metadata. If ``auto_create`` if ``True``, then it'll automatically
+    create the table.
+    
+create()
+    Create table, and will check if the table is existed first.
     
 Relation Level
 ~~~~~~~~~~~~~~~~~
@@ -681,10 +704,55 @@ delete(\*objects)
 Transacation
 --------------
 
-If you are using Uliweb ORM, you can install ``middle_transaction.TransactionMiddle``
+If you are using uliorm, you can install ``middle_transaction.TransactionMiddle``
 to ``MIDDLEWARE_CLASSES`` in ``settings.ini``. So when the request is coming, the 
 transaction is began, and when the response is returned, the transaction will be committed.
 And if there are exceptions, the transaction will be rollbacked.
+
+If you want to control the transacation manually, you could get the connection
+object first::
+
+    db = get_connection()
+    
+Then there are many functions you can use::
+
+    db.begin()      #start a transacation
+    db.commit()     #commit
+    db.rollback()   #rollback
+    
+Model Register & Reference
+----------------------------
+
+Uliweb also provides a new way to deal with model usage. 
+
+1. When you import a model class, it'll be automatically register to a global 
+   variable, and you can get back the model later according the tablename.
+2. You can also register a model in string format, more details see set_model
+   explanation.
+3. Call get_model(tablename) to get a real model class instance.
+4. Reference, ManyToMany can also accept a string(tablename) parameter instead
+   of a model class.
+5. Models can be configured in settings.ini, for examle::
+    
+    [MODELS]
+    user = 'uliweb.contrib.auth.models.User'
+    
+   For the key is the tablename, and the value is the string format of the 
+   model also with its module name which belongs.
+
+What's the use of it? Think about you have several apps, and each app has its 
+own models.py, and one app may need to reference some models from others. So
+the common situation, you may import the models from other models.py. This is
+no problem at all. But what will happen when you want to change the referenced 
+models, you may think out that "I can change them directly". But if these models
+are not maintained by you, so change them may not be a good appoach. With 
+referencing models by string format tablename, you can easily replace one app
+with a new app, and implement new models in new app. Just define MODELS mapping
+in new app's settings.ini, then use string tablename in Reference, ManyToMany or
+get the model via calling get_model(tablename).
+
+Of cause this appoach is optional, just when you want to make your app is more 
+easy to be replaced.
 
 How to use ORM in your program
 ----------------------------------
@@ -695,7 +763,7 @@ Mysql Issues
 Encoding Setting
 ~~~~~~~~~~~~~~~~~
 
-Uliweb ORM will default use utf8 encoding when creating the table in Mysql even
+uliorm will default use utf8 encoding when creating the table in Mysql even
 if the default charset of mysql is not utf8. So that if you are using Mysql
 you should check if the default charset of your sechma is utf8 encoding, if not
 you should add charset in connection string, just like::
@@ -706,8 +774,8 @@ you should add charset in connection string, just like::
 The charset=utf8 is needed when the default charset of server is not utf8, 
 otherwise you don't need to set it.
     
-API
-------
+Module Level API
+-------------------
 
 set_auto_create(flag)
     Set auto create table flag. The flag default is True.
@@ -716,3 +784,35 @@ set_debug_query(flag)
     Set debug mode. If set, the SQL statements will be ouputed in logs.
     If you've gotten a db instance from get_connection(), you can also
     simply set ``db.echo = True`` to enable the debug mode.
+    
+set_encoding(encoding)
+    Set default encoding. Default is 'utf-8'.
+    
+get_connection(connection='', metadata=_default_metadata, default=True, debug=None, \*\*args)
+    Establish a connection to database, and return the connection object.
+    
+set_model(model, tablename=None, created=None)
+    Register a model or model string. For example::
+    
+        set_model(User)
+        set_model('uliweb.contrib.models.User', 'users')
+        
+    If you pass a model instance to set_model, you don't need to pass it a 
+    tablename parameter. But if you pass a string as model parameter to it,
+    you should also need to pass a tablename. And created parameter used for
+    indicate that if the table has been created already. So for common usage,
+    you don't need to care about this parameter.
+    
+get_model(model)
+    Get the real model object according to the model parameter. And the model
+    parameter could be a real model instance, in this case, the model will be
+    directly returned. And the model parameter could be tablename, so uliorm
+    will use it to find the registered value, and if the value is also a model
+    instance, then just return it. But if the value is a string, then import it
+    according the value.
+    
+Testing Code
+---------------
+
+There are some testing code in uliweb/test/test_orm.py, so you can see some examples
+of how to use uliorm.

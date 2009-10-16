@@ -1087,9 +1087,11 @@ class Model(object):
     def _set_saved(self):
         self._old_values = self.to_dict()
         
-    def to_dict(self):
+    def to_dict(self, *fields):
         d = {}
         for k, v in self.properties.items():
+            if fields and not k in fields:
+                continue
             if not isinstance(v, ManyToMany):
                 t = v.get_value_for_datastore(self)
                 if isinstance(t, Model):
