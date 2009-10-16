@@ -5,7 +5,7 @@
 
 __all__ = ['Field', 'get_connection', 'Model', 'create_all',
     'set_debug_query', 'set_auto_create', 'set_connection',
-    'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 
+    'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
@@ -23,7 +23,6 @@ __default_encoding__ = 'utf-8'
 import decimal
 import threading
 import datetime
-import types
 from uliweb.utils import date
 from sqlalchemy import *
 from sqlalchemy.sql import select
@@ -361,8 +360,6 @@ class CharProperty(Property):
     def convert(self, value):
         if isinstance(value, str):
             return unicode(value, __default_encoding__)
-        elif isinstance(value, unicode):
-            return value
         else:
             return self.data_type(value)
     
@@ -435,12 +432,12 @@ class DateProperty(DateTimeProperty):
     data_type = datetime.date
     field_class = Date
     
-    def get_value_for_datastore(self, model_instance):
-        value = super(DateProperty, self).get_value_for_datastore(model_instance)
-        if value is not None:
-            value = date.to_datetime(value)
+    def validate(self, value):
+        value = super(DateProperty, self).validate(value)
+        if value:
+            return date.to_date(value)
         return value
-
+    
     def make_value_from_datastore(self, value):
         if value is not None:
             value = date.to_date(value)
@@ -448,6 +445,7 @@ class DateProperty(DateTimeProperty):
 
     #if the value is datetime.datetime, this convert will not be invoked at all
     #Todo: so if I need to fix it?
+    #this is fixed by call date.to_date(value) in validate() method
     def convert(self, value):
         assert isinstance(value, (str, unicode, datetime.datetime)), \
             'The value of DataProperty should be str, unicode, or datetime.datetime type.'\
@@ -466,12 +464,6 @@ class TimeProperty(DateTimeProperty):
     data_type = datetime.time
     field_class = Time
     
-    def get_value_for_datastore(self, model_instance):
-        value = super(TimeProperty, self).get_value_for_datastore(model_instance)
-        if value is not None:
-            value = date.to_datetime(value)
-        return value
-
     def make_value_from_datastore(self, value):
         if value is not None:
             value = date.to_time(value)
@@ -500,10 +492,8 @@ class IntegerProperty(Property):
     
     def validate(self, value):
         value = super(IntegerProperty, self).validate(value)
-        if value is None:
-            return value
-        if not isinstance(value, (int, long)) or isinstance(value, bool):
-            raise BadValueError('Property %s must be an int, not a %s'
+        if value and not isinstance(value, (int, long, bool)):
+            raise BadValueError('Property %s must be an int, long or bool, not a %s'
                 % (self.name, type(value).__name__))
         return value
 
@@ -515,17 +505,20 @@ class FloatProperty(Property):
     
     def __init__(self, verbose_name=None, default=0.0, **kwds):
         super(FloatProperty, self).__init__(verbose_name, default=default, **kwds)
-   
-    def _create_type(self):
+        precision = 10
         if self.max_length:
             precision = self.max_length
         if self.kwargs.get('precision', None):
             precision = self.kwargs.pop('precision')
+        self.precision = precision
+        
         length = 2
         if self.kwargs.get('length', None):
             length = self.kwargs.pop('length')
+        self.length = length
         
-        f_type = self.field_class(**dict(precision=precision, length=length))
+    def _create_type(self):
+        f_type = self.field_class(**dict(precision=self.precision, length=self.length))
         return f_type
     
     def validate(self, value):
@@ -566,42 +559,6 @@ class BooleanProperty(Property):
             raise BadValueError('Property %s must be a boolean, not a %s' 
                 % (self.name, type(value).__name__))
         return value
-
-#class FileProperty(Property):
-#    """
-#    This Property can be used to store file-like object, so you can pass it
-#    a real file object or StringIO object, as soon as the object has 'read'
-#    and 'write' function.
-#    
-#    But you should notice that it'll use the currect file point, so if you 
-#    want to save the whole file content, you should reset the file point to the
-#    beginning position.
-#    """
-#    data_type = None
-#    field_class = BLOB
-#    
-#    def validate(self, value):
-#        value = super(FileProperty, self).validate(value)
-#        if value is None:
-#            return value
-#        if not hasattr(value, 'read') or not hasattr(value, 'write'):
-#            raise BadValueError('Property %s must be a file-like object, not a %s'
-#                % (self.name, type(value).__name__))
-#        return value
-#    
-#    def get_value_for_datastore(self, model_instance):
-#        value = super(FileProperty, self).get_value_for_datastore(model_instance)
-#        if value is not None:
-#            value = value.read()
-#        return value
-#    
-#    def make_value_from_datastore(self, value):
-#        import cStringIO
-#        buf = cStringIO.StringIO()
-#        if value is not None:
-#            buf.write(value)
-#            buf.seek(0)
-#        return buf
 
 class ReferenceProperty(Property):
     """A property that represents a many-to-one reference to another model.
@@ -1137,7 +1094,7 @@ class Model(object):
                 t = v.get_value_for_datastore(self)
                 if isinstance(t, Model):
                     t = t.id
-                d[k] = t
+                d[k] = self._dump_field(t)
         return d
     
     def _dump_field(self, v):
@@ -1147,6 +1104,8 @@ class Model(object):
             return v.strftime('%Y-%m-%d')
         elif isinstance(v, datetime.time):
             return v.strftime('%H:%M:%S')
+        elif isinstance(v, decimal.Decimal):
+            return str(v)
         else:
             return v
            

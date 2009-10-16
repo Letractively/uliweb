@@ -236,39 +236,6 @@ def test_8():
     <User {'username':u'c','parent':<User {'username':u'a','parent':None,'id':1}>,'id':3}>
     """
     
-def test_9():
-    """
-    >>> set_debug_query(True)
-    >>> db = get_connection('sqlite://')
-    >>> db.metadata.drop_all()
-    >>> import datetime
-    >>> class Test(Model):
-    ...     date1 = DateTimeProperty()
-    ...     date2 = DateProperty()
-    ...     date3 = TimeProperty()
-    >>> a = Test(date1=datetime.datetime(2009,1,1,14,0,5), date2=datetime.date(2009,1,1), date3=datetime.time(14,0,0)).save()
-    >>> a
-    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'id':1}>
-    >>> b = Test(date1='2009-1-1 14:0:5', date2="2009-1-1", date3="14:0:5").save()
-    >>> b
-    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'id':2}>
-    >>> t = datetime.datetime(2009,1,1,14,0,5)
-    >>> c = Test(date1=t, date2=t, date3=t).save()
-    >>> c
-    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.datetime(2009, 1, 1, 14, 0, 5),'date3':datetime.time(14, 0, 5),'id':3}>
-    >>> try:
-    ...     d = Test(date1="2008*99").save()
-    ... except Exception, e:
-    ...     print e
-    The datetime value is not a valid format
-    >>> for i in Test.all():
-    ...     print i
-    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'id':1}>
-    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'id':2}>
-    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'id':3}>
-    
-    """
-    
 def test_10():
     """
     >>> db = get_connection('sqlite://')
@@ -280,13 +247,133 @@ def test_10():
     u'abc'
     """
 
+def test_floatproperty():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     f = FloatProperty()
+    >>> Test.f.precision
+    10
+    >>> class Test1(Model):
+    ...     f = FloatProperty(precision=6)
+    >>> Test1.f.precision
+    6
+    >>> class Test2(Model):
+    ...     f = FloatProperty(max_length=5)
+    >>> Test2.f.precision
+    5
+    >>> a = Test2(f=23.123456789).save()
+    >>> a
+    <Test2 {'f':23.123456788999999,'id':1}>
+    >>> Test2.get(1)
+    <Test2 {'f':23.123456788999999,'id':1}>
+    """
+    
+def test_datetime_property():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     date1 = DateTimeProperty()
+    ...     date2 = DateProperty()
+    ...     date3 = TimeProperty()
+    >>> a = Test()
+    >>> #test common datetime object
+    >>> a.date1=datetime.datetime(2009,1,1,14,0,5)
+    >>> a.date2=datetime.date(2009,1,1)
+    >>> a.date3=datetime.time(14,0,5)
+    >>> #test to_dict function
+    >>> print a.to_dict()
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:05', 'date2': '2009-01-01', 'id': None}
+    >>> print repr(a.date1)
+    datetime.datetime(2009, 1, 1, 14, 0, 5)
+    >>> print repr(a.date2)
+    datetime.date(2009, 1, 1)
+    >>> print repr(a.date3)
+    datetime.time(14, 0, 5)
+    >>> #test saving result
+    >>> print a.save()
+    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'id':1}>
+    >>> #test to_dict function
+    >>> print a.to_dict()
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:05', 'date2': '2009-01-01', 'id': 1}
+    >>> #test different datetime object to diffent datetime property
+    >>> a.date2=datetime.datetime(2009,1,1,14,0,5)
+    >>> a.date3=datetime.datetime(2009,1,1,14,0,5)
+    >>> print repr(a.date2)
+    datetime.date(2009, 1, 1)
+    >>> print repr(a.date3)
+    datetime.time(14, 0, 5)
+    >>> #test string format to datetime property
+    >>> a.date1 = '2009-01-01 14:00:05'
+    >>> a.date2 = '2009-01-01'
+    >>> a.date3 = '14:00:05'
+    >>> print repr(a.date1)
+    datetime.datetime(2009, 1, 1, 14, 0, 5)
+    >>> print repr(a.date2)
+    datetime.date(2009, 1, 1)
+    >>> print repr(a.date3)
+    datetime.time(14, 0, 5)
+    >>> #test different string format to datetime property
+    >>> a.date1 = '2009/01/01 14:00:05'
+    >>> a.date2 = '2009-01-01 14:00:05'
+    >>> a.date3 = '2009-01-01 14:00:05'
+    >>> print repr(a.date1)
+    datetime.datetime(2009, 1, 1, 14, 0, 5)
+    >>> print repr(a.date2)
+    datetime.date(2009, 1, 1)
+    >>> print repr(a.date3)
+    datetime.time(14, 0, 5)
+    """
+    
+def test_to_dict():
+    """
+    >>> set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> import datetime
+    >>> class Test(Model):
+    ...     string = StringProperty(max_length=40)
+    ...     boolean = BooleanProperty()
+    ...     integer = IntegerProperty()
+    ...     date1 = DateTimeProperty()
+    ...     date2 = DateProperty()
+    ...     date3 = TimeProperty()
+    ...     float = FloatProperty()
+    ...     decimal = DecimalProperty()
+    >>> a = Test()
+    >>> a.date1=datetime.datetime(2009,1,1,14,0,5)
+    >>> a.date2=datetime.date(2009,1,1)
+    >>> a.date3=datetime.time(14,0,0)
+    >>> a.string = 'limodou'
+    >>> a.boolean = True
+    >>> a.integer = 200
+    >>> a.float = 200.02
+    >>> a.decimal = decimal.Decimal("10.2")
+    >>> a.to_dict()
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': u'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': None}
+    >>> a.save()
+    <Test {'string':u'limodou','boolean':True,'integer':200,'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'float':200.02000000000001,'decimal':Decimal("10.2"),'id':1}>
+    >>> a.to_dict()
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': u'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': 1}
+    """
 #if __name__ == '__main__':
 #    set_debug_query(True)
-#    db = get_connection('sqlite://')
+#    db = get_connection('mysql://root:limodou@localhost/test')
 #    db.metadata.drop_all()
-#    import datetime
 #    class Test(Model):
-#        username = Field(unicode)
-#    a = Test(username='limodou').save()
-#    print repr(a.username)
-#    print list(Test.all())
+#        f = FloatProperty()
+#    print Test.f.precision
+#    class Test1(Model):
+#        f = FloatProperty(precision=6)
+#    print Test1.f.precision
+#    class Test2(Model):
+#        f = FloatProperty(max_length=5)
+#    print Test2.f.precision
+#    a = Test2(f=23.123456789).save()
+#    print a
+#    print Test2.get(1)
+    
+    
+    

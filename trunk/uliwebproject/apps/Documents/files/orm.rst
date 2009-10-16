@@ -140,7 +140,7 @@ of the table. Just write a class method OnInit, for example::
         def OnInit(cls):
             Index('my_indx', cls.c.title, cls.c.owner, unique=True)
 
-For now, I only test ``Index``, and you can also import it from uliweb.orm.
+For now, I only test ``Index``, and you can also import it from ``uliweb.orm``.
 
 Property Definition
 ~~~~~~~~~~~~~~~~~~~~~
@@ -304,7 +304,13 @@ This property will be mapped to ``Numric`` type. It have two more parameters:
 FloatProperty
 ~~~~~~~~~~~~~~~
 
-This property will be mapped to ``Float`` type.
+This property will be mapped to ``Float`` type. It have one special parameter:
+
+    precision
+        Default is 10.
+    
+If you are passing ``max_length`` but no ``precision``, the ``precision`` will be the same
+value of ``max_length``.
 
 IntegerProperty
 ~~~~~~~~~~~~~~~~~~
