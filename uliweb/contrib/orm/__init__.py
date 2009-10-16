@@ -5,9 +5,9 @@ import uliweb
 def startup(sender):
     from uliweb import orm
     
-    orm.set_debug_query(sender.settings.ORM.DEBUG_LOG)
-    orm.set_auto_create(sender.settings.ORM.AUTO_CREATE)
-    orm.get_connection(sender.settings.ORM.CONNECTION)
+    orm.set_debug_query(uliweb.settings.ORM.DEBUG_LOG)
+    orm.set_auto_create(uliweb.settings.ORM.AUTO_CREATE)
+    orm.get_connection(uliweb.settings.ORM.CONNECTION)
 
     if 'MODELS' in uliweb.settings:
         for k, v in uliweb.settings.MODELS.items():
