@@ -125,7 +125,9 @@ Tabel Arguments
 ~~~~~~~~~~~~~~~~~
 
 In SQLAlchemy, when you creating a Table, you may pass some extra arguments, just
-like: mysql_engine, etc. So you could define ``__table_args__`` in Model, for example::
+like: mysql_engine, etc. So you could define ``__table_args__`` in Model, for example:
+
+.. code:: python
 
     class Todo(Model):
         __table_args__ = dict(mysql_charset='utf8')
@@ -134,7 +136,9 @@ OnInit Method
 ~~~~~~~~~~~~~~~
 
 uliorm also enable you do some initialization works before doing the creation
-of the table. Just write a class method OnInit, for example::
+of the table. Just write a class method OnInit, for example:
+
+.. code: python
 
     class Todo(Model):
         @classmethod
@@ -468,18 +472,24 @@ Instance Level
 Create an Instance
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Say there is a User model, the class definition is::
+Say there is a User model, the class definition is:
+
+.. code: python
 
     class User(Model):
         username = Field(CHAR, max_length=20)
         year = Field(int)
 
-So if you want to create an instance of User model, just do like this::
+So if you want to create an instance of User model, just do like this:
+
+.. code: python
 
     user = User(username='limodou', year=36)
     
 But it'll not be saved in database, it just creates an instance, you need call
-``put`` or ``save`` to save it::
+``put`` or ``save`` to save it:
+
+.. code: python
 
     user.save()
     #or
@@ -496,7 +506,9 @@ Get an Instance
     user = User.get(User.c.id==5)
     
 If you want to get an instance from a model, you should call ``get`` method of a model.
-You can pass a integer or a query condition. So ``User.get(5)`` will be exact::
+You can pass a integer or a query condition. So ``User.get(5)`` will be exact:
+
+.. code: python
 
     User.get(User.c.id==5)
     
@@ -526,7 +538,9 @@ Other APIs
 to_dict([\*fields])
     Dumps instance to a dict object. If there is no ``fields`` parameter, it'll dump
     all fields of the instance. And you can pass fields which you want to dumps, 
-    for example::
+    for example:
+
+    .. code: python
     
         a = User.get(1)
         a.to_dict() #this will dump all fields 
@@ -542,7 +556,9 @@ There are two query methods: all() and filter(). all() and filter() will both
 return an ``Result`` object, and all() will return all records of a model, but filter()
 will only return records of a model which match the condition passed to filter().
 
-For example::
+For example:
+
+.. code: python
 
     User.all()
     User.filter(User.c.year > 18)
@@ -554,7 +570,9 @@ When you executing all() or filter(), it'll return a Result object, and you can
 use it for further opration, just like: filter, count, delete, order_by, limit,
 offset, etc. And other operation will also return Result object, for example, when
 you access the reversed relation property. Result has many methods, and you can 
-combine them one by one, for example::
+combine them one by one, for example:
+
+.. code: python
 
     result.all().filter(User.c.year>18).count()
 
@@ -590,6 +608,12 @@ values(\*fields)
     
         >>> print a1.tttt.all().values(Test1.c.name, Test1.c.year)
         [(u'user', 5), (u'aaaa', 10)]
+        
+values_one(\*fields)
+    Just like values() but only return one record. If no record, then return None.
+        
+one()
+    Only return the lastest one record, if no records, then return None.
     
 Delete objects
 ^^^^^^^^^^^^^^^^^^^

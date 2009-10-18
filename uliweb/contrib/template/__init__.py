@@ -80,7 +80,7 @@ def link_tag_handler(app):
         if not args:
             args = 'bottomlinks'
         else:
-            args = args[0]
+            args = args
         collection[__id] = {args:new_links}
         __id += 1
         env['collection'] = collection

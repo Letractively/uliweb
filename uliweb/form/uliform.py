@@ -336,7 +336,10 @@ class UnicodeField(BaseField):
         """
         if data is None:
             return data
-        return unicode(data, self.encoding)
+        if isinstance(data, unicode):
+            return data
+        else:
+            return unicode(data, self.encoding)
   
 class PasswordField(StringField):
     """
