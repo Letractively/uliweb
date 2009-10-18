@@ -7,7 +7,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'create_all',
     'set_debug_query', 'set_auto_create', 'set_connection',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
-    'TimeProperty', 'DecimalProperty', 'FloatProperty',
+    'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
@@ -248,7 +248,8 @@ class Property(object):
     def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
-        args['default'] = self.default_value()
+        if callable(self.default):
+            args['default'] = self.default
         args['primary_key'] = self.kwargs.pop('primary_key', False)
         args['autoincrement'] = self.kwargs.pop('autoincrement', False)
         args['index'] = self.kwargs.pop('index', False)
@@ -288,7 +289,9 @@ class Property(object):
         #a object really need to save
         setattr(model_instance, self._attr_name(), value)
 
-    def default_value(self):
+    def default_value(self, model_instance=None):
+        if callable(self.default):
+            return self.default(model_instance)
         return self.default
 
     def validate(self, value):
@@ -299,11 +302,23 @@ class Property(object):
             if self.choices:
                 match = False
                 for choice in self.choices:
-                    if choice == value:
-                        match = True
+                    if isinstance(choice, tuple):
+                        if choice[0] == value:
+                            match = True
+                    else:
+                        if choice == value:
+                            match = True
+                    if match:
+                        break
                 if not match:
+                    c = []
+                    for choice in self.choices:
+                        if isinstance(choice, tuple):
+                            c.append(choice[0])
+                        else:
+                            c.append(choice)
                     raise BadValueError('Property %s is %r; must be one of %r' %
-                        (self.name, value, self.choices))
+                        (self.name, value, c))
         if (value is not None) and self.data_type and (not isinstance(value, self.data_type)):
             try:
                 value = self.convert(value)
@@ -346,7 +361,10 @@ class Property(object):
             
     def _attr_name(self):
         return '_' + self.name + '_'
-   
+    
+    def to_str(self, v):
+        return str(v)
+    
 class CharProperty(Property):
     data_type = unicode
     field_class = CHAR
@@ -369,6 +387,9 @@ class CharProperty(Property):
         else:
             f_type = self.field_class
         return f_type
+    
+    def to_str(self, v):
+        return v
     
 class StringProperty(CharProperty):
     field_class = String
@@ -405,19 +426,7 @@ class DateTimeProperty(Property):
             raise BadValueError('Property %s must be a %s' %
                 (self.name, self.data_type.__name__))
         return value
-
-#    def default_value(self):
-#        if self.auto_now or self.auto_now_add:
-#            return self.now()
-#        return Property.default_value(self)
-#
-    def get_value_for_datastore(self, model_instance):
-        if self.auto_now:
-            return self.now()
-        else:
-            return super(DateTimeProperty,
-                self).get_value_for_datastore(model_instance)
-
+    
     @staticmethod
     def now():
         return now()
@@ -427,6 +436,9 @@ class DateTimeProperty(Property):
         if d:
             return d
         raise BadValueError('The datetime value is not a valid format')
+    
+    def to_str(self, v):
+        return v.strftime('%Y-%m-%d %H:%M:%S')
     
 class DateProperty(DateTimeProperty):
     data_type = datetime.date
@@ -458,6 +470,9 @@ class DateProperty(DateTimeProperty):
                 return date.to_date(d)
             raise BadValueError('The date value is not a valid format')
     
+    def to_str(self, v):
+        return v.strftime('%Y-%m-%d')
+        
 class TimeProperty(DateTimeProperty):
     """A time property, which stores a time without a date."""
 
@@ -481,6 +496,9 @@ class TimeProperty(DateTimeProperty):
                 return date.to_time(d)
             raise BadValueError('The time value is not a valid format')
     
+    def to_str(self, v):
+        return v.strftime('%H:%M:%S')
+        
 class IntegerProperty(Property):
     """An integer property."""
 
@@ -596,7 +614,8 @@ class ReferenceProperty(Property):
     def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
-        args['default'] = self.default_value()
+        if not callable(self.default):
+            args['default'] = self.default
         args['primary_key'] = self.kwargs.pop('primary_key', False)
         args['autoincrement'] = self.kwargs.pop('autoincrement', False)
         args['index'] = self.kwargs.pop('index', False)
@@ -725,7 +744,8 @@ class OneToOne(ReferenceProperty):
     def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
-        args['default'] = self.default_value()
+        if not callable(self.default):
+            args['default'] = self.default
         args['primary_key'] = self.kwargs.pop('primary_key', False)
         args['autoincrement'] = self.kwargs.pop('autoincrement', False)
         args['index'] = self.kwargs.pop('index', False)
@@ -759,6 +779,7 @@ class Result(object):
         self.funcs = []
         self.args = args
         self.kwargs = kwargs
+        self.result = None
         
     def all(self):
         return self
@@ -785,6 +806,12 @@ class Result(object):
         self.funcs.append(('with_only_columns', (args,), kwargs))
         return self.run()
     
+    def values_one(self, *args, **kwargs):
+        self.funcs.append(('with_only_columns', (args,), kwargs))
+        self.run()
+        result = self.result.fetchone()
+        return result
+
     def distinct(self, *args, **kwargs):
         self.funcs.append(('distinct', args, kwargs))
         return self
@@ -801,12 +828,28 @@ class Result(object):
         query = select(self.columns, self.condition)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
-        r = query.execute()
-        return r
+        self.result = query.execute()
+        return self.result
+    
+    def one(self):
+        self.run()
+        result = self.result.fetchone()
+        if result:
+            d = self.model._data_prepare(result)
+            o = self.model(**d)
+            o._set_saved()
+            return o
+    
+    def __del__(self):
+        if self.result:
+            self.result.close()
 
     def __iter__(self):
-        r = self.run()
-        for obj in r:
+        self.result = self.run()
+        while 1:
+            obj = self.result.fetchone()
+            if not obj:
+                raise StopIteration
             d = self.model._data_prepare(obj)
             o = self.model(**d)
             o._set_saved()
@@ -823,6 +866,7 @@ class ManyResult(Result):
         self.columns = [self.modelb.table]
         self.condition = None
         self.funcs = []
+        self.result = None
         
     def add(self, *objs):
         for o in objs:
@@ -850,13 +894,6 @@ class ManyResult(Result):
         else:
             self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
     
-    def filter(self, condition):
-        self.condition = condition & self.condition
-        return self
-        
-    def all(self):
-        return self
-    
     def count(self):
         result = self.table.count(self.table.c[self.fielda]==self.valuea).execute()
         count = 0
@@ -868,22 +905,34 @@ class ManyResult(Result):
             count = 0
         return count
     
-    def values(self, *args, **kwargs):
-        self.funcs.append(('with_only_columns', (args,), kwargs))
-        return self.run()
-    
     def run(self):
         query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
         ids = [x[0] for x in query.execute()]
         query = select(self.columns, self.modelb.c.id.in_(ids) & self.condition)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
-        r = query.execute()
-        return r
+        self.result = query.execute()
+        return self.result
         
+    def one(self):
+        self.run()
+        result = self.result.fetchone()
+        if result:
+            d = self.modelb._data_prepare(result)
+            o = self.modelb(**d)
+            o._set_saved()
+            return o
+
+    def __del__(self):
+        if self.result:
+            self.result.close()
+    
     def __iter__(self):
-        r = self.run()
-        for obj in r:
+        self.run()
+        while 1:
+            obj = self.result.fetchone()
+            if not obj:
+                raise StopIteration
             d = self.modelb._data_prepare(obj)
             o = self.modelb(**d)
             o._set_saved()
@@ -1081,7 +1130,7 @@ class Model(object):
                 if prop.name in kwargs:
                     value = kwargs[prop.name]
                 else:
-                    value = prop.default_value()
+                    value = prop.default_value(self)
                 prop.__set__(self, value)
         
     def _set_saved(self):
@@ -1096,10 +1145,10 @@ class Model(object):
                 t = v.get_value_for_datastore(self)
                 if isinstance(t, Model):
                     t = t.id
-                d[k] = self._dump_field(t)
+                d[k] = self.field_str(t)
         return d
     
-    def _dump_field(self, v):
+    def field_str(self, v):
         if isinstance(v, datetime.datetime):
             return v.strftime('%Y-%m-%d %H:%M:%S')
         elif isinstance(v, datetime.date):
@@ -1126,6 +1175,10 @@ class Model(object):
                         d[k] = v.now()
                     elif x is not None:
                         d[k] = x
+                    else:
+                        x = v.default_value(self)
+                        if x:
+                            d[k] = x
         else:
             d = {}
             d['id'] = self.id
@@ -1137,7 +1190,7 @@ class Model(object):
                         x = x.id
                     if isinstance(v, DateTimeProperty) and v.auto_now:
                         d[k] = v.now()
-                    elif (x is not None) and (self._dump_field(t) != self._dump_field(x)):
+                    elif (x is not None) and (t != self.field_str(x)):
                         d[k] = x
         
         return d
@@ -1157,7 +1210,7 @@ class Model(object):
                     self.table.update(self.table.c.id == self.id).execute(**d)
             for k, v in d.items():
                 x = self.properties[k].get_value_for_datastore(self)
-                if self._dump_field(x) != self._dump_field(v):
+                if self.field_str(x) != self.field_str(v):
                     setattr(self, k, v)
             self._set_saved()
         return self
@@ -1244,11 +1297,9 @@ class Model(object):
     @classmethod
     def get(cls, condition=None, **kwargs):
         if isinstance(condition, (int, long)):
-            for obj in cls.filter(cls.c.id==condition):
-                return obj
+            return cls.filter(cls.c.id==condition).one()
         else:
-            for obj in cls.filter(condition):
-                return obj
+            return cls.filter(condition).one()
     
     @classmethod
     def _data_prepare(cls, record):

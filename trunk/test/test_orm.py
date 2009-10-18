@@ -349,6 +349,76 @@ def test_to_dict():
     >>> a.to_dict()
     {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': u'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': 1}
     """
+    
+def test_match():
+    """
+    >>> set_debug_query(False)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> c = ['abc', 'def']
+    >>> class Test(Model):
+    ...     string = StringProperty(max_length=40, choices=c)
+    >>> a = Test()
+    >>> a
+    <Test {'string':u'','id':None}>
+    >>> #test the correct assign
+    >>> a.string = 'abc'
+    >>> #test the error assign
+    >>> try:
+    ...     a.string = 'aaa'
+    ... except Exception, e:
+    ...     print e
+    Property string is 'aaa'; must be one of ['abc', 'def']
+    >>> #test tuple choices
+    >>> c = [('abc', 'Prompt'), ('def', 'Hello')]
+    >>> Test.string.choices = c
+    >>> #test the correct assign
+    >>> a.string = 'abc'
+    >>> #test the error assign
+    >>> try:
+    ...     a.string = 'aaa'
+    ... except Exception, e:
+    ...     print e
+    Property string is 'aaa'; must be one of ['abc', 'def']
+    """
+
+def test_result():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int, default=0)
+    >>> Test(username='limodou', year=10).save()
+    <Test {'username':u'limodou','year':10,'id':1}>
+    >>> Test(username='user', year=5).save()
+    <Test {'username':u'user','year':5,'id':2}>
+    >>> print list(Test.all())
+    [<Test {'username':u'limodou','year':10,'id':1}>, <Test {'username':u'user','year':5,'id':2}>]
+    >>> print list(Test.filter(Test.c.year > 5))
+    [<Test {'username':u'limodou','year':10,'id':1}>]
+    >>> print list(Test.all().order_by(Test.c.year.desc()))
+    [<Test {'username':u'limodou','year':10,'id':1}>, <Test {'username':u'user','year':5,'id':2}>]
+    >>> print list(Test.all().order_by(Test.c.year.asc(), Test.c.username.desc()))
+    [<Test {'username':u'user','year':5,'id':2}>, <Test {'username':u'limodou','year':10,'id':1}>]
+    >>> print Test.count()
+    2
+    >>> print Test.filter(Test.c.year>5).count()
+    1
+    >>> print list(Test.all().values(Test.c.username))
+    [(u'limodou',)]
+    >>> print Test.all().values_one(Test.c.username)
+    (u'limodou',)
+    >>> print list(Test.filter(Test.c.year<0))
+    []
+    >>> print Test.filter(Test.c.year<0).one()
+    None
+    >>> print Test.filter(Test.c.year>5).one()
+    <Test {'username':u'limodou','year':10,'id':1}>
+    """
+    
+
 #if __name__ == '__main__':
 #    set_debug_query(True)
 #    db = get_connection('mysql://root:limodou@localhost/test')
