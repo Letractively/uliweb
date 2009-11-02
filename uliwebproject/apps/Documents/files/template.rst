@@ -67,10 +67,9 @@ Reserved Tag Syntax
         
     .. note::
     
-        If you don't want to escape the output, you can use ``xml()`` builtin
-        function, just like this::
+        If you don't want to escape the output, you can use ``{{<<}}`` , just like this::
         
-            {{xml(v)}}
+            {{<< v}}
             
 * ``{{block name}}...{{end}}``
     ``block`` will define a block, and child template can replace it if there is
@@ -136,10 +135,6 @@ Builtin Objects
 
 There are several builtin objects you can use directly list below:
 
-* ``xml()``
-    It's a function, you can use it to unescape output a object if you don't want
-    some special characters(just like: ``&``, ``<``, etc) be converted to HTML entities.
-  
 * ``out``
     It's a object, Uliweb template use it to output the template buffer. If you
     want to output unescape content you can use: ``out.write(v, escape=False)`` or
