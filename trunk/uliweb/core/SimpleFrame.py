@@ -12,7 +12,7 @@ from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
 import template
 from storage import Storage
 import dispatch
-from uliweb.utils.common import pkg, log, sort_list, import_func, wrap_func
+from uliweb.utils.common import pkg, log, sort_list, import_func, wrap_func, timeit
 from uliweb.utils.pyini import Ini
 import uliweb as conf
 from rules import Mapping, add_rule
@@ -246,11 +246,15 @@ def get_app_dir(app):
     if path is not None:
         return path
     else:
+        p = app.split('.')
         try:
-            path = pkg.resource_filename(app, '')
+            path = pkg.resource_filename(p[0], '')
         except ImportError, e:
             log.exception(e)
             path = ''
+        if len(p) > 1:
+            path = os.path.join(path, *p[1:])
+        
         __app_dirs[app] = path
         return path
 
@@ -276,15 +280,17 @@ def get_apps(apps_dir, include_apps=None):
             continue
         else:
             configfile = os.path.join(get_app_dir(p), 'config.ini')
+            
             if os.path.exists(configfile):
                 x = Ini(configfile)
                 if 'DEFAULT' in x:
                     for i in x.DEFAULT.get('REQUIRED_APPS', []):
                         if i not in apps:
                             apps.append(i)
-                        s.append(i)
-                visited.add(p)
-    
+                        if i not in visited:
+                            s.append(i)
+            visited.add(p)
+
     return apps
 
 class Loader(object):
@@ -322,8 +328,9 @@ class Dispatcher(object):
             
         if start:
             dispatch.call(self, 'startup')
-        
+    
     def init(self, apps_dir):
+        import time
         conf.apps_dir = apps_dir
         Dispatcher.apps_dir = apps_dir
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps)
@@ -358,10 +365,6 @@ class Dispatcher(object):
         self.debug = conf.settings.GLOBAL.get('DEBUG', False)
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
         Dispatcher.default_template = pkg.resource_filename('uliweb.core', 'default.html')
-        
-        #setup timezone
-        from uliweb.utils import date
-        date.set_timezone(conf.settings.GLOBAL.TIME_ZONE)
         
         Dispatcher.installed = True
         
@@ -645,7 +648,7 @@ class Dispatcher(object):
                 __import__(v, {}, {}, [''])
             except Exception, e:
                 log.exception(e)
-            
+    
     def install_apps(self):
         for p in self.apps:
             try:

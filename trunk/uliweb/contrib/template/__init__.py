@@ -92,15 +92,6 @@ def startup(sender):
     if sender.settings.TEMPLATE.USE_TEMPLATE_TEMP_DIR:
         template.use_tempdir(sender.settings.TEMPLATE.TEMPLATE_TEMP_DIR)
 
-@bind('prepare_default_env')
-def prepare_default_env(sender, env):
-    def cycle(*elements):
-        while 1:
-            for j in elements:
-                yield j
-
-    env['cycle'] = cycle
-    
 @bind('get_template_tag_handlers')
 def get_template_tag_handlers(sender, handlers):
     handlers['use'] = use_tag_handler(sender)

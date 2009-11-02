@@ -1,9 +1,15 @@
 import time
 import datetime
-try:
-    import pytz
-except:
-    pytz = None
+
+pytz = None
+
+def use_tz():
+    global pytz
+    
+    try:
+        import pytz
+    except:
+        pytz = None
 
 __timezone__ = None
 __local_timezone__ = None

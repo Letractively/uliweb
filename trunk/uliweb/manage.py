@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys, os
 import logging
-from uliweb.utils.common import log, check_apps_dir
+from uliweb.utils.common import log, check_apps_dir, timeit
 import uliweb as conf
         
 apps_dir = 'apps'
@@ -34,7 +34,7 @@ def set_log(app):
     else:
         level = 'INFO'
     log.setLevel(getattr(logging, level, logging.INFO))
-    
+
 def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True):
     from uliweb.utils.common import sort_list
     
@@ -243,7 +243,7 @@ def collect_files(apps_dir, apps):
 def runserver(apps_dir, hostname='localhost', port=5000, 
             threaded=False, processes=1, admin=False):
     """Returns an action callback that spawns a new wsgiref server."""
-    def action(hostname=('h', hostname), port=('p', port), debugger=True,
+    def action(hostname=('h', hostname), port=('p', port), reload=True, debugger=True,
                threaded=threaded, processes=processes):
         """Start a new development server."""
         check_apps_dir(apps_dir)
@@ -259,7 +259,7 @@ def runserver(apps_dir, hostname='localhost', port=5000,
             app = make_application(debugger, apps_dir)
             include_apps = []
         extra_files = collect_files(apps_dir, get_apps(apps_dir)+include_apps)
-        run_simple(hostname, port, app, True, False, True,
+        run_simple(hostname, port, app, reload, False, True,
                    extra_files, 1, threaded, processes)
     return action
 
@@ -274,18 +274,18 @@ def main():
     install_config(apps_dir)
     
     action_runserver = runserver(apps_dir, port=8000)
-    action_runadmin = runserver(apps_dir, port=8000, admin=True)
-    action_makeapp = make_app
-    action_makepkg = make_pkg
-    action_exportstatic = exportstatic
-    from uliweb.i18n.i18ntool import make_extract
-    action_i18n = make_extract(apps_dir)
-    action_extracturls = extracturls
-    action_makeproject = make_project
-    action_call = call_commands
-    
-    #process app's commands.py
-    locals().update(collcet_commands())
+#    action_runadmin = runserver(apps_dir, port=8000, admin=True)
+#    action_makeapp = make_app
+#    action_makepkg = make_pkg
+#    action_exportstatic = exportstatic
+#    from uliweb.i18n.i18ntool import make_extract
+#    action_i18n = make_extract(apps_dir)
+#    action_extracturls = extracturls
+#    action_makeproject = make_project
+#    action_call = call_commands
+#    
+#    #process app's commands.py
+#    locals().update(collcet_commands())
 
     script.run()
 
