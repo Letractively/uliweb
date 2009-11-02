@@ -200,6 +200,17 @@ def sort_list(alist, default=500):
         t.extend(d[k])
     return t
 
+def timeit(func):
+    import time
+    def f(*args, **kwargs):
+        begin = time.time()
+        ret = func(*args, **kwargs)
+        end = time.time()
+        log.info("%s.%s [%s]s" % (func.__module__, func.__name__, end-begin))
+        return ret
+    wrap_func(f, func)
+    return f
+
 if __name__ == '__main__':
     log.info('Info: info')
     try:
