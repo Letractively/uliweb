@@ -274,18 +274,18 @@ def main():
     install_config(apps_dir)
     
     action_runserver = runserver(apps_dir, port=8000)
-#    action_runadmin = runserver(apps_dir, port=8000, admin=True)
-#    action_makeapp = make_app
-#    action_makepkg = make_pkg
-#    action_exportstatic = exportstatic
-#    from uliweb.i18n.i18ntool import make_extract
-#    action_i18n = make_extract(apps_dir)
-#    action_extracturls = extracturls
-#    action_makeproject = make_project
-#    action_call = call_commands
-#    
-#    #process app's commands.py
-#    locals().update(collcet_commands())
+    action_runadmin = runserver(apps_dir, port=8000, admin=True)
+    action_makeapp = make_app
+    action_makepkg = make_pkg
+    action_exportstatic = exportstatic
+    from uliweb.i18n.i18ntool import make_extract
+    action_i18n = make_extract(apps_dir)
+    action_extracturls = extracturls
+    action_makeproject = make_project
+    action_call = call_commands
+    
+    #process app's commands.py
+    locals().update(collcet_commands())
 
     script.run()
 
