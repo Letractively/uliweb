@@ -172,4 +172,6 @@ def test_set_var():
     <BLANKLINE>
     >>> x.get_var('default/key/name')
     'hello'
+    >>> x.get_var('default')
+    <Section {'key/name':'hello'}>
     """

@@ -75,3 +75,6 @@ class SortedDict(object):
 
     def dict(self):
         return self._dict.copy()
+    
+    def copy(self):
+        return self._dict.copy()

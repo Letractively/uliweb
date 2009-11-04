@@ -45,15 +45,17 @@ class SessionCookie(object):
 class Session(dict):
     default_expiry_time = 3600*24*365
     default_storage_type = 'file'
-    default_options = {'table_name':'uliweb_session'}
+    default_options = {'table_name':'uliweb_session', 'data_dir':'./sessions'
+        'file_dir':'./sessions/session_files',
+        'lock_dir':'./sessions/session_files_lock'}
     
     def __init__(self, key=None, storage_type=None, options=None, expiry_time=None):
         dict.__init__(self)
         self._old_value = {}
         self._storage_type = storage_type or self.default_storage_type
-        self._options = options or {}
-        self._options = self._options.copy()
-        self._options.update(self.default_options)
+        self._options = self.default_options
+        if options:
+            self._options.update(options.copy())
         self._storage_cls = self.__get_storage()
         self._storage = None
         self._accessed_time = None

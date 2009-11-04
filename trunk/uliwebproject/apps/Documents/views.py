@@ -2,9 +2,12 @@ from uliweb.core.SimpleFrame import expose
 from Portal.modules.menu import menu
 from uliweb import response, request, application, error, settings
 import os
+from uliweb.utils.cache import get_cache
 
 def __begin__():
     response.menu=menu(request, 'Documents')
+
+cache = get_cache()
 
 @expose('/documents')
 def documents():
@@ -30,12 +33,16 @@ def _show(filename, lang=None, render=True):
             filename = f
     _f = application.get_file(filename, dir='files')
     if _f:
-        content = file(_f).read()
-        if render:
-            content = to_html(template(content, env=application.get_view_env()))
-        else:
-            content = to_html(content)
-        response.write(application.template('show_document.html', locals()))
+        result = cache.get(_f, '')
+        if not result:
+            content = file(_f).read()
+            if render:
+                content = to_html(template(content, env=application.get_view_env()))
+            else:
+                content = to_html(content)
+            result = application.template('show_document.html', locals())
+            cache.put(_f, result)
+        response.write(result)
         return response
     else:
         error("Can't find the file %s" % filename)

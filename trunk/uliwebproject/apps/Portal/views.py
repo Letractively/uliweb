@@ -1,9 +1,13 @@
 from uliweb.core.SimpleFrame import expose
 from Portal.modules.menu import menu
+from uliweb.utils.cache import get_cache
+
+cache = get_cache()
 
 def __begin__():
     response.menu=menu(request, 'Portal')
     
+@cache.cache(expire=3600)
 @expose('/')
 def index():
     return {}

@@ -1,15 +1,39 @@
 import os, sys
 
-def import_func(path):
-    module, func = path.rsplit('.', 1)
-    mod = __import__(module, {}, {}, [''])
-    return getattr(mod, func)
+__module_cached__ = {}
+__func_cached__ = {}
 
-def myimport(module):
-    m = module.split('.')
-    mod = __import__(module)
-    for i in m[1:]:
-        mod = getattr(mod, i)
+def import_mod_func(path, cache=True):
+    global __module_cached__, __func_cached__
+    module, func = path.rsplit('.', 1)
+    if cache:
+        if (module, func) in __func_cached__:
+            return __func_cached__[(module, func)]
+        if module in __module_cached__:
+            mod = __module_cached__[module]
+        else:
+            mod = __import__(module, {}, {}, [''])
+            __module_cached__[module] = mod
+        f = getattr(mod, func)
+        __func_cached__[(module, func)] = (mod, f)
+    else:
+        mod = __import__(module, {}, {}, [''])
+        f = getattr(mod, func)
+    return mod, f
+
+def import_func(func, cache=True):
+    mod, f = import_mod_func(func, cache)
+    return f
+
+def myimport(module, cache=True):
+    if cache:
+        if module in __module_cached__:
+            mod = __module_cached__[module]
+        else:
+            mod = __import__(module, {}, {}, [''])
+            __module_cached__[module] = mod
+    else:
+        mod = __import__(module, {}, {}, [''])
     return mod
 
 def install(packages):
