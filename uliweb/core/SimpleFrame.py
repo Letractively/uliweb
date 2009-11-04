@@ -12,7 +12,7 @@ from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
 import template
 from storage import Storage
 import dispatch
-from uliweb.utils.common import pkg, log, sort_list, import_func, wrap_func, timeit
+from uliweb.utils.common import pkg, log, sort_list, import_func, import_mod_func, myimport, wrap_func
 from uliweb.utils.pyini import Ini
 import uliweb as conf
 from rules import Mapping, add_rule
@@ -330,7 +330,6 @@ class Dispatcher(object):
             dispatch.call(self, 'startup')
     
     def init(self, apps_dir):
-        import time
         conf.apps_dir = apps_dir
         Dispatcher.apps_dir = apps_dir
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps)
@@ -504,9 +503,7 @@ class Dispatcher(object):
         
         #get handler
         if isinstance(endpoint, (str, unicode)):
-            module, func = endpoint.rsplit('.', 1)
-            mod = __import__(module, {}, {}, [''])
-            handler = getattr(mod, func)
+            mod, handler = import_mod_func(endpoint)
         elif callable(endpoint):
             handler = endpoint
             mod = sys.modules[handler.__module__]
@@ -533,7 +530,7 @@ class Dispatcher(object):
                 return self.wrap_result(result, request, response, env)
         
         result = self.call_handler(handler, request, response, env, **values)
-        
+
         result1 = None
         if hasattr(mod, '__end__'):
             f = getattr(mod, '__end__')
@@ -586,7 +583,7 @@ class Dispatcher(object):
         local_env['json'] = json
         
         return self.get_env(local_env)
-        
+       
     def _call_function(self, handler, request, response, env, **values):
         
         for k, v in env.iteritems():
@@ -645,14 +642,14 @@ class Dispatcher(object):
     def install_views(self, views):
         for v in views:
             try:
-                __import__(v, {}, {}, [''])
+                myimport(v)
             except Exception, e:
                 log.exception(e)
     
     def install_apps(self):
         for p in self.apps:
             try:
-                __import__(p)
+                myimport(p)
             except ImportError, e:
                 pass
             except Exception, e:
@@ -771,7 +768,7 @@ class Dispatcher(object):
                         if not ins:
                             ins = cls(self, conf.settings)
                         response = ins.process_response(req, response)
-
+                
             #endif
             
         except HTTPError, e:
