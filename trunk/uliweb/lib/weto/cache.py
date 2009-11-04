@@ -87,6 +87,8 @@ class Cache(object):
         return time.time() < accessed_time + expiry_time
         
     def put(self, key, value=None, expire=None):
+        if value is None:
+            return True
         key = _get_key(key)
         now = time.time()
 
@@ -135,7 +137,8 @@ class Cache(object):
         def _f(func):
             def f(*args, **kwargs):
                 if not k:
-                    key = func.__module__ + '.' + func.__name__
+                    r = repr(args) + repr(sorted(kwargs.items()))
+                    key = func.__module__ + '.' + func.__name__ + r
                 else:
                     key = k
                 try:
