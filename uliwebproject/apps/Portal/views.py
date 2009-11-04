@@ -7,7 +7,7 @@ cache = get_cache()
 def __begin__():
     response.menu=menu(request, 'Portal')
     
-@cache.cache(expire=3600)
+@cache.page()
 @expose('/')
 def index():
     return {}

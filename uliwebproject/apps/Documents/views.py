@@ -7,8 +7,6 @@ from uliweb.utils.cache import get_cache
 def __begin__():
     response.menu=menu(request, 'Documents')
 
-cache = get_cache()
-
 @expose('/documents')
 def documents():
     return _show('content.rst')
@@ -33,16 +31,18 @@ def _show(filename, lang=None, render=True):
             filename = f
     _f = application.get_file(filename, dir='files')
     if _f:
-        result = cache.get(_f, '')
-        if not result:
+        
+        cache = get_cache()
+        @cache.cache(_f)
+        def f():
             content = file(_f).read()
             if render:
                 content = to_html(template(content, env=application.get_view_env()))
             else:
                 content = to_html(content)
-            result = application.template('show_document.html', locals())
-            cache.put(_f, result)
-        response.write(result)
+            return application.template('show_document.html', locals())
+            
+        response.write(f())
         return response
     else:
         error("Can't find the file %s" % filename)

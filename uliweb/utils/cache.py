@@ -1,5 +1,5 @@
 import uliweb
-import weto.cache
+from weto.cache import Cache as CacheCls, CacheKeyException
 from uliweb import Response
 from uliweb.core.SimpleFrame import ResponseProxy
 from uliweb.utils.common import wrap_func
@@ -10,21 +10,19 @@ def get_cache(cache_setting_name='CACHE', cache_storage_setting_name='CACHE_STOR
         expiry_time=uliweb.settings.get_var('%s/expiretime' % cache_setting_name))
     return cache
 
-class Cache(weto.cache.Cache):
-    def cache(self, k=None, expire=None):
+class Cache(CacheCls):
+    def page(self, k=None, expire=None):
         def _f(func):
             def f(*args, **kwargs):
                 from uliweb import request
                 if not k:
-#                    r = repr(args) + repr(sorted(kwargs.items()))
-#                    key = func.__module__ + '.' + func.__name__ + r
                     key = request.url
                 else:
                     key = k
                 try:
                     ret = self.get(key)
                     return ret
-                except weto.cache.CacheKeyException:
+                except CacheKeyException:
                     ret = func(*args, **kwargs)
                     if isinstance(ret, (Response, ResponseProxy)):
                         ret = ret.data
