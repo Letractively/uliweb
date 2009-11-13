@@ -45,7 +45,7 @@ class SessionCookie(object):
 class Session(dict):
     default_expiry_time = 3600*24*365
     default_storage_type = 'file'
-    default_options = {'table_name':'uliweb_session', 'data_dir':'./sessions'
+    default_options = {'table_name':'uliweb_session', 'data_dir':'./sessions',
         'file_dir':'./sessions/session_files',
         'lock_dir':'./sessions/session_files_lock'}
     
