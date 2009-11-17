@@ -12,7 +12,7 @@ from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
 import template
 from storage import Storage
 import dispatch
-from uliweb.utils.common import pkg, log, sort_list, import_func, import_mod_func, myimport, wraps
+from uliweb.utils.common import pkg, log, sort_list, import_attr, import_mod_attr, myimport, wraps
 from uliweb.utils.pyini import Ini
 import uliweb as conf
 from rules import Mapping, add_rule
@@ -503,7 +503,7 @@ class Dispatcher(object):
         
         #get handler
         if isinstance(endpoint, (str, unicode)):
-            mod, handler = import_mod_func(endpoint)
+            mod, handler = import_mod_attr(endpoint)
         elif callable(endpoint):
             handler = endpoint
             mod = sys.modules[handler.__module__]
@@ -722,7 +722,7 @@ class Dispatcher(object):
                         order = None
                         if isinstance(middleware, tuple):
                             order, middleware = middleware
-                        cls = import_func(middleware)
+                        cls = import_attr(middleware)
                         if order is None:
                             order = getattr(cls, 'ORDER', 500)
                         s.append((order, middleware))
