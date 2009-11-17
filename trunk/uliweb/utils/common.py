@@ -1,13 +1,13 @@
 import os, sys
 
-def import_mod_func(path):
+def import_mod_attr(path):
     module, func = path.rsplit('.', 1)
     mod = __import__(module, {}, {}, [''])
     f = getattr(mod, func)
     return mod, f
 
-def import_func(func):
-    mod, f = import_mod_func(func)
+def import_attr(func):
+    mod, f = import_mod_attr(func)
     return f
 
 def myimport(module):
