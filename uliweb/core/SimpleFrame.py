@@ -102,7 +102,14 @@ def error(message='', errorpage=None, request=None, appname=None, **kwargs):
     raise HTTPError(errorpage, **kwargs)
 
 def json(data):
-    return Response(JSON.dumps(data), content_type='application/json; charset=utf-8')
+    if callable(data):
+        @wraps(data)
+        def f(*arg, **kwargs):
+            ret = data(*arg, **kwargs)
+            return Response(JSON.dumps(ret), content_type='application/json; charset=utf-8')
+        return f
+    else:
+        return Response(JSON.dumps(data), content_type='application/json; charset=utf-8')
 
 class ReservedKeyError(Exception):pass
 
