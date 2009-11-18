@@ -167,11 +167,12 @@ def wraps(src):
     def _f(des):
         def f(*args, **kwargs):
             from uliweb import application
-            env = application.get_view_env()
-            for k, v in env.iteritems():
-                src.func_globals[k] = v
-            
-            src.func_globals['env'] = env
+            if application:
+                env = application.get_view_env()
+                for k, v in env.iteritems():
+                    src.func_globals[k] = v
+                
+                src.func_globals['env'] = env
             return des(*args, **kwargs)
         
         f.__name__ = src.__name__
