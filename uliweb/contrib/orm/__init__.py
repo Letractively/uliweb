@@ -1,7 +1,7 @@
 from uliweb.core.dispatch import bind
 import uliweb
 
-@bind('startup')
+@bind('before_init_apps')
 def startup(sender):
     from uliweb import orm
     
