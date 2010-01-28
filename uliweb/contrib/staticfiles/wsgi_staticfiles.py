@@ -41,14 +41,14 @@ class StaticFilesMiddleware(SharedDataMiddleware):
             if dir:
                 fname = os.path.normpath(os.path.join(dir, filename)).replace('\\', '/')
                 if not fname.startswith(dir):
-                    return Forbidden("You can only visit the files under static directory.")
+                    return Forbidden("You can only visit the files under static directory."), None
                 if os.path.exists(fname):
                     f = fname
             else:
                 for p in app.apps:
                     fname = os.path.normpath(os.path.join('static', filename)).replace('\\', '/')
                     if not fname.startswith('static/'):
-                        return Forbidden("You can only visit the files under static directory.")
+                        return Forbidden("You can only visit the files under static directory."), None
                     
                     ff = pkg.resource_filename(p, fname)
                     if os.path.exists(ff):
