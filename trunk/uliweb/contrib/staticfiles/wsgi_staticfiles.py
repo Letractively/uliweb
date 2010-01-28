@@ -72,19 +72,25 @@ class StaticFilesMiddleware(SharedDataMiddleware):
         path = '/'.join([''] + [x for x in cleaned_path.split('/')
                                 if x and x != '..'])
         file_loader = None
+        flag = False
         for search_path, loader in self.exports.iteritems():
             if search_path == path:
+                flag = True
                 real_filename, file_loader = loader(None)
                 if file_loader is not None:
                     break
             if not search_path.endswith('/'):
                 search_path += '/'
             if path.startswith(search_path):
+                flag = True
                 real_filename, file_loader = loader(path[len(search_path):])
                 if file_loader is not None:
                     break
         if file_loader is None:
-            return real_filename(environ, start_response)
+            if flag:
+                return real_filename(environ, start_response)
+            else:
+                return self.app(environ, start_response)
         
         if not self.is_allowed(real_filename):
             return Forbidden("You can not visit the file %s." % real_filename)(environ, start_response)
