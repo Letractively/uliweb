@@ -62,6 +62,8 @@ class StaticFilesMiddleware(SharedDataMiddleware):
         return _loader
     
     def __call__(self, environ, start_response):
+        from werkzeug.exceptions import Forbidden
+
         # sanitize the path for non unix systems
         cleaned_path = environ.get('PATH_INFO', '').strip('/')
         for sep in os.sep, os.altsep:
@@ -81,37 +83,12 @@ class StaticFilesMiddleware(SharedDataMiddleware):
                 real_filename, file_loader = loader(path[len(search_path):])
                 if file_loader is not None:
                     break
-        if file_loader is None or not self.is_allowed(real_filename):
-            return self.app(environ, start_response)
+        if file_loader is None:
+            return real_filename(environ, start_response)
+        
+        if not self.is_allowed(real_filename):
+            return Forbidden("You can not visit the file %s." % real_filename)(environ, start_response)
     
         res = filedown(environ, real_filename, self.cache, self.cache_timeout)
         return res(environ, start_response)
         
-#        guessed_type = mimetypes.guess_type(real_filename)
-#        mime_type = guessed_type[0] or 'text/plain'
-#        f, mtime, file_size = file_loader()
-#    
-#        headers = [('Date', http_date())]
-#        if self.cache:
-#            timeout = self.cache_timeout
-#            etag = self.generate_etag(mtime, file_size, real_filename)
-#            headers += [
-#                ('Etag', '"%s"' % etag),
-#                ('Cache-Control', 'max-age=%d, public' % timeout)
-#            ]
-#            if not is_resource_modified(environ, etag, last_modified=mtime):
-#                f.close()
-#                start_response('304 Not Modified', headers)
-#                return []
-#            headers.append(('Expires', http_date(time() + timeout)))
-#        else:
-#            headers.append(('Cache-Control', 'public'))
-#    
-#        headers.extend((
-#            ('Content-Type', mime_type),
-#            ('Content-Length', str(file_size)),
-#            ('Last-Modified', http_date(mtime))
-#        ))
-#        start_response('200 OK', headers)
-#        return wrap_file(environ, f)
-#    
