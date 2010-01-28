@@ -356,6 +356,9 @@ class Dispatcher(object):
         Dispatcher.settings = conf.settings
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_dirs = self.get_template_dirs()
+        
+        dispatch.call(self, 'before_init_apps')
+        
         self.install_apps()
         Dispatcher.url_map = conf.url_map
         if flag:

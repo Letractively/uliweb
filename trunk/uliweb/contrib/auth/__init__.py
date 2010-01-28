@@ -1,95 +1,85 @@
 from uliweb.utils.common import log
 from uliweb.core import dispatch
-import database
-from models import User
+from uliweb.orm import get_model
 
 class CreatingUserError(Exception):pass
 
 def _get_auth_key(request):
     return request.settings.AUTH.AUTH_KEY
 
-def _get_backend_key(request):
-    return request.settings.AUTH.BACKEND_KEY
-
 def get_user(request):
     """
-    return user, backend_id
+    return user
     """
     session_key = _get_auth_key(request)
     user_id = request.session.get(session_key)
-    backend_key = _get_backend_key(request)
-    backend_id = request.session.get(backend_key)
     if user_id:
-        return dispatch.get(request, 'get_user', user_id, signal=backend_id)
+        User = get_model('user')
+        return User.get(user_id)
 
-def create_user(request, username, password, backend_id=None, **kwargs):
+def create_user(request, username, password):
     """
     return flag, result(result can be an User object or just True, {} for errors)
     """
     
-    v = dispatch.get(request, 'create_user', username, password, signal=backend_id, **kwargs)
-    flag, result = v
-    if flag:
-        if not isinstance(result, User):
-            user = User.get(User.c.username==username)
-            if not user:
-                user = User(username=username, **kwargs)
-                user.save()
-        else:
-            user = result
+    try:
+        User = get_model('user')
+        user = User.get(User.c.username==username)
+        if user:
+            return False, {'username':"Username is already existed!"}
+        user = User(username=username, password=password)
+        user.set_password(password)
+        user.save()
         return True, user
-    return flag, result
+    except Exception, e:
+        log.exception(e)
+        return False, {'_': "Creating user failed!"}
     
-def change_password(request, username, password, backend_id=None):
-    return dispatch.get(request, 'change_password', username, password, signal=backend_id)
+def change_password(request, username, password):
+    User = get_model('user')
+    user = User.get(User.c.username==username)
+    user.set_password(password)
+    user.save()
+    return True
 
-def delete_user(request, username, backend_id=None):
-    result = dispatch.get(request, 'delete_user', username, signal=backend_id)
+def delete_user(request, username):
     if result:
+        User = get_model('user')
         user = User.get(User.c.username==username)
         if user:
             user.delete()
     return result
     
-def authenticate(request, username, password, backend_id=None):
-    """
-    return flag, result, if flag == True, result will be backend_id
-    if flag == False, result will be the error message({}):
-    """
-    flag, result, backend = dispatch.get(request, 'authenticate', username, password, signal=backend_id)
-    if flag:
-        if not isinstance(result, User):
-            user = User.get(User.c.username==username)
-            if not user:
-                user = User(username=username)
-                user.save()
+def authenticate(request, username, password):
+    User = get_model('user')
+    user = User.get(User.c.username==username)
+    if user:
+        if user.check_password(password):
+            return True, user
         else:
-            user = result
-    return flag, backend
+            return False, {'password': "Password isn't correct!"}
+    else:
+        return False, {'username': 'Username is not existed!'}
 
-def login(request, username, backend_id=None):
+def login(request, username):
     """
-    return user, backend_id
+    return user
     """
-    result = dispatch.get(request, 'login', username, signal=backend_id)
-    if result:
-        import datetime
-        
-        user = User.get(User.c.username==username)
-        user.last_login = datetime.datetime.now()
-        user.save()
-        request.session[_get_auth_key(request)] = user.id
-        request.session[_get_backend_key(request)] = backend_id
-        if hasattr(request, 'user'):
-            request.user = user
-    return result
+    import datetime
+    User = get_model('user')
     
-def logout(request, backend_id=None):
+    user = User.get(User.c.username==username)
+    user.last_login = datetime.datetime.now()
+    user.save()
+    request.session[_get_auth_key(request)] = user.id
+    if hasattr(request, 'user'):
+        request.user = user
+    return True
+    
+def logout(request):
     """
     Remove the authenticated user's ID from the request.
     """
-    result = dispatch.get(request, 'logout', request.user.username, signal=backend_id)
-    if result:
-        request.session.delete()
-        request.user = None
-    return result
+    request.session.delete()
+    request.user = None
+    return True
