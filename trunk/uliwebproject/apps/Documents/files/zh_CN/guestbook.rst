@@ -295,7 +295,7 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
     <h3><a href="{{= url_for('%s.views.del_comment' % request.appname, id=n.id) }}">
     <img src="{{= url_for('%s.views.static' % request.appname, filename='delete.gif') }}"/>
     </a> {{=n.username}} at {{=n.datetime.strftime('%Y/%m/%d %H:%M:%S')}} say:</h3>
-    <p>{{=text2html(n.message)}}</p>
+    <p>{{<<text2html(n.message)}}</p>
     </div>
     {{pass}}
     
@@ -314,7 +314,7 @@ Form代码写在一起，因为那样代码比较多，同且如果用户输入�
 
 在循环中对notes变量进行处理，然后显示一个删除的图形链接，用户信息和用户留言。
 
-看到 ``{{=text2html(n.message)}}`` 了吗？它使用了我们在settings.py中定义的text2html函
+看到 ``{{<<text2html(n.message)}}`` 了吗？它使用了我们在settings.py中定义的text2html函
 数对文本进行格式化处理。
 
 ``{{pass}}`` 是必须的。在Uliweb模板中，不需要考虑缩近，但是需要在块语句结束时添加pass，表示缩
