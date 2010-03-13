@@ -321,7 +321,7 @@ Uliweb will reindent for you, as long as you add the correct pass statement.
 In loop, it'll process the notes object, and then display a delete link, and 
 then user info and user comments.
 
-Have you seen ``{{=text2html(n.message)}}``? It uses ``text2html`` function which we
+Have you seen ``{{<<text2html(n.message)}}``? It uses ``text2html`` function which we
 defined in __init__.py to convert plain text to html code.
 
 Ok, after above working, displaying comments is finished. But for now, you can't
