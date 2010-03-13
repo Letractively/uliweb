@@ -118,8 +118,8 @@ Open ``GuestBook/__init__.py`` and adding below codes:
 
     from uliweb.core.dispatch import bind
     
-    @bind('prepare_template_env')
-    def prepare_template_env(sender, env, request):
+    @bind('prepare_view_env')
+    def prepare_view_env(sender, env, request):
         from uliweb.utils.textconvert import text2html
         env['text2html'] = text2html
 
