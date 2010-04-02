@@ -25,8 +25,8 @@ def login():
                 return redirect(next)
             else:
                 data = d
-        message = "Login failed!"
-        return {'form':form, 'message':message, 'message_type':'error'}
+        message = '<h3 class="error message">Login failed!</h3>'
+        return {'form':form, 'message':message}
 
 def register():
     from uliweb.contrib.auth import create_user
@@ -47,7 +47,7 @@ def register():
             else:
                 form.errors.update(d)
                 
-        message = "There was something wrong! Please fix them."
+        message = '<h3 class="error message">There was something wrong! Please fix them.</h3>'
         return {'form':form, 'message':message, 'message_type':'error'}
         
 def logout():
@@ -67,6 +67,6 @@ def admin():
             if flag:
                 return redirect(request.path)
             else:
-                message = "There was something wrong! Please fix them."
+                message = '<h3 class="error message">There was something wrong! Please fix them.</h3>'
                 return {'changepasswordform':changepasswordform, 
                     'message':message}
