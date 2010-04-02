@@ -211,6 +211,10 @@ def test_7():
     [<User {'username':u'limodou','id':1}>]
     >>> list(a.group_set.all())
     [<Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
+    >>> g1.users.get(2)
+    <User {'username':u'user','id':2}>
+    >>> list(g1.users.filter(User.c.id==3).all())
+    [<User {'username':u'abc','id':3}>]
     """
 
 #test SelfReference
@@ -345,7 +349,7 @@ def test_to_dict():
     >>> a.to_dict()
     {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': u'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': None}
     >>> a.save()
-    <Test {'string':u'limodou','boolean':True,'integer':200,'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'float':200.02000000000001,'decimal':Decimal("10.2"),'id':1}>
+    <Test {'string':u'limodou','boolean':True,'integer':200,'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'float':200.02000000000001,'decimal':Decimal('10.2'),'id':1}>
     >>> a.to_dict()
     {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': u'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': 1}
     """

@@ -1,10 +1,12 @@
 # This module is used for wrapping SqlAlchemy to a simple ORM
 # Author: limodou <limodou@gmail.com>
 # 2008.06.11
+# Update:
+#   2010.4.1 Add get() support to Result and ManyResult
 
 
 __all__ = ['Field', 'get_connection', 'Model', 'create_all',
-    'set_debug_query', 'set_auto_create', 'set_connection',
+    'set_debug_query', 'set_auto_create', 'set_connection', 'get_model',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
@@ -784,6 +786,12 @@ class Result(object):
     def all(self):
         return self
     
+    def get(self, condition=None):
+        if isinstance(condition, (int, long)):
+            return self.filter(self.model.c.id==condition).one()
+        else:
+            return self.filter(condition).one()
+    
     def count(self):
         if not self.model or not self.condition:
             return 0
@@ -795,7 +803,11 @@ class Result(object):
         return self.model.remove(self.condition)
     
     def filter(self, condition):
-        self.condition = condition & self.condition
+        import sys
+        if self.condition:
+            self.condition = condition & self.condition
+        else:
+            self.condition = condition
         return self
     
     def order_by(self, *args, **kwargs):
@@ -868,6 +880,12 @@ class ManyResult(Result):
         self.funcs = []
         self.result = None
         
+    def get(self, condition=None):
+        if isinstance(condition, (int, long)):
+            return self.filter(self.modelb.c.id==condition).one()
+        else:
+            return self.filter(condition).one()
+
     def add(self, *objs):
         for o in objs:
             assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
