@@ -89,14 +89,46 @@ class Node(object):
             return ''
     
 class BlockNode(Node):
-    def __init__(self, name='', parent=None):
+    def __init__(self, name=''):
         self.nodes = []
-        self.parent = parent
-        if self.parent:
-            self.vars = self.parent.vars
-        else:
-            self.vars = {}
         self.name = name
+        
+    def add(self, node):
+        self.nodes.append(node)
+        
+    def merge(self, content):
+        self.nodes.extend(content.nodes)
+    
+    def output(self, vars):
+        s = []
+        for x in self.nodes:
+            if isinstance(x, BlockNode):
+                if x.name in vars:
+                    s.append(vars[x.name].output(vars))
+                else:
+                    s.append(x.output(vars))
+            else:
+                s.append(str(x))
+        return ''.join(s)
+    
+    def __repr__(self):
+        s = ['{{block %s}}' % self.name]
+        for x in self.nodes:
+            s.append(str(x))
+        s.append('{{end}}')
+        return ''.join(s)
+    
+    def __str__(self):
+        s = []
+        for x in self.nodes:
+            if not isinstance(x, BlockNode):
+                s.append(str(x))
+        return ''.join(s)
+
+class Content(BlockNode):
+    def __init__(self):
+        self.nodes = []
+        self.vars = {}
         
     def add(self, node):
         self.nodes.append(node)
@@ -113,16 +145,15 @@ class BlockNode(Node):
     def __str__(self):
         s = []
         for x in self.nodes:
-            if isinstance(x, BlockNode) and x.name in self.vars:
-                s.append(str(self.vars[x.name]))
+            if isinstance(x, BlockNode):
+                if x.name in self.vars:
+                    s.append(self.vars[x.name].output(self.vars))
+                else:
+                    s.append(x.output(self.vars))
             else:
                 s.append(str(x))
         return ''.join(s)
-
-class Content(BlockNode):
-    def __init__(self):
-        self.nodes = []
-        self.vars = {}
+    
 
 class ContextPopException(Exception):
     "pop() has been called more times than push()"
@@ -247,7 +278,7 @@ class Lexer(object):
                     if name in self.handlers:
                         self.handlers[name](value, top, self.stack, self.vars, self.env, self.dirs, self.writer)
                     elif name == 'block':
-                        node = BlockNode(name=value.strip(), parent=top)
+                        node = BlockNode(name=value.strip())
                         top.add(node)
                         self.stack.append(node)
                     elif name == 'end':
