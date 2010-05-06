@@ -154,6 +154,11 @@ class Content(BlockNode):
                 s.append(str(x))
         return ''.join(s)
     
+    def __repr__(self):
+        s = []
+        for x in self.nodes:
+            s.append(str(x))
+        return ''.join(s)
 
 class ContextPopException(Exception):
     "pop() has been called more times than push()"

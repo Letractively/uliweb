@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys, os
 import logging
-from uliweb.utils.common import log, check_apps_dir, timeit
+from uliweb.utils.common import log, check_apps_dir
 import uliweb as conf
         
 apps_dir = 'apps'
@@ -29,10 +29,17 @@ def install_config(apps_dir):
                     sys.path.insert(0, p)
                     
 def set_log(app):
+    from uliweb.utils.common import set_log_handers
+    
     if app.settings.LOG:
         level = app.settings.LOG.get("level", "info").upper()
     else:
         level = 'INFO'
+    handler_name = app.settings.LOG.get("handler_class", 'StreamHandler')
+    handler_cls = getattr(logging, handler_name)
+    arguments = app.settings.LOG.get("arguments", ())
+    handler = handler_cls(*arguments)
+    set_log_handers(log, [handler])
     log.setLevel(getattr(logging, level, logging.INFO))
 
 def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True):
