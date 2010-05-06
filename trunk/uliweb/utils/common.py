@@ -141,11 +141,17 @@ def get_logger(format=FORMAT, datafmt=None):
     fmt = logging.Formatter(format, datafmt)
     handler.setFormatter(fmt)
     
-    log = logging.getLogger('uliweb')
+    log = logging.getLogger('werkzeug')
     log.addHandler(handler)
     log.setLevel(logging.INFO)
     return log
 
+def set_log_handers(logger, handlers):
+    if handlers:
+        logger.handlers = []
+        for h in handlers:
+            logger.addHandler(h)
+            
 get_logger()
 
 def check_apps_dir(apps_dir):

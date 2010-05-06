@@ -25,7 +25,7 @@ def login():
                 return redirect(next)
             else:
                 data = d
-        message = '<h3 class="error message">Login failed!</h3>'
+        message = '<p class="error message">Login failed!</p>'
         return {'form':form, 'message':message}
 
 def register():
@@ -47,7 +47,7 @@ def register():
             else:
                 form.errors.update(d)
                 
-        message = '<h3 class="error message">There was something wrong! Please fix them.</h3>'
+        message = '<p class="error message">There was something wrong! Please fix them.</p>'
         return {'form':form, 'message':message, 'message_type':'error'}
         
 def logout():
@@ -67,6 +67,6 @@ def admin():
             if flag:
                 return redirect(request.path)
             else:
-                message = '<h3 class="error message">There was something wrong! Please fix them.</h3>'
+                message = '<p class="error message">There was something wrong! Please fix them.</p>'
                 return {'changepasswordform':changepasswordform, 
                     'message':message}
