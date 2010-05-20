@@ -793,18 +793,18 @@ class Result(object):
             return self.filter(condition).one()
     
     def count(self):
-        if not self.model or not self.condition:
+        if self.model is None or self.condition is None:
             return 0
         return self.model.count(self.condition)
 
     def delete(self):
-        if not self.model or not self.condition:
+        if self.model is None or self.condition is None:
             return
         return self.model.remove(self.condition)
     
     def filter(self, condition):
         import sys
-        if self.condition:
+        if self.condition is not None:
             self.condition = condition & self.condition
         else:
             self.condition = condition
@@ -1268,13 +1268,13 @@ class Model(object):
                 cls.manytomany = []
                 for k, f in cls.properties.items():
                     c = f.create(cls)
-                    if c:
+                    if c is not None:
                         cols.append(c)
                         
                 #if there is already a same name table, then remove the old one
                 #replace with new one
                 t = cls.metadata.tables.get(cls.tablename, None)
-                if t:
+                if t is not None:
                     cls.metadata.remove(t)
                 args = getattr(cls, '__table_args__', {})
                 args['mysql_charset'] = 'utf8'
