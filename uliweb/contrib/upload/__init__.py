@@ -63,6 +63,11 @@ def save_image_field(field, path_to=None, resize_to=None, replace=False, subfold
 def get_filename(filename, path_to=None, subfolder=''):
     return _get_normal_filename(filename, path_to, subfolder)
 
+def delete_filename(filename, path_to=None, subfolder=''):
+    f = _get_normal_filename(filename, path_to, subfolder)
+    if os.path.exists:
+        os.remove(f)
+
 def get_url(filename, path_to=None, subfolder=''):
     import urllib
     from uliweb import application
