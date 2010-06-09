@@ -25,7 +25,8 @@ def login():
                 return redirect(next)
             else:
                 data = d
-        message = '<p class="error message">Login failed!</p>'
+        m = form.errors.get('_', '') or 'Login failed!'
+        message = '<p class="error message">%s</p>' % m
         return {'form':form, 'message':message}
 
 def register():
@@ -47,7 +48,8 @@ def register():
             else:
                 form.errors.update(d)
                 
-        message = '<p class="error message">There was something wrong! Please fix them.</p>'
+        m = form.errors.get('_', '') or 'Register failed!'
+        message = '<p class="error message">%s</p>' % m
         return {'form':form, 'message':message, 'message_type':'error'}
         
 def logout():
