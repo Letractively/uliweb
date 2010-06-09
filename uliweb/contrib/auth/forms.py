@@ -13,11 +13,18 @@ class RegisterForm(Form):
 #    email = StringField(label=_('Email:'))
     next = HiddenField()
     
-    def form_validate(self, all_data, request):
-        if all_data.password != all_data.password1:
-            raise ValidationError, 'Passwords are not matched'
+    def validate_username(self, data):
+        from uliweb.orm import get_model
+        
+        User = get_model('user')
+        user = User.get(User.c.username==data)
+        if user:
+            raise ValidationError, 'User "%s" does not exist!' % data
     
-
+    def form_validate(self, all_data):
+        if all_data.password != all_data.password1:
+            raise ValidationError, 'Passwords are not match.'
+    
 class LoginForm(Form):
     form_buttons = Submit(value=_('Login'), _class="button")
     form_title = _('Login')
@@ -26,6 +33,19 @@ class LoginForm(Form):
     password = PasswordField(label=_('Password:'), required=True)
     rememberme = BooleanField(label=_('Remember Me'))
     next = HiddenField()
+    
+    def validate_username(self, data):
+        from uliweb.orm import get_model
+        
+        User = get_model('user')
+        user = User.get(User.c.username==data)
+        if not user:
+            raise ValidationError, 'User "%s" does not exist!' % data
+        self._user = user
+    
+    def form_validate(self, all_data):
+        if not self._user.check_password(all_data['password']):
+            raise ValidationError, 'Password is not right.'
     
 class ChangePasswordForm(Form):
     form_buttons = Submit(value=_('Save'), _class="button")
@@ -36,10 +56,12 @@ class ChangePasswordForm(Form):
     password1 = PasswordField(label=_('Password again:'), required=True)
     action = HiddenField(default='changepassword')
 
-    def form_validate(self, all_data, request):
+    def form_validate(self, all_data):
         if all_data.password != all_data.password1:
-            raise ValidationError, 'Passwords are not matched'
+            raise ValidationError, 'Passwords are not match.'
 
-    def validate_oldpassword(self, data, request):
+    def validate_oldpassword(self, data):
+        from uliweb import request
+        
         if not request.user.check_password(data):
             raise ValidationError, 'Password is not right.'

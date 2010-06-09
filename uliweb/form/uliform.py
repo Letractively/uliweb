@@ -196,7 +196,7 @@ class BaseField(object):
             return ''
         return u_str(data)
 
-    def validate(self, data, request=None):
+    def validate(self, data):
         if hasattr(data, 'stream'):
             data.file = data.stream
             
@@ -228,7 +228,7 @@ class BaseField(object):
             return False, "Can't convert %r to %s." % (data, self.__class__.__name__)
         try:
             for v in self.default_validators + self.validators:
-                v(data, request)
+                v(data)
         except ValidationError, e:
             return False, e.message
         return True, data
@@ -802,7 +802,7 @@ class Form(object):
 
     def __init__(self, action=None, method=None, buttons=None, 
             validators=None, html_attrs=None, data={}, errors={}, 
-            idtype='name', title='', **kwargs):
+            idtype='name', title='', vars=None, **kwargs):
         self.form_action = action or self.form_action
         self.form_method = method or self.form_method
         self.form_title = title or self.form_title
@@ -811,7 +811,7 @@ class Form(object):
         self.validators = validators or []
         self.html_attrs = html_attrs or {}
         self.idtype = idtype
-        self.request = None
+        self.vars = vars
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
         if '_class' in self.html_attrs:
@@ -834,11 +834,6 @@ class Form(object):
             self.validators.append(func)
 
     def validate(self, *data, **kwargs):
-        """
-        request should provide get() and getall() functions
-        """
-        self.request = request = kwargs.pop('request', None)
-
         all_data = {}
         for k, v in self.fields.items():
             v.parse_data(data, all_data)
@@ -853,7 +848,7 @@ class Form(object):
         #validate and gather the result
         result = D({})
         for field_name, field in self.fields.items():
-            flag, value = field.validate(new_data[field_name], request)
+            flag, value = field.validate(new_data[field_name])
             if not flag:
                 if isinstance(value, dict):
                     errors.update(value)
@@ -862,11 +857,11 @@ class Form(object):
             else:
                 result[field_name] = value
 
-        if self.validators:
+        if not errors and self.validators:
             #validate global
             try:
                 for v in self.validators:
-                    v(result, request=request)
+                    v(result)
             except ValidationError, e:
                 errors['_'] = e.message
 
