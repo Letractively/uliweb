@@ -794,6 +794,7 @@ class Form(object):
 
     layout_class = YamlLayout
     layout = None
+    fieldset = False
     form_action = ''
     form_method = 'POST'
     form_buttons = None

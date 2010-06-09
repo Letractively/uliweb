@@ -175,3 +175,19 @@ def test_set_var():
     >>> x.get_var('default')
     <Section {'key/name':'hello'}>
     """
+
+def test_update():
+    """
+    >>> x = Ini()
+    >>> x.set_var('default/key', 'name')
+    True
+    >>> d = {'default/key':'limodou', 'default/b':123}
+    >>> x.update(d)
+    >>> print x
+    #coding=utf-8
+    [default]
+    key = 'limodou'
+    b = 123
+    <BLANKLINE>
+    
+    """

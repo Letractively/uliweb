@@ -339,6 +339,10 @@ class Ini(SortedDict):
     def __setitem__(self, key, value):
         if key not in self:
             super(Ini, self).__setitem__(key, value)
+            
+    def update(self, value):
+        for k, v in value.items():
+            self.set_var(k, v)
 
     def add(self, sec_name, comments=None):
         if sec_name in self:

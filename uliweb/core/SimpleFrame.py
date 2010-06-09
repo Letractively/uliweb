@@ -325,10 +325,11 @@ class Loader(object):
     
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir='apps', use_urls=None, include_apps=None, start=True):
+    def __init__(self, apps_dir='apps', use_urls=None, include_apps=None, start=True, default_settings=None):
         self.debug = False
         self.use_urls = conf.use_urls = use_urls
         self.include_apps = include_apps or []
+        self.default_settings = default_settings or {}
         if not Dispatcher.installed:
             self.init(apps_dir)
             dispatch.call(self, 'startup_installed')
@@ -672,6 +673,7 @@ class Dispatcher(object):
         conf.settings = Ini(env=env)
         for v in s:
             conf.settings.read(v)
+        conf.settings.update(self.default_settings)
             
     def dispatch_hooks(self):
         #process DISPATCH hooks

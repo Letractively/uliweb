@@ -74,11 +74,10 @@ class User(Model):
     
     def get_image_url(self):
         from uliweb.contrib.upload import get_url
-        from uliweb import application
         from uliweb.contrib.staticfiles import url_for_static
         
         if self.image:
-            return get_url(self.image, subfolder='portrait', application=application)
+            return get_url(self.image, subfolder='portrait')
         else:
             return url_for_static('images/user.jpg')
     
