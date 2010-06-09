@@ -141,11 +141,17 @@ def set_model(model, tablename=None, created=None):
         item['created'] = None
     if isinstance(model, (str, unicode)):
         model_name = model
+        appname = model.rsplit('.', 2)[0]
+        #for example 'uliweb.contrib.auth.models.User'
         model = None
     else:
         model_name = ''
+        appname = model.__module__.rsplit('.', 1)[0]
+        #for example 'uliweb.contrib.auth.models'
+        
     item['model'] = model
     item['model_name'] = model_name
+    item['appname'] = appname
     
 def get_model(model):
     """

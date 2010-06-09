@@ -45,9 +45,14 @@ class TableLayout(Layout):
         buf = Buf()
         buf << self.form.form_begin
         
-        p = buf << Tag('fieldset')
-        if self.form.form_title:
-            p << Tag('legend', self.form.form_title)
+        if self.form.fieldset:
+            p = buf << Tag('fieldset')
+            if self.form.form_title:
+                p << Tag('legend', self.form.form_title)
+        else:
+            form = buf
+                 
+        
         table = p << Tag('table')
         tbody = table << Tag('tbody')
 
@@ -83,9 +88,12 @@ class CSSLayout(Layout):
         buf = Buf()
         buf << self.form.form_begin
         
-        form = buf << Tag('fieldset')
-        if self.form.form_title:
-            form << Tag('legend', self.form.form_title)
+        if self.form.fieldset:
+            form = buf << Tag('fieldset')
+            if self.form.form_title:
+                form << Tag('legend', self.form.form_title)
+        else:
+            form = buf
     
         for name, obj in self.form.fields_list:
             f = getattr(self.form, name)
@@ -166,9 +174,12 @@ class YamlLayout(Layout):
             self.form.html_attrs['_class'] = 'yform'
         buf << self.form.form_begin
         
-        form = buf << Tag('fieldset')
-        if self.form.form_title:
-            form << Tag('legend', self.form.form_title)
+        if self.form.fieldset:
+            form = buf << Tag('fieldset')
+            if self.form.form_title:
+                form << Tag('legend', self.form.form_title)
+        else:
+            form = buf
     
         for name, obj in self.form.fields_list:
             f = getattr(self.form, name)
