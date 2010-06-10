@@ -69,7 +69,13 @@ def dump_table(name, table, dir, con, std=None):
 def load_table(name, table, dir, con):
     import datetime
     con.execute(table.delete())
-    f = open(os.path.join(dir, name+'.txt'))
+    filename = os.path.join(dir, name+'.txt')
+    
+    if not os.path.exists(filename):
+        log.info("The table [%s] data is not existed." % name)
+        return 
+    
+    f = open(filename)
     try:
         first_line = f.readline()
         fields = first_line[1:].strip().split()
@@ -117,6 +123,11 @@ def action_reset(apps_dir):
         """Reset the appname models(drop and recreate)"""
         from sqlalchemy import create_engine
 
+        ans = raw_input("""This command will drop tables, are you sure to reset[Y/n]""")
+        if ans and ans.upper() != 'Y':
+            print "Command be cancelled!"
+            return
+        
         check_apps_dir(apps_dir)
 
         engine = get_engine(apps_dir)
@@ -166,6 +177,12 @@ def action_load(apps_dir):
         """load all models records according all available apps"""
             
         from uliweb import orm
+        
+        ans = raw_input("""This command will delete all data of table before loading, 
+are you sure to load data[Y/n]""")
+        if ans and ans.upper() != 'Y':
+            print "Command be cancelled!"
+            return
 
         check_apps_dir(apps_dir)
         
