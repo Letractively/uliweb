@@ -1,4 +1,90 @@
+import os, sys
 from uliweb.utils.common import log, check_apps_dir, is_pyfile_exist
+
+def get_engine(apps_dir):
+    from uliweb.core.SimpleFrame import Dispatcher
+    settings = {'ORM/DEBUG_LOG':False, 'ORM/AUTO_CREATE':True}
+    app = Dispatcher(apps_dir=apps_dir, start=False, default_settings=settings)
+    engine = app.settings.ORM.CONNECTION
+    return engine
+
+def get_tables(apps_dir, appname=None, engine=None):
+    from uliweb.core.SimpleFrame import get_apps, get_app_dir
+    from uliweb import orm
+    from sqlalchemy import create_engine
+    from StringIO import StringIO
+    
+    if not engine:
+        engine = get_engine(apps_dir)
+    
+    _engine = engine[:engine.find('://')+3]
+    
+    buf = StringIO()
+    
+    con = create_engine(_engine, strategy='mock', executor=lambda s, p='': buf.write(str(s) + p))
+    db = orm.get_connection(con)
+    
+    apps = get_apps(apps_dir)
+    if appname:
+        apps_list = [appname]
+    else:
+        apps_list = apps[:]
+    models = []
+    for p in apps_list:
+        if p not in apps:
+            log.error('Error: Appname %s is not a valid app' % p)
+            continue
+        if not is_pyfile_exist(get_app_dir(p), 'models'):
+            continue
+        m = '%s.models' % p
+        try:
+            mod = __import__(m, {}, {}, [''])
+            models.append(mod)
+        except ImportError:
+            log.exception("There are something wrong when importing module [%s]" % m)
+    
+    if appname:
+        tables = {}
+        for tablename, m in orm.__models__.items():
+            if m['appname'] == appname:
+                tables[tablename] = db.metadata.tables[tablename]
+    else:
+        tables = db.metadata.tables
+        
+    return tables
+
+def dump_table(name, table, dir, con, std=None):
+    if not std:
+        std = open(os.path.join(dir, name+'.txt'), 'w')
+    else:
+        std = sys.stdout
+    result = con.execute(table.select())
+    print >>std, '#',
+    for c in table.c:
+        print >>std, c.name,
+    print >>std
+    for r in result:
+        print >>std, r
+        
+def load_table(name, table, dir, con):
+    import datetime
+    con.execute(table.delete())
+    f = open(os.path.join(dir, name+'.txt'))
+    try:
+        first_line = f.readline()
+        fields = first_line[1:].strip().split()
+        for line in f:
+            r = eval(line)
+            record = dict(zip(fields, r))
+            params = {}
+            for c in table.c:
+                if c.name in record:
+                    params[c.name] = record[c.name]
+            
+            ins = table.insert().values(**params)
+            con.execute(ins)
+    finally:
+        f.close()
 
 def action_syncdb(apps_dir):
     def action():
@@ -20,100 +106,83 @@ def action_syncdb(apps_dir):
                 mod = __import__(m, {}, {}, [''])
                 models.append(mod)
             except ImportError:
-                log.exception()
+                log.exception("There are something wrong when importing module [%s]" % m)
         
         db.metadata.create_all()
             
     return action
 
 def action_reset(apps_dir):
-    def action(appname=''):
+    def action(appname=('a', '')):
         """Reset the appname models(drop and recreate)"""
+        from sqlalchemy import create_engine
+
         check_apps_dir(apps_dir)
 
-        if not appname:
-            appname = ''
-            while not appname:
-                appname = raw_input('Please enter app name:')
+        engine = get_engine(apps_dir)
+        con = create_engine(engine)
         
-        from uliweb.core.SimpleFrame import get_app_dir, Dispatcher
-        from uliweb import orm
-        app = Dispatcher(apps_dir=apps_dir, start=False)
-        orm.set_auto_create(False)
-        db = orm.get_connection(app.settings.ORM.CONNECTION)
+        for name, t in get_tables(apps_dir, appname).items():
+            t.drop(con)
+            t.create(con)
+        
+    return action
 
-        if not is_pyfile_exist(get_app_dir(appname), 'models'):
-            return
-        m = '%s.models' % appname
-        try:
-            mod = __import__(m, {}, {}, [''])
-        except ImportError:
-            log.exception()
+def action_sql(apps_dir):
+    def action(appname=('a', '')):
+        """Display the table creation sql statement"""
+        from sqlalchemy.schema import CreateTable
         
-        db.metadata.drop_all()
-        db.metadata.create_all()
+        check_apps_dir(apps_dir)
+        
+        for name, t in sorted(get_tables(apps_dir, appname).items()):
+            _t = CreateTable(t)
+            print _t
             
     return action
 
-class MockDBAPI(object):
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs
-        self.paramstyle = 'named'
-    def connect(self, **kwargs):
-        print kwargs, self.kwargs
-        for k in self.kwargs:
-            assert k in kwargs, "key %s not present in dictionary" % k
-            assert kwargs[k]==self.kwargs[k], "value %s does not match %s" % (kwargs[k], self.kwargs[k])
-        return MockConnection()
-class MockConnection(object):
-    def close(self):
-        pass
-    def cursor(self):
-        return MockCursor()
-    def run_callable(self, do):
-        print 'xxxxxxxxxxxxxxxx'
-        False
-class MockCursor(object):
-    def close(self):
-        pass
+def action_dump(apps_dir):
+    def action(appname=('a', ''), verbose=('v', False)):
+        """Dump all models records according all available apps"""
+            
+        from sqlalchemy import create_engine
 
-def action_sql(apps_dir):
-    def action(appname=''):
-        """Display the table creation sql statement"""
         check_apps_dir(apps_dir)
         
-        from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
-        from uliweb import orm
-        from StringIO import StringIO
-        from sqlalchemy import create_engine
+        output_dir = './data'
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         
-        app = Dispatcher(apps_dir=apps_dir, start=False)
-        orm.set_auto_create(False)
-        p = app.settings.ORM.CONNECTION
-        _engine = p[:p.find('://')+3]
-        con = create_engine(_engine, strategy='mock', executor=lambda s, p='': buf.write(s + p))
-        db = orm.get_connection(con)
+        engine = get_engine(apps_dir)
+        con = create_engine(engine)
 
-        buf = StringIO()
-        apps = get_apps(apps_dir)
-        if appname:
-            apps_list = [appname]
-        else:
-            apps_list = apps[:]
-        models = []
-        for p in apps_list:
-            if p not in apps:
-                log.error('Error: Appname %s is not a valid app' % p)
-                continue
-            if not is_pyfile_exist(get_app_dir(p), 'models'):
-                continue
-            m = '%s.models' % p
-            try:
-                mod = __import__(m, {}, {}, [''])
-                models.append(mod)
-            except ImportError:
-                log.exception()
+        for name, t in get_tables(apps_dir, appname, engine=engine).items():
+            dump_table(name, t, output_dir, con, std=verbose)
         
-        db.metadata.create_all(db)
-        print buf.getvalue()
+    return action
+
+def action_load(apps_dir):
+    def action(appname=('a', '')):
+        """load all models records according all available apps"""
+            
+        from uliweb import orm
+
+        check_apps_dir(apps_dir)
+        
+        output_dir = './data'
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        engine = get_engine(apps_dir)
+        con = orm.get_connection(engine)
+
+        for name, t in get_tables(apps_dir, appname, engine=engine).items():
+            try:
+                con.begin()
+                load_table(name, t, output_dir, con)
+                con.commit()
+            except:
+                log.exception("There are something wrong when loading table [%s]" % name)
+                con.rollback()
+        
     return action
