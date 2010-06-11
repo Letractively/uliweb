@@ -358,9 +358,11 @@ class Dispatcher(object):
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_dirs = self.get_template_dirs()
         
-        dispatch.call(self, 'before_init_apps')
-        
+        #begin to start apps
         self.install_apps()
+        
+        dispatch.call(self, 'after_init_apps')
+
         Dispatcher.url_map = conf.url_map
         if flag:
             self.install_views(self.modules['views'])

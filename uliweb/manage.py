@@ -79,7 +79,7 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
                     log.exception(e)
                 
     debug_flag = application.settings.GLOBAL.DEBUG
-    if debug or debug_flag:
+    if debug or (debug is None and debug_flag):
         log.setLevel(logging.DEBUG)
         log.info(' * Loading DebuggedApplication...')
         from werkzeug.debug import DebuggedApplication
