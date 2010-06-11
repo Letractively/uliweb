@@ -944,14 +944,19 @@ class ManyResult(Result):
     def run(self):
         query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
         ids = [x[0] for x in query.execute()]
-        query = select(self.columns, self.modelb.c.id.in_(ids) & self.condition)
-        for func, args, kwargs in self.funcs:
-            query = getattr(query, func)(*args, **kwargs)
-        self.result = query.execute()
+        if not ids:
+            self.result = []
+        else:
+            query = select(self.columns, self.modelb.c.id.in_(ids) & self.condition)
+            for func, args, kwargs in self.funcs:
+                query = getattr(query, func)(*args, **kwargs)
+            self.result = query.execute()
         return self.result
         
     def one(self):
         self.run()
+        if not self.result:
+            return
         result = self.result.fetchone()
         if result:
             d = self.modelb._data_prepare(result)
@@ -965,6 +970,8 @@ class ManyResult(Result):
     
     def __iter__(self):
         self.run()
+        if not self.result:
+            raise StopIteration
         while 1:
             obj = self.result.fetchone()
             if not obj:
