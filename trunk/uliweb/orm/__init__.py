@@ -170,13 +170,10 @@ def get_model(model):
             return m
         else:
             m, name = item['model_name'].rsplit('.', 1)
-            try:
-                mod = __import__(m, {}, {}, [''])
-                model = getattr(mod, name)
-                item['model'] = model
-                return model
-            except:
-                raise Error("Can't import the model %s from %s" % (name, m))
+            mod = __import__(m, {}, {}, [''])
+            model = getattr(mod, name)
+            item['model'] = model
+            return model
     else:
         raise Error("Can't found the model %s" % model)
     
@@ -809,7 +806,6 @@ class Result(object):
         return self.model.remove(self.condition)
     
     def filter(self, condition):
-        import sys
         if self.condition is not None:
             self.condition = condition & self.condition
         else:
@@ -929,6 +925,22 @@ class ManyResult(Result):
             count = 0
         return count
     
+    def has(self, obj):
+        if isinstance(obj, (int, long)):
+            _id = obj
+        else:
+            _id = obj.id
+        
+        result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb]==_id)).execute()
+        count = 0
+        if result:
+            r = result.fetchone()
+            if r:
+                count = r[0]
+        else:
+            count = 0
+        return count > 0
+        
     def run(self):
         query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
         ids = [x[0] for x in query.execute()]

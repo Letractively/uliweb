@@ -1,3 +1,20 @@
+def fix_filename(filename, suffix=''):
+    """
+    e.g.
+        fix_filename('icon.png', '_40x40')
+        
+        return
+    
+            icon_40x40.png
+    """
+    import os
+    
+    if suffix:
+        f, ext = os.path.splitext(filename)
+        return f+suffix+ext
+    else:
+        return filename
+        
 def resize_image(fobj, size=(50, 50)):
     import Image
     from StringIO import StringIO

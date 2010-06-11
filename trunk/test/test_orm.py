@@ -84,6 +84,8 @@ def test_3():
     2
     >>> list(a2.test2.all())
     [<Test1 {'test1':<Test {'username':u'limodou1','year':0,'id':1}>,'test2':<Test {'username':u'limodou2','year':0,'id':2}>,'name':u'aaaa','id':2}>]
+    >>> list(a1.test1.filter(Test1.c.name=='user'))
+    [<Test1 {'test1':<Test {'username':u'limodou1','year':0,'id':1}>,'test2':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>]
     >>> b1.test1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.username = 'user'
@@ -198,6 +200,12 @@ def test_7():
     >>> g1.users.count()
     0
     >>> g1.users.add(a, b, c)
+    >>> g1.users.count()
+    3
+    >>> g1.users.has(a)
+    True
+    >>> g1.users.has(100)
+    False
     >>> g2.users.add(a)
     >>> list(a.group_set.all())
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
