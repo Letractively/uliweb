@@ -358,7 +358,7 @@ class Property(object):
             self.name,
             self.default,
             self.required,
-            self.validator,
+            self.validators,
             self.choices,
             self.max_length,
             self.kwargs)
