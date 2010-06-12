@@ -177,12 +177,12 @@ class RoleManager(object):
 roles = RoleManager()
         
 class Permission(object):
-    def __init__(self, name, description, roles, loaded=False):
+    def __init__(self, name, description, roles, record=None, loaded=False):
         self.name = name
         self.roles = roles
         self.description = description
         self.loaded = loaded
-        self.record = None
+        self.record = record
         
     def get_record(self):
         self.load()
@@ -253,9 +253,9 @@ class Permission(object):
             if r:
                 self.record = r
                 self.description = r.description
-                roles = list(r.roles.all())
-                if roles:
-                    self.roles = roles
+                self.roles = list(r.roles.all())
+#                if roles:
+#                    self.roles = roles
                 self.loaded = True
         
     def has(self, user, **kwargs):
@@ -285,15 +285,21 @@ class PermissionManager(object):
         self.permissions = {}
         self.loaded = False
         
-    def add(self, name, description, roles):
-        p = self.permissions[name] = Permission(name, description, roles)
+    def add(self, name, description, roles=[], record=None, loaded=False):
+        p = self.permissions[name] = Permission(name, description, roles, record, loaded)
         return p
     
     def get(self, name):
-        if name not in self.permissions:
-            raise PermissionError, "Permission [%s] is not existed!" % name
-        
-        return self.permissions[name]
+        if name in self.permissions:
+            return self.permissions[name]
+        else:
+            PermissionModel = get_model('permission')
+            p = PermissionModel.get(PermissionModel.c.name==name)
+            if p:
+                return self.add(p.name, p.description, roles=list(p.roles.all()), record=p, loaded=True)
+            else:
+                raise PermissionError, "Permission [%s] is not existed!" % name
+            
     
     def ok(self, name, user, **kwargs):
         return self.get(name).has(user, **kwargs)
