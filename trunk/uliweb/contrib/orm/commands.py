@@ -203,3 +203,36 @@ are you sure to load data[Y/n]""")
                 con.rollback()
         
     return action
+
+def action_dbinit(apps_dir):
+    def action(appname=('a', '')):
+        """Initialize database, it'll run the code in dbinit.py of each app"""
+        check_apps_dir(apps_dir)
+
+        from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
+        from uliweb import orm
+
+        app = Dispatcher(apps_dir=apps_dir, start=False)
+
+        apps = get_apps(apps_dir)
+        if appname:
+            apps_list = [appname]
+        else:
+            apps_list = apps[:]
+        
+        con = orm.get_connection()
+        
+        for p in apps_list:
+            if not is_pyfile_exist(get_app_dir(p), 'dbinit'):
+                continue
+            m = '%s.dbinit' % p
+            try:
+                print "Processing %s..." % m
+                con.begin()
+                mod = __import__(m, {'application':app}, {}, [''])
+                con.commit()
+            except ImportError:
+                con.rollback()
+                log.exception("There are something wrong when importing module [%s]" % m)
+        
+    return action
