@@ -1,7 +1,8 @@
 from uliweb.orm import get_model
 
 __all__ = ['PermissionError', 'RoleError', 'Role', 'RoleManager', 'roles', 'permissions',
-    'PermissionManager', 'Permission', 'add_role_func']
+    'PermissionManager', 'Permission', 'add_role_func', 'register_role_method',
+    'superuser', 'trusted', 'anonymous', 'owner']
 
 class PermissionError(Exception): pass
 class RoleError(Exception): pass
@@ -16,11 +17,6 @@ def call_func(func, kwargs):
         except KeyError:
             raise Exception, "Missing args %s" % x
     return func(**args)
-
-def group_manager(user, group_id):
-    from group.models import find_group
-    group = find_group(group_id)
-    return group.managers.has(user)
 
 def superuser(user):
     return user and user.is_superuser
@@ -40,13 +36,10 @@ def owner(user, obj):
     else:
         return False
 
-__role_funcs__ = {
-    'group_manager':group_manager,
-    'superuser':superuser,
-    'trusted':trusted,
-    'anonymous':anonymous,
-    'owner':owner,
-}
+__role_funcs__ = {}
+
+def register_role_method(role_name, method):
+    __role_funcs__[role_name] = method
 
 def add_role_func(name, func):
     global __role_funcs__
@@ -134,6 +127,13 @@ class Role(object):
             
         func = __role_funcs__.get(self.name, None)
         if func:
+            from uliweb.utils.common import import_attr
+            
+            if isinstance(func, (unicode, str)):
+                func = import_attr(func)
+                
+            assert callable(func)
+            
             env = kwargs.copy()
             env['user'] = user
             if not callable(func):

@@ -119,7 +119,7 @@ def action_syncdb(apps_dir):
     return action
 
 def action_reset(apps_dir):
-    def action(appname=('a', '')):
+    def action(appname=('a', ''), verbose=('v', False)):
         """Reset the appname models(drop and recreate)"""
         from sqlalchemy import create_engine
 
@@ -132,6 +132,8 @@ def action_reset(apps_dir):
 
         engine = get_engine(apps_dir)
         con = create_engine(engine)
+        if verbose:
+            con.echo = True
         
         for name, t in get_tables(apps_dir, appname).items():
             t.drop(con)
