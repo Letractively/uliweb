@@ -174,6 +174,9 @@ class RoleManager(object):
         else:
             return self.add(role.name, role.description, users=list(role.users.all()), record=role, loaded=True)
             
+    def has(self, role, user, **kwargs):
+        return self.get(role).has(user, **kwargs)
+    
 roles = RoleManager()
         
 class Permission(object):

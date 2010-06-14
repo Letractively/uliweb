@@ -4,8 +4,10 @@ from uliweb.core.dispatch import bind
 
 @bind('prepare_default_env')
 def prepare_default_env(sender, env):
-    func = permissions.ok
-    env['permission'] = func
+    has_permission = permissions.ok
+    env['has_permission'] = has_permission
+    has_role = roles.has
+    env['has_role'] = has_role
     
 @bind('after_init_apps')
 def startup(sender):
