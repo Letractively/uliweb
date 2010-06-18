@@ -1,13 +1,13 @@
-{{extend "admin_layout.html"}}
+{{extend "develop_layout.html"}}
 {{block nav_menu}}
-{{from uliweb.contrib.admin.menu import menu}}
+{{from uliweb.contrib.develop.menu import menu}}
 {{<< menu('Build')}}
 {{end}}
 {{block content}}
 {{use "mootools"}}
 {{link "css/tabs.css"}}
 {{link "js/clientcide-tabswap.js"}}
-{{link "css/admin.css"}}
+{{link "css/develop.css"}}
 {{link "js/Fx.Slide.js"}}
 <div id="build-container">
     <ul class="tabSet">
@@ -16,10 +16,10 @@
     </ul>
     <div class="panelSet">
         <div class="panel">
-            {{include "admin_app_generic.html"}}
+            {{include "develop_app_generic.html"}}
         </div>
         <div class="panel">
-            {{include "admin_app_show.html"}}
+            {{include "develop_app_show.html"}}
         </div>
     </div>
 </div>
@@ -32,7 +32,7 @@ window.addEvent('domready', function() {
 	  clickers: $$('.tabSet li a'),
 	  sections: $$('div.panelSet div.panel'),
 	  /*remember what the last tab the user clicked was*/
-	  cookieName: 'admin.build',
+	  cookieName: 'develop.build',
 	  /*use transitions to fade across*/
 	  smooth: true,
       smoothSize: true
