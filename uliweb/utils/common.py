@@ -232,6 +232,12 @@ def timeit(func):
         return ret
     return f
 
+def safe_unicode(s, encoding='utf-8'):
+    if isinstance(s, unicode):
+        return s
+    else:
+        return unicode(s, encoding)
+
 if __name__ == '__main__':
     log.info('Info: info')
     try:

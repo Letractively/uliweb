@@ -8,6 +8,8 @@ class ValidationError(Exception):
         return str(self.message)
 
 def __get_choices_keys(choices):
+    if callable(choices):
+        choices = choices()
     if isinstance(choices, dict):
         keys = set(choices.keys())
     elif isinstance(choices, (list, tuple)):

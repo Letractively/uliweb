@@ -29,10 +29,10 @@ def anonymous(user):
 
 def owner(user, obj):
     """
-    If you want to use it, you should define "owner" function to object
+    If you want to use it, you should define "is_owner" function to object
     """
-    if hasattr(obj, 'owner'):
-        return obj.owner(user)
+    if hasattr(obj, 'is_owner'):
+        return obj.is_owner(user)
     else:
         return False
 

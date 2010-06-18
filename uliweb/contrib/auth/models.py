@@ -77,7 +77,7 @@ class User(Model):
         from uliweb.contrib.staticfiles import url_for_static
         
         if self.image:
-            return get_url(self.image, subfolder='portrait')
+            return get_url(self.image)
         else:
             return url_for_static('images/user.jpg')
     

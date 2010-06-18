@@ -21,12 +21,18 @@ def _generate_etag(mtime, file_size, real_filename):
         adler32(real_filename) & 0xffffffff
     )
 
-def filedown(environ, filename, cache=True, cache_timeout=None):
+def filedown(environ, filename, cache=True, cache_timeout=None, download=False, inline=False):
     guessed_type = mimetypes.guess_type(filename)
     mime_type = guessed_type[0] or 'text/plain'
     f, mtime, file_size = _opener(filename)
 
     headers = [('Date', http_date())]
+    
+    if download:
+        headers.append(('Content-Disposition', 'attachment; filename=%s' % filename))
+    if inline:
+        headers.append(('Content-Disposition', 'inline; filename=%s' % filename))
+    
     if cache:
         etag = _generate_etag(mtime, file_size, filename)
         headers += [
@@ -42,6 +48,7 @@ def filedown(environ, filename, cache=True, cache_timeout=None):
             return Response(status=304, headers=headers)
     else:
         headers.append(('Cache-Control', 'public'))
+    
 
     headers.extend((
         ('Content-Type', mime_type),
