@@ -613,7 +613,7 @@ class ReferenceProperty(Property):
                 (isinstance(reference_class, type) and issubclass(reference_class, Model)) or
                 reference_class is _SELF_REFERENCE or
                 valid_model(reference_class)):
-            raise KindError('reference_class must be Model or _SELF_REFERENCE')
+            raise KindError('reference_class must be Model or _SELF_REFERENCE or available table name')
         self.reference_class = self.data_type = get_model(reference_class)
         
     def create(self, cls):

@@ -541,7 +541,7 @@ class SelectField(BaseField):
         self.choices = choices or []
         if self.choices:
             self._default = default or self.choices[0][0]
-        self.validators.append(IS_IN_SET(self.choices))
+        self.validators.append(IS_IN_SET(lambda :self.choices))
 
     def html(self, data, py=True):
         if py:

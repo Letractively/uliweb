@@ -21,26 +21,41 @@ def save_file(fname, fobj, replace=False, buffer_size=4096):
             i += 1
         
     out = open(fname, 'wb')
+    size = 0
     try:
         while 1:
             text = fobj.read(buffer_size)
             if text:
+                size += len(text)
                 out.write(text)
             else:
                 break
         return os.path.basename(fname)
     finally:
         out.close()
+    return size
         
-def encoding_filename(filename, from_encoding='utf-8', to_encoding=None):
+def unicode_filename(filename, encoding=None):
+    encoding = encoding or sys.getfilesystemencoding()
+    if isinstance(filename, unicode):
+        return filename
+    else:
+        return unicode(filename, encoding)
+    
+def encode_filename(filename, from_encoding='utf-8', to_encoding=None):
     """
-    >>> print encoding_filename('\xe4\xb8\xad\xe5\x9b\xbd.doc')
+    >>> print encode_filename('\xe4\xb8\xad\xe5\x9b\xbd.doc')
     \xd6\xd0\xb9\xfa.doc
     >>> f = unicode('\xe4\xb8\xad\xe5\x9b\xbd.doc', 'utf-8')
-    >>> print encoding_filename(f)
+    >>> print encode_filename(f)
     \xd6\xd0\xb9\xfa.doc
-    >>> print encoding_filename(f.encode('gbk'))
+    >>> print encode_filename(f.encode('gbk'), 'gbk')
     \xd6\xd0\xb9\xfa.doc
+    >>> print encode_filename(f, 'gbk', 'utf-8')
+    \xe4\xb8\xad\xe5\x9b\xbd.doc
+    >>> print encode_filename('\xe4\xb8\xad\xe5\x9b\xbd.doc', 'utf-8', 'gbk')
+    \xd6\xd0\xb9\xfa.doc
+    
     """
     import sys
     to_encoding = to_encoding or sys.getfilesystemencoding()
@@ -52,9 +67,36 @@ def encoding_filename(filename, from_encoding='utf-8', to_encoding=None):
             try:
                 f = unicode(filename, 'utf-8')
             except UnicodeDecodeError:
-                try:
-                    f = unicode(filename, to_encoding)
-                except UnicodeDecodeError:
-                    raise Exception, "Unknown encoding of the filename %s" % filename
+                raise Exception, "Unknown encoding of the filename %s" % filename
         filename = f
-    return filename.encode(to_encoding)
+    if to_encoding:
+        return filename.encode(to_encoding)
+    else:
+        return filename
+
+def str_filesize(size):
+    """
+    >>> print str_filesize(0)
+    0
+    >>> print str_filesize(1023) 
+    1023
+    >>> print str_filesize(1024)
+    1K
+    >>> print str_filesize(1024*2)
+    2K
+    >>> print str_filesize(1024**2-1)
+    1023K
+    >>> print str_filesize(1024**2)
+    1M
+    """
+    import bisect
+    
+    d = [(1024-1,'K'), (1024**2-1,'M'), (1024**3-1,'G'), (1024**4-1,'T')]
+    s = [x[0] for x in d]
+    
+    index = bisect.bisect_left(s, size) - 1
+    if index == -1:
+        return str(size)
+    else:
+        b, u = d[index]
+    return str(size / (b+1)) + u
