@@ -1,22 +1,22 @@
 #coding=utf-8
 from uliweb.core.SimpleFrame import expose
-from uliweb.contrib.admin.menu import bind_menu
+from uliweb.contrib.develop.menu import bind_menu
 from uliweb.utils.common import log
 from uliweb.utils.common import pkg, is_pyfile_exist
 
-@expose('/admin')
+@expose('/develop')
 @bind_menu('Settings', weight=10)
-def admin_index():
+def develop_index():
     return {}
 
-@expose('/admin/appsinfo')
+@expose('/develop/appsinfo')
 @bind_menu('Apps Info', weight=20)
-def admin_appsinfo():
+def develop_appsinfo():
     return {'apps':application.apps}
 
-@expose('/admin/urls')
+@expose('/develop/urls')
 @bind_menu('Urls', weight=30)
-def admin_urls():
+def develop_urls():
     u = []
     for r in application.url_map.iter_rules():
         if r.methods:
@@ -28,9 +28,9 @@ def admin_urls():
     
     return {'urls':u}
 
-@expose("/admin/global")
+@expose("/develop/global")
 @bind_menu('View Global', weight=40)
-def admin_globals():
+def develop_globals():
 #    glob = globals()
 #    glo = [ (key,glob[key]) for key in glob.keys() if callable(glob[key]) ]
 #    un = [(key, str(glob[key]) or "none") for key in glob.keys() if not callable(glob[key]) ]
@@ -42,9 +42,9 @@ def admin_globals():
 from uliweb.utils.pyini import Ini
 import os
 
-@expose("/admin/build")
+@expose("/develop/build")
 @bind_menu('Build')
-def admin_build():
+def develop_build():
     from uliweb.utils.common import pkg
     
     import uliweb.core.SimpleFrame as sf
@@ -88,8 +88,8 @@ def admin_build():
         
     return {'catalogs':catalogs, 'generic_form':f}
 
-@expose('/admin/app_edit')
-def admin_edit_app():
+@expose('/develop/app_edit')
+def develop_edit_app():
     ini = Ini(os.path.join(application.apps_dir, 'settings.ini'))
     flag = False
     module = str(request.GET['module'])
@@ -189,8 +189,8 @@ def get_apps(application, apps_dirs, app_apps):
         
     return catalogs, apps
 
-@expose('/admin/app_conf')
-def admin_app_conf():
+@expose('/develop/app_conf')
+def develop_app_conf():
     module = request.GET['module']
     app_path = pkg.resource_filename(module, '')
     
@@ -201,7 +201,7 @@ def admin_app_conf():
             mod = __import__(module + '.conf', {}, {}, [''])
             f = getattr(mod, 'ManageForm')
             if f:
-                form = f(action=url_for(admin_app_conf)+'?module=%s' % module, method='post')
+                form = f(action=url_for(develop_app_conf)+'?module=%s' % module, method='post')
                 if request.method == 'POST':
                     ini = Ini(os.path.join(application.apps_dir, 'settings.ini'))
                     default_ini = Ini(os.path.join(app_path, 'settings.ini'))

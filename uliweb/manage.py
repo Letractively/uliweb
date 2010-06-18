@@ -248,7 +248,7 @@ def collect_files(apps_dir, apps):
     return files
         
 def runserver(apps_dir, hostname='localhost', port=5000, 
-            threaded=False, processes=1, admin=False):
+            threaded=False, processes=1, develop=False):
     """Returns an action callback that spawns a new wsgiref server."""
     def action(hostname=('h', hostname), port=('p', port), reload=True, debugger=True,
                threaded=threaded, processes=processes):
@@ -258,8 +258,8 @@ def runserver(apps_dir, hostname='localhost', port=5000,
         from werkzeug.serving import run_simple
         from uliweb import get_apps
 
-        if admin:
-            include_apps = ['uliweb.contrib.admin']
+        if develop:
+            include_apps = ['uliweb.contrib.develop']
             app = make_application(debugger, apps_dir, 
                         include_apps=include_apps)
         else:
@@ -281,7 +281,7 @@ def main():
     install_config(apps_dir)
     
     action_runserver = runserver(apps_dir, port=8000)
-    action_runadmin = runserver(apps_dir, port=8000, admin=True)
+    action_develop = runserver(apps_dir, port=8000, develop=True)
     action_makeapp = make_app
     action_makepkg = make_pkg
     action_exportstatic = exportstatic
