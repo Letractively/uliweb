@@ -10,7 +10,7 @@ from widgets import *
 from layout import *
 
 DEFAULT_FORM_CLASS = 'form'
-REQUIRED_CAPTION = '(*)'
+REQUIRED_CAPTION = '*'
 REQUIRED_CAPTION_AFTER = True
 DEFAULT_ENCODING = 'utf-8'
 
@@ -64,7 +64,7 @@ class FieldProxy(object):
     
     @property
     def help_string(self):
-        return self.field.help_string
+        return self.field.get_help_string(_class='description')
     
     @property
     def error(self):
@@ -159,6 +159,12 @@ class BaseField(object):
             else:
                 label = str(Tag('span', REQUIRED_CAPTION, _class='field_required')) + label
         return str(Tag('label', label, _for=self.id, **kwargs))
+    
+    def get_help_string(self, **kwargs):
+        if self.help_string:
+            return str(Tag('label', self.help_string, _for=self.id, **kwargs))
+        else:
+            return ''
     
     @property
     def id(self):
@@ -407,7 +413,7 @@ class TextField(StringField):
     """
     default_build = TextArea
 
-    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=5, cols=40, **kwargs):
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=5, cols=75, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.rows = rows
         self.cols = cols
@@ -510,6 +516,18 @@ class IntField(BaseField):
             return ''
         return str(data)
 
+class FloatField(BaseField):
+    def __init__(self, label='', default=0.0, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
+        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
+
+    def to_python(self, data):
+        return float(data)
+
+    def to_html(self, data):
+        if data is None:
+            return ''
+        return str(data)
+
 class SelectField(BaseField):
     """
     >>> a = SelectField(name='select', id='field_select', default='a', choices=[('a', 'AAA'), ('b', 'BBB')])
@@ -536,19 +554,30 @@ class SelectField(BaseField):
     """
     default_build = Select
 
-    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
+    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.choices = choices or []
-        if self.choices:
-            self._default = default or self.choices[0][0]
-        self.validators.append(IS_IN_SET(lambda :self.choices))
+        self.empty = empty
+#        if self.choices:
+#            self._default = default or self.choices[0][0]
+#        self.validators.append(IS_IN_SET(lambda :self.get_choices()))
 
+    def get_choices(self):
+        if callable(self.choices):
+            return self.choices()
+        else:
+            return self.choices
+        
     def html(self, data, py=True):
         if py:
             value = self.to_html(data)
         else:
             value = data
-        return str(self.build(self.choices, data, id=self.id, name=self.name, **self.html_attrs))
+        choices = self.get_choices()
+        if self.empty is not True:
+            if not '' in dict(choices):
+                choices.insert(0, ('', self.empty))
+        return str(self.build(choices, data, id=self.id, name=self.name, **self.html_attrs))
 
 class RadioSelectField(SelectField):
     """
@@ -752,12 +781,13 @@ class DateTimeField(StringField):
 
 class FormMetaclass(type):
     def __init__(cls, name, bases, dct):
-        fields = {}
+        cls.fields = {}
         for field_name, obj in dct.items():
-            if isinstance(obj, BaseField):
-                check_reserved_word(field_name)
-                fields[field_name] = obj
-                obj.__property_config__(cls, field_name)
+            cls.add_field(field_name, obj)
+#            if isinstance(obj, BaseField):
+#                check_reserved_word(field_name)
+#                fields[field_name] = obj
+#                obj.__property_config__(cls, field_name)
                 
 
 #        f = {}
@@ -766,12 +796,7 @@ class FormMetaclass(type):
 #                f.update(base.fields)
 #
 #        f.update(fields)
-        cls.fields = fields
-
-        fields_list = [(k, v) for k, v in fields.items()]
-        fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
-        cls.fields_list = fields_list
-
+#        cls.fields = fields
 
 class Form(object):
     """
@@ -812,6 +837,8 @@ class Form(object):
         self.html_attrs = html_attrs or {}
         self.idtype = idtype
         self.vars = vars
+        self.fields_list = [(k, v) for k, v in self.fields.items()]
+        self.fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
         if '_class' in self.html_attrs:
@@ -822,6 +849,15 @@ class Form(object):
         self.bind(data, errors)
         self.__init_validators()
         self.ok = True
+        
+    @classmethod
+    def add_field(cls, field_name, field, attribute=False):
+        if isinstance(field, BaseField):
+            check_reserved_word(field_name)
+            cls.fields[field_name] = field
+            field.__property_config__(cls, field_name)
+            if attribute:
+                setattr(cls, field_name, field)
         
     def __init_validators(self):
         for k, obj in self.fields.items():
@@ -915,9 +951,16 @@ class Form(object):
 #            self.f[name] = f
 
     def html(self):
+        result = []
+        if hasattr(self, 'pre_html'):
+            result.append(self.pre_html())
         cls = self.layout_class
         layout = cls(self, self.layout)
-        return str(layout)
+        result.append(str(layout))
+        if hasattr(self, 'post_html'):
+            result.append(self.post_html())
+        
+        return ''.join(result)
 
 def test():
     """

@@ -45,7 +45,7 @@ class C(B):
     
 class U(B):
     def __str__(self):
-        return '"' + self.value + '"'
+        return S(self.value)
     
     def __call__(self):
         return self.__str__()
@@ -81,6 +81,8 @@ def S(value, tab=0):
         return '\n'.join(s)
     elif isinstance(value, C):
         return str(value)
+    elif isinstance(value, str):
+        return '"' + value + '"'
     else:
         return dumps(value)
 
@@ -90,7 +92,7 @@ class Var(B):
         self.name = name
         
     def __str__(self):
-        return 'var %s = %s;' % (self.name, self.value)
+        return 'var %s = %s;' % (self.name, S(self.value))
     
     def __call__(self):
         return self.name
