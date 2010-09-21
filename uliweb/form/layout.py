@@ -158,8 +158,10 @@ class YamlLayout(Layout):
             if self.get_widget_name(obj) == 'Checkbox':
                 div << input
                 div << label
+                div << help_string
             else:
                 div << label
+                div << help_string
                 div << input
             return div
 

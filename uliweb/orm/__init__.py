@@ -234,13 +234,14 @@ class Property(object):
     creation_counter = 0
 
     def __init__(self, verbose_name=None, name=None, default=None,
-         required=False, validators=None, choices=None, max_length=None, **kwargs):
+         required=False, validators=None, choices=None, max_length=None, hint='', **kwargs):
         self.verbose_name = verbose_name
         self.property_name = None
         self.name = name
         self.default = default
         self.required = required
         self.validators = validators or []
+        self.hint = hint
         if not isinstance(self.validators, (tuple, list)):
             self.validators = [self.validators]
         self.choices = choices
@@ -255,11 +256,11 @@ class Property(object):
         args['key'] = self.name
         if callable(self.default):
             args['default'] = self.default
-        args['primary_key'] = self.kwargs.pop('primary_key', False)
-        args['autoincrement'] = self.kwargs.pop('autoincrement', False)
-        args['index'] = self.kwargs.pop('index', False)
-        args['unique'] = self.kwargs.pop('unique', False)
-        args['nullable'] = self.kwargs.pop('nullable', True)
+        args['primary_key'] = self.kwargs.get('primary_key', False)
+        args['autoincrement'] = self.kwargs.get('autoincrement', False)
+        args['index'] = self.kwargs.get('index', False)
+        args['unique'] = self.kwargs.get('unique', False)
+        args['nullable'] = self.kwargs.get('nullable', True)
         f_type = self._create_type()
         return Column(self.property_name, f_type, **args)
 
@@ -298,32 +299,39 @@ class Property(object):
         if callable(self.default):
             return self.default(model_instance)
         return self.default
+    
+    def get_choices(self):
+        if callable(self.choices):
+            return self.choices()
+        else:
+            return self.choices
 
     def validate(self, value):
         if self.empty(value):
             if self.required:
                 raise BadValueError('Property %s is required' % self.name)
-        else:
-            if self.choices:
-                match = False
-                for choice in self.choices:
-                    if isinstance(choice, tuple):
-                        if choice[0] == value:
-                            match = True
-                    else:
-                        if choice == value:
-                            match = True
-                    if match:
-                        break
-                if not match:
-                    c = []
-                    for choice in self.choices:
-                        if isinstance(choice, tuple):
-                            c.append(choice[0])
-                        else:
-                            c.append(choice)
-                    raise BadValueError('Property %s is %r; must be one of %r' %
-                        (self.name, value, c))
+#        else:
+#            if self.choices:
+#                match = False
+#                choices = self.get_choices()
+#                for choice in choices:
+#                    if isinstance(choice, tuple):
+#                        if choice[0] == value:
+#                            match = True
+#                    else:
+#                        if choice == value:
+#                            match = True
+#                    if match:
+#                        break
+#                if not match:
+#                    c = []
+#                    for choice in choices:
+#                        if isinstance(choice, tuple):
+#                            c.append(choice[0])
+#                        else:
+#                            c.append(choice)
+#                    raise BadValueError('Property %s is %r; must be one of %r' %
+#                        (self.name, value, c))
         if (value is not None) and self.data_type and (not isinstance(value, self.data_type)):
             try:
                 value = self.convert(value)
@@ -528,20 +536,21 @@ class FloatProperty(Property):
     
     def __init__(self, verbose_name=None, default=0.0, **kwds):
         super(FloatProperty, self).__init__(verbose_name, default=default, **kwds)
-        precision = 10
+        precision = 2
         if self.max_length:
             precision = self.max_length
-        if self.kwargs.get('precision', None):
+        if 'precision' in self.kwargs:
             precision = self.kwargs.pop('precision')
         self.precision = precision
         
-        length = 2
-        if self.kwargs.get('length', None):
-            length = self.kwargs.pop('length')
-        self.length = length
-        
+#        length = 2
+#        if 'length' in self.kwargs:
+#            length = self.kwargs.get('length')
+#        self.length = length
+#        
     def _create_type(self):
-        f_type = self.field_class(**dict(precision=self.precision, length=self.length))
+#        f_type = self.field_class(**dict(precision=self.precision, length=self.length))
+        f_type = self.field_class(precision=self.precision)
         return f_type
     
     def validate(self, value):
@@ -621,11 +630,11 @@ class ReferenceProperty(Property):
         args['key'] = self.name
         if not callable(self.default):
             args['default'] = self.default
-        args['primary_key'] = self.kwargs.pop('primary_key', False)
-        args['autoincrement'] = self.kwargs.pop('autoincrement', False)
-        args['index'] = self.kwargs.pop('index', False)
-        args['unique'] = self.kwargs.pop('unique', False)
-        args['nullable'] = self.kwargs.pop('nullable', True)
+        args['primary_key'] = self.kwargs.get('primary_key', False)
+        args['autoincrement'] = self.kwargs.get('autoincrement', False)
+        args['index'] = self.kwargs.get('index', False)
+        args['unique'] = self.kwargs.get('unique', False)
+        args['nullable'] = self.kwargs.get('nullable', True)
         f_type = self._create_type()
 #        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
         return Column(self.property_name, f_type, **args)
@@ -751,11 +760,11 @@ class OneToOne(ReferenceProperty):
         args['key'] = self.name
         if not callable(self.default):
             args['default'] = self.default
-        args['primary_key'] = self.kwargs.pop('primary_key', False)
-        args['autoincrement'] = self.kwargs.pop('autoincrement', False)
-        args['index'] = self.kwargs.pop('index', False)
-        args['unique'] = self.kwargs.pop('unique', True)
-        args['nullable'] = self.kwargs.pop('nullable', True)
+        args['primary_key'] = self.kwargs.get('primary_key', False)
+        args['autoincrement'] = self.kwargs.get('autoincrement', False)
+        args['index'] = self.kwargs.get('index', False)
+        args['unique'] = self.kwargs.get('unique', True)
+        args['nullable'] = self.kwargs.get('nullable', True)
         f_type = self._create_type()
 #        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
         return Column(self.property_name, f_type, **args)
@@ -796,7 +805,7 @@ class Result(object):
             return self.filter(condition).one()
     
     def count(self):
-        if self.model is None or self.condition is None:
+        if self.model is None:
             return 0
         return self.model.count(self.condition)
 
