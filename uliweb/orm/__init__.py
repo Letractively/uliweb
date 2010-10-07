@@ -28,6 +28,7 @@ import datetime
 from uliweb.utils import date
 from sqlalchemy import *
 from sqlalchemy.sql import select
+from uliweb.core import dispatch
 
 now = date.now
 
@@ -222,7 +223,8 @@ class ModelMetaclass(type):
             f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)
 
-        fields_list = [(k, v) for k, v in cls.properties.items() if not isinstance(v, ManyToMany)]
+#        fields_list = [(k, v) for k, v in cls.properties.items() if not isinstance(v, ManyToMany)]
+        fields_list = [(k, v) for k, v in cls.properties.items()]
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls._fields_list = fields_list
         
@@ -1188,7 +1190,7 @@ class Model(object):
     def _set_saved(self):
         self._old_values = self.to_dict()
         
-    def to_dict(self, *fields):
+    def to_dict(self, fields=[], convert=True):
         d = {}
         for k, v in self.properties.items():
             if fields and not k in fields:
@@ -1197,7 +1199,10 @@ class Model(object):
                 t = v.get_value_for_datastore(self)
                 if isinstance(t, Model):
                     t = t.id
-                d[k] = self.field_str(t)
+                if convert:
+                    d[k] = self.field_str(t)
+                else:
+                    d[k] = t
         return d
     
     def field_str(self, v):
@@ -1209,6 +1214,8 @@ class Model(object):
             return v.strftime('%H:%M:%S')
         elif isinstance(v, decimal.Decimal):
             return str(v)
+        elif isinstance(v, unicode):
+            return v.encode(__default_encoding__)
         else:
             return v
            
@@ -1249,36 +1256,59 @@ class Model(object):
             
     def is_saved(self):
         return bool(self.id) 
+    
+    def update(self, **data):
+        for k, v in data.iteritems():
+            if k in self.properties:
+                x = self.properties[k].get_value_for_datastore(self)
+                if self.field_str(x) != self.field_str(v):
+                    setattr(self, k, v)
             
     def put(self):
+        dispatch.call(self.__class__, 'pre_save', instance=self)
+        
+        saved = False
         d = self._get_data()
         if d:
             if not self.id:
                 obj = self.table.insert().execute(**d)
                 setattr(self, 'id', obj.lastrowid)
+                dispatch.call(self.__class__, 'post_save', instance=self, created=True, data=d)
+                saved = True
             else:
                 _id = d.pop('id')
                 if d:
                     self.table.update(self.table.c.id == self.id).execute(**d)
+                    dispatch.call(self.__class__, 'post_save', instance=self, created=False, data=d)
+                    saved = True
             for k, v in d.items():
                 x = self.properties[k].get_value_for_datastore(self)
                 if self.field_str(x) != self.field_str(v):
                     setattr(self, k, v)
             self._set_saved()
-        return self
+        return saved
     
     save = put
     
     def delete(self):
+        dispatch.call(self.__class__, 'pre_delete', instance=self)
         self.table.delete(self.table.c.id==self.id).execute()
+        dispatch.call(self.__class__, 'post_delete', instance=self)
         self.id = None
         self._old_values = {}
             
     def __repr__(self):
         s = []
         for k, v in self._fields_list:
-            s.append('%r:%r' % (k, getattr(self, k, None)))
+            if not isinstance(v, ManyToMany):
+                s.append('%r:%r' % (k, getattr(self, k, None)))
         return ('<%s {' % self.__class__.__name__) + ','.join(s) + '}>'
+    
+    def __str__(self):
+        return str(self.id)
+    
+    def __unicode__(self):
+        return str(self.id)
            
     #classmethod========================================================
 

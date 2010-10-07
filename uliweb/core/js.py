@@ -7,6 +7,8 @@ try:
     import json as JSON
 except:
     import simplejson as JSON
+import datetime
+import decimal
 
 TAB = 4
 SIMPLE_IDEN = True
@@ -62,7 +64,7 @@ def S(value, tab=0):
             else:
                 ending = ''
             if SIMPLE_IDEN and k.isalpha() and k not in ['class']:
-                s.append((tab+TAB) * ' ' + '%s: %s%s' % (k, S(v, tab+TAB), ending))
+                s.append((tab+TAB) * ' ' + '%s: %s%s' % (S(k), S(v, tab+TAB), ending))
             else:
                 s.append((tab+TAB) * ' ' + '%s: %s%s' % (S(k, tab+TAB), S(v, tab+TAB), ending))
         s.append(tab*' ' + '}')
@@ -80,6 +82,14 @@ def S(value, tab=0):
         s.append(tab*' ' + ']')
         return '\n'.join(s)
     elif isinstance(value, C):
+        return str(value)
+    elif isinstance(value, datetime.datetime):
+        return '"%s"' % value.strftime('%Y-%m-%d %H:%M:%S')
+    elif isinstance(value, datetime.date):
+        return '"%s"' % value.strftime('%Y-%m-%d')
+    elif isinstance(value, datetime.time):
+        return '"%s"' % value.strftime('%H:%M:%S')
+    elif isinstance(value, decimal.Decimal):
         return str(value)
     elif isinstance(value, str):
         return '"' + value + '"'

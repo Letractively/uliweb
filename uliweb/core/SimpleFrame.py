@@ -18,11 +18,6 @@ import uliweb as conf
 from rules import Mapping, add_rule
 
 try:
-    import json as JSON
-except:
-    import simplejson as JSON
-
-try:
     set
 except:
     from sets import Set as set
@@ -102,14 +97,15 @@ def error(message='', errorpage=None, request=None, appname=None, **kwargs):
     raise HTTPError(errorpage, **kwargs)
 
 def json(data):
+    from uliweb.core.js import S
     if callable(data):
         @wraps(data)
         def f(*arg, **kwargs):
             ret = data(*arg, **kwargs)
-            return Response(JSON.dumps(ret), content_type='application/json; charset=utf-8')
+            return Response(S(ret), content_type='application/json; charset=utf-8')
         return f
     else:
-        return Response(JSON.dumps(data), content_type='application/json; charset=utf-8')
+        return Response(S(data), content_type='application/json; charset=utf-8')
 
 class ReservedKeyError(Exception):pass
 
