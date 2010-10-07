@@ -305,6 +305,7 @@ class StringField(BaseField):
         """
         Convert a data to python format. 
         """
+        data = data.strip()
         if isinstance(data, unicode):
             data = data.encode(DEFAULT_ENCODING)
         else:
@@ -342,6 +343,7 @@ class UnicodeField(BaseField):
         """
         if data is None:
             return data
+        data = data.strip()
         if isinstance(data, unicode):
             return data
         else:
@@ -464,7 +466,7 @@ class BooleanField(BaseField):
     default_build = Checkbox
     field_css_class = 'checkbox'
     
-    def __init__(self, label='', default=False, name='', html_attrs=None, help_string='', build=None, **kwargs):
+    def __init__(self, label='', default=False, name='', html_attrs=None, help_string='', build=None, required=False, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=False, validators=None, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
 
     def to_python(self, data):

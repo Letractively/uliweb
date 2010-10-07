@@ -4,8 +4,18 @@ class Build(object):
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
-    def html(self):
+    def to_html(self):
         raise NotImplementedError
+    
+    def pre_html(self):
+        return ''
+    
+    def post_html(self):
+        return ''
+    
+    def html(self):
+        return '\n'.join([self.pre_html() % self.kwargs] + [self.to_html()] + 
+            [self.post_html() % self.kwargs])
 
     def __str__(self):
         return self.html()
@@ -14,9 +24,9 @@ class Text(Build):
     type = 'text'
 
     def __init__(self, **kwargs):
-        self.kwargs = kwargs
+        super(Text, self).__init__(**kwargs)
 
-    def html(self):
+    def to_html(self):
         args = self.kwargs.copy()
         args.setdefault('type', self.type)
         return str(Tag('input', **args))
@@ -24,10 +34,10 @@ class Text(Build):
 class Password(Text): type = 'password'
 class TextArea(Build):
     def __init__(self, value='', **kwargs):
-        self.kwargs = kwargs
         self.value = value
+        super(TextArea, self).__init__(**kwargs)
 
-    def html(self):
+    def to_html(self):
         args = self.kwargs
         args.setdefault('rows', 5)
         args.setdefault('cols', 40)
@@ -42,9 +52,9 @@ class Select(Build):
     def __init__(self, choices, value=None, **kwargs):
         self.choices = choices
         self.value = value
-        self.kwargs = kwargs
+        super(Select, self).__init__(**kwargs)
 
-    def html(self):
+    def to_html(self):
         s = []
         for v, caption in self.choices:
             args = {'value': v}
@@ -56,9 +66,9 @@ class Select(Build):
 class RadioSelect(Select):
     _id = 0
     def __init__(self, choices, value=None, **kwargs):
-        Select.__init__(self, choices, value, **kwargs)
+        super(RadioSelect, self).__init__(choices, value, **kwargs)
 
-    def html(self):
+    def to_html(self):
         s = []
         for v, caption in self.choices:
             args = {'value': v}
@@ -77,9 +87,9 @@ class RadioSelect(Select):
 class Checkbox(Build):
     def __init__(self, value=False, **kwargs):
         self.value = value
-        self.kwargs = kwargs
+        super(Checkbox, self).__init__(**kwargs)
 
-    def html(self):
+    def to_html(self):
         args = self.kwargs.copy()
         if self.value:
             args.setdefault('checked', None)

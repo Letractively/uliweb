@@ -238,6 +238,18 @@ def safe_unicode(s, encoding='utf-8'):
     else:
         return unicode(s, encoding)
 
+def get_var(key):
+    def f():
+        from uliweb import settings
+        
+        return settings.get_var(key)
+    return f
+
+def get_choice(choices, value):
+    if callable(choices):
+        choices = choices()
+    return dict(choices).get(value, '')
+
 if __name__ == '__main__':
     log.info('Info: info')
     try:

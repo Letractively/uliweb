@@ -296,6 +296,8 @@ class Lexer(object):
                         top.add(buf)
                     elif name == 'include':
                         self._parse_include(top, value)
+                    elif name == 'embed':
+                        self._parse_text(top, value)
                     elif name == 'extend':
                         extend = value
                     else:
@@ -309,6 +311,11 @@ class Lexer(object):
         if extend:
             self._parse_extend(extend)
             
+    def _parse_text(self, content, var):
+        text = str(eval(var, self.env.to_dict(), self.vars))
+        t = Lexer(text, self.vars, self.env, self.dirs, self.handlers)
+        content.merge(t.content)
+
     def _parse_include(self, content, filename):
         if not filename.strip():
             return

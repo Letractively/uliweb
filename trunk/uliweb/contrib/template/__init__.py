@@ -7,17 +7,29 @@ _saved_template_plugins_modules = {}
 
 def _parse_arguments(text, key='with'):
     r = re.compile(r'\s+%s\s+' % key)
+    key = re.compile(r'^\s*([\w][a-zA-Z_0-9]*\s*)=\s*(.*)')
     b = r.split(text)
     if len(b) == 1:
-        name, args = b[0], ()
+        name, args, kwargs = b[0], (), {}
     else:
         name = b[0]
-        args = b[1]
-    return name, args
+        s = b[1].split(',')
+        args = []
+        kwargs = {}
+        for x in s:
+            ret = key.search(x)
+            if ret:
+                kwargs[ret.group(1)] = ret.group(2)
+            else:
+                args.append(x)
+                
+    return name, args, kwargs
 
 def eval_vars(vs, vars, env):
     if isinstance(vs, (tuple, list)):
         return [eval_vars(x, vars, env) for x in vs]
+    elif isinstance(vs, dict):
+        return dict([(x, eval_vars(y, vars, env)) for x, y in vs.iteritems()])
     else:
         return eval(vs, vars, env.to_dict())
 
@@ -30,9 +42,10 @@ def use_tag_handler(app):
     def use(plugin, container, stack, vars, env, dirs, writer, app=app):
         from uliweb.core.SimpleFrame import get_app_dir
         
-        plugin, args = _parse_arguments(plugin)
+        plugin, args, kwargs = _parse_arguments(plugin)
         plugin = eval_vars(plugin, vars, env)
         args = eval_vars(args, vars, env)
+        kwargs = eval_vars(kwargs, vars, env)
         collection = env.dicts[0].get('collection', SortedDict())
         if plugin in _saved_template_plugins_modules:
             mod = _saved_template_plugins_modules[plugin]
@@ -54,7 +67,7 @@ def use_tag_handler(app):
                 log.debug("Can't found the [%s] html plugins, please check if you've installed special app already" % plugin)
         call = getattr(mod, 'call', None)
         if call:
-            v = call(app, vars, env, *args)
+            v = call(app, vars, env, *args, **kwargs)
             if v:
                 collection[plugin] = v
         env['collection'] = collection
