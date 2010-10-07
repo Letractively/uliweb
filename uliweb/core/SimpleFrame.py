@@ -96,6 +96,18 @@ def error(message='', errorpage=None, request=None, appname=None, **kwargs):
         kwargs.setdefault('link', request.url)
     raise HTTPError(errorpage, **kwargs)
 
+def function(fname, *args, **kwargs):
+    from uliweb.utils.common import import_attr
+    
+    func = conf.settings.get_var('FUNCTIONS/'+fname)
+    if func:
+        if args or kwargs:
+            return import_attr(func)(*args, **kwargs)
+        else:
+            return import_attr(func)
+    else:
+        raise Exception, "Can't find the function [%s] in settings" % func
+    
 def json(data):
     from uliweb.core.js import S
     if callable(data):
