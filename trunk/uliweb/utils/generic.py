@@ -98,11 +98,11 @@ def make_add_form(model, fields=None, form_cls=None, data=None, builds_type_map=
     return DummyForm(data=data, **kwargs)
 
 def view_add_object(model, ok_url, form=None, success_msg=None, fail_msg=None, data=None, **kwargs):
-    from uliweb import request
+    from uliweb import request, function
     from uliweb.orm import get_model
-    from uliweb.contrib.flashmessage import flash
     from uliweb import redirect
     
+    flash = function('flash')
     data = data or {}
     
     if not form:
@@ -168,15 +168,14 @@ def make_edit_form(model, obj, fields=None, form_cls=None, data=None, builds_typ
     return DummyForm(data=data, **kwargs)
 
 def view_edit_object(model, condition, ok_url, form=None, success_msg=None, fail_msg=None, data=None, **kwargs):
-    from uliweb import request
-    from uliweb.orm import get_model
-    from uliweb.contrib.flashmessage import flash
+    from uliweb import request, function
     from uliweb import redirect
     import uliweb.orm as orm
-    from uliweb.core import dispatch
     
     if isinstance(model, str):
         model = orm.get_model(model)
+
+    flash = function('flash')
 
     obj = model.get(condition)
     data = data or {}
