@@ -107,3 +107,8 @@ class Tag(Buf):
             s = [self.begin]
         return '\n'.join(s)
 
+def begin_tag(tag, **kwargs):
+    return '<%s%s>' % (tag, _create_kwargs(kwargs))
+
+def end_tag(tag):
+    return '</%s>' % tag
