@@ -83,3 +83,15 @@ def logout(request):
     request.session.delete()
     request.user = None
     return True
+
+def require_login(f, login_url='/login'):
+    from uliweb.utils.common import wraps
+    
+    @wraps(f)
+    def _f(*args):
+        from uliweb import request, redirect
+        
+        if not request.user:
+            return redirect(login_url + '?next=%s' % request.path)
+        return f(*args)
+    return _f

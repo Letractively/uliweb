@@ -308,3 +308,7 @@ class PermissionManager(object):
         return self.get(name).has(user, **kwargs)
     
 permissions = PermissionManager()
+
+has_permission = permissions.ok
+has_role = roles.has
+
