@@ -200,11 +200,13 @@ def view_edit_object(model, condition, ok_url, form=None, success_msg=None, fail
     else:
         return {'form':form, 'object':obj}
     
-def make_view_field(prop, obj, types_convert_map={}, fields_convert_map={}):
+def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
     import uliweb.orm as orm
     from uliweb.utils.common import get_choice
 
-    default_convert_map = {orm.TextProperty:lambda v:'<br/>'.join(v.splitlines())}
+    types_convert_map = types_convert_map or {}
+    fields_convert_map = fields_convert_map or {}
+    default_convert_map = {orm.TextProperty:lambda v,o:'<br/>'.join(v.splitlines())}
     
     value = prop.get_value_for_datastore(obj)
     display = value
@@ -217,7 +219,7 @@ def make_view_field(prop, obj, types_convert_map={}, fields_convert_map={}):
             convert = default_convert_map.get(prop.__class__, None)
         
     if convert:
-        display = convert(value)
+        display = convert(value, obj)
     else:
         if value is not None:
             if isinstance(prop, orm.ManyToMany):
@@ -250,7 +252,6 @@ def view_object(model, condition, fields=None, types_convert_map={}, fields_conv
     if isinstance(model, str):
         model = get_model(model)
 
-    print model._fields_list
     obj = model.get(condition)
     
     if fields:
@@ -281,3 +282,79 @@ def view_delete_object(model, condition):
     obj.delete()
     
     return {}
+
+def view_list_objects_table(model, fields=None):
+    from uliweb.orm import get_model
+    
+    t = {'fields_name':[], 'fields_list':[]}
+    R = get_model(model)
+    is_table = False
+
+    if getattr(R, 'Table', None):
+        fields_list = [(x['name'], getattr(R, x['name'])) for x in R.Table.fields]
+        is_table = True
+    elif fields:
+        fields_list = [(x, getattr(R, x)) for x in fields]
+    else:
+        fields_list = R._fields_list
+        
+    for i, (x, y) in enumerate(fields_list):
+        t['fields_name'].append(str(y.verbose_name or x))
+        
+        if is_table:
+            t['fields_list'].append(R.Table.fields[i])
+        else:
+            t['fields_list'].append({'name':x})
+    return t
+
+def view_list_objects(model, condition=None, offset=None, limit=None, order_by=None, fields=None):
+    from uliweb.orm import get_model
+    
+    if isinstance(model, str):
+        model = get_model(model)
+    
+    query = model.filter(condition)
+    if offset is not None:
+        query.offset(int(offset))
+    if limit is not None:
+        query.limit(int(limit))
+    if order_by is not None:
+        query.order_by(order_by)
+    return query.count(), query
+
+def simple_view_list_objects(model, condition=None, pageno=0, order_by=None, fields=None, rows_per_page=10,
+        types_convert_map=None, fields_convert_map=None):
+    from uliweb.core.html import Tag
+    
+    from uliweb.orm import get_model
+    
+    if isinstance(model, str):
+        model = get_model(model)
+    
+    #create table header
+    table = view_list_objects_table(model, fields)
+    s = ['<table class="table">']
+    s.append('<thead><tr>')
+    for i, f in enumerate(table['fields_name']):
+        kwargs = {}
+        x = table['fields_list'][i]
+        if 'width' in x:
+            kwargs['width'] = x['width']
+        kwargs['align'] = x.get('align', 'left')
+        s.append(str(Tag('th', f, **kwargs)))
+    s.append('</tr></thead>')
+    
+    count, query = view_list_objects(model, condition, offset=pageno*rows_per_page, limit=rows_per_page, order_by=order_by)
+    #create table body
+    s.append('<tbody>')
+    for row in query:
+        s.append('<tr>')
+        for i, f in enumerate(table['fields_list']):
+            kwargs = {}
+            x = table['fields_list'][i]
+            v = make_view_field(getattr(model, x['name']), row, types_convert_map, fields_convert_map)
+            s.append(str(Tag('td', v['display'], **kwargs)))
+        s.append('</tr>')
+    s.append('</tbody>')
+    s.append('</table>')
+    return {'table':'\n'.join(s), 'info':{'total':count, 'rows_per_page':rows_per_page, 'pageno':pageno}}

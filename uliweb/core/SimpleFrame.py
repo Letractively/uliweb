@@ -107,7 +107,7 @@ def function(fname, *args, **kwargs):
             return import_attr(func)
     else:
         raise Exception, "Can't find the function [%s] in settings" % func
-    
+ 
 def json(data):
     from uliweb.core.js import S
     if callable(data):
@@ -209,36 +209,6 @@ def expose(rule=None, **kw):
         return f
     return decorate
 
-def pre_view(topic, *args1, **kwargs1):
-    methods = kwargs1.pop('methods', None)
-    signal = kwargs1.pop('signal', None)
-    def _f(f):
-        @wraps(f)
-        def _f2(*args, **kwargs):
-            m = methods or []
-            m = [x.upper() for x in m]
-            if not m or (m and conf.local.request.method in m):
-                ret = dispatch.get(conf.local.application, topic, signal=signal, *args1, **kwargs1)
-                if ret:
-                    return ret
-            return f(*args, **kwargs)
-    return _f
-
-def post_view(topic, *args1, **kwargs1):
-    methods = kwargs1.pop('methods', None)
-    signal = kwargs1.pop('signal', None)
-    def _f(f):
-        @wraps(f)
-        def _f2(*args, **kwargs):
-            m = methods or []
-            m = [x.upper() for x in m]
-            ret = f(*args, **kwargs)
-            ret1 = None
-            if not m or (m and conf.local.request.method in m):
-                ret1 = dispatch.get(conf.local.application, topic, signal=signal, *args1, **kwargs1)
-            return ret or ret1
-    return _f
-    
 def POST(rule, **kw):
     kw['methods'] = ['POST']
     return expose(rule, **kw)
