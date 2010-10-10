@@ -829,7 +829,13 @@ class Result(object):
     
     def values(self, *args, **kwargs):
         self.funcs.append(('with_only_columns', (args,), kwargs))
-        return self.run()
+        r = self.run()
+        while 1:
+            x = r.fetchone()
+            if x:
+                yield x
+            else:
+                raise StopIteration
     
     def values_one(self, *args, **kwargs):
         self.funcs.append(('with_only_columns', (args,), kwargs))
@@ -850,7 +856,10 @@ class Result(object):
         return self
     
     def run(self):
-        query = select(self.columns, self.condition)
+        if self.condition is not None:
+            query = select(self.columns, self.condition)
+        else:
+            query = select(self.columns)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         self.result = query.execute()

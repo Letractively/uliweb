@@ -80,4 +80,11 @@ class User(Model):
             return get_url(self.image)
         else:
             return url_for_static('images/user.jpg')
+        
+    def __unicode__(self):
+        return self.username
+    
+    class Meta:
+        display_field = 'username'
+    
     
