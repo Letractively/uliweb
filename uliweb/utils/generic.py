@@ -1,16 +1,40 @@
 #coding=utf-8
 from uliweb.i18n import gettext_lazy as _
+from uliweb.form import SelectField
 
-def make_form_field(prop, field_cls=None, builds_type_map=None, disabled=False, hidden=False):
+class ReferenceSelectField(SelectField):
+    def __init__(self, model, value_field=None, key_field='id', condition=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
+        SelectField.__init__(self, label=label, default=default, choices=[], required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
+        self.model = model
+        self.value_field = value_field
+        self.key_field = key_field
+        self.condition = condition
+    
+    def get_choices(self):
+        from uliweb.orm import get_model
+        
+        model = get_model(self.model)
+        if not self.value_field:
+            if hasattr(model, 'Meta'):
+                self.value_field = getattr(model.Meta, 'display_field', 'id')
+        else:
+            self.value_field = 'id'
+            
+        return list(model.all().values(self.key_field, self.value_field))
+    
+    def to_python(self, data):
+        return int(data)
+
+def make_form_field(prop, model, field_cls=None, builds_args_map=None, disabled=False, hidden=False):
     import uliweb.orm as orm
     import uliweb.form as form
 
     field_type = None
-    builds_type_map = builds_type_map or {}
+    builds_args_map = builds_args_map or {}
     field = None
     
-    kwargs = dict(label=prop.verbose_name or prop.name, default=prop.default, 
-        name=prop.name, required=prop.required, help_string=prop.hint)
+    kwargs = dict(label=prop.verbose_name or prop.property_name, default=prop.default, 
+        name=prop.property_name, required=prop.required, help_string=prop.hint)
     if disabled:
         kwargs['disabled'] = None
     if hidden:
@@ -55,15 +79,18 @@ def make_form_field(prop, field_cls=None, builds_type_map=None, disabled=False, 
                 else:
                     field_type = form.IntField
         elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOneProperty):
-            field_type = form.IntField
+            #field_type = form.IntField
+            kwargs['model'] = prop.reference_class
+            field_type = ReferenceSelectField
         
     if field_type:
-        build_type = builds_type_map.get(field_type, None)
-        field = field_type(build=build_type, **kwargs)
+        build_args = builds_args_map.get(field_type, {})
+        kwargs.update(build_args)
+        field = field_type(**kwargs)
     
     return field
-    
-def make_add_form(model, fields=None, form_cls=None, data=None, builds_type_map=None, disabled_fields=None, **kwargs):
+
+def make_add_form(model, fields=None, form_cls=None, data=None, builds_args_map=None, disabled_fields=None, **kwargs):
     import uliweb.orm as orm
     import uliweb.form as form
     
@@ -89,7 +116,7 @@ def make_add_form(model, fields=None, form_cls=None, data=None, builds_type_map=
         fields_list = [(x, y) for x, y in model._fields_list]
     
     for field_name, prop in fields_list:
-        field = make_form_field(prop, builds_type_map=builds_type_map, disabled=field_name in disabled_fields)
+        field = make_form_field(prop, model, builds_args_map=builds_args_map, disabled=field_name in disabled_fields)
         
         if field:
             DummyForm.add_field(field.name, field, True)
@@ -123,7 +150,7 @@ def view_add_object(model, ok_url, form=None, success_msg=None, fail_msg=None, d
     else:
         return {'form':form}
     
-def make_edit_form(model, obj, fields=None, form_cls=None, data=None, builds_type_map=None, disabled_fields=None, **kwargs):
+def make_edit_form(model, obj, fields=None, form_cls=None, data=None, builds_args_map=None, disabled_fields=None, **kwargs):
     import uliweb.orm as orm
     import uliweb.form as form
     
@@ -159,7 +186,7 @@ def make_edit_form(model, obj, fields=None, form_cls=None, data=None, builds_typ
         elif isinstance(prop, orm.IntegerProperty) and 'autoincrement' in prop.kwargs:
             hidden = True
             
-        field = make_form_field(prop, builds_type_map=builds_type_map, disabled=field_name in disabled_fields, hidden=hidden)
+        field = make_form_field(prop, model, builds_args_map=builds_args_map, disabled=field_name in disabled_fields, hidden=hidden)
         
         if field:
             DummyForm.add_field(field.name, field, True)
@@ -203,16 +230,17 @@ def view_edit_object(model, condition, ok_url, form=None, success_msg=None, fail
 def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
     import uliweb.orm as orm
     from uliweb.utils.common import get_choice
+    from uliweb.utils.textconvert import text2html
 
     types_convert_map = types_convert_map or {}
     fields_convert_map = fields_convert_map or {}
-    default_convert_map = {orm.TextProperty:lambda v,o:'<br/>'.join(v.splitlines())}
+    default_convert_map = {orm.TextProperty:lambda v,o:text2html(v)}
     
     value = prop.get_value_for_datastore(obj)
     display = value
         
-    if prop.name in fields_convert_map:
-        convert = fields_convert_map.get(prop.name, None)
+    if prop.property_name in fields_convert_map:
+        convert = fields_convert_map.get(prop.property_name, None)
     else:
         convert = types_convert_map.get(prop.__class__, None)
         if not convert:
@@ -224,18 +252,18 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
         if value is not None:
             if isinstance(prop, orm.ManyToMany):
                 s = []
-                for x in getattr(obj, prop.name).all():
+                for x in getattr(obj, prop.property_name).all():
                     if hasattr(x, 'get_url'):
                         s.append(x.get_url())
                     else:
                         s.append(unicode(x))
                 display = ' '.join(s)
             elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOne):
-                v = getattr(obj, prop.name)
+                v = getattr(obj, prop.property_name)
                 if hasattr(v, 'get_url'):
                     display = v.get_url()
                 else:
-                    display = unicode(x)
+                    display = unicode(v)
             if prop.choices is not None:
                 display = get_choice(prop.choices, value)
         
@@ -244,7 +272,7 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
     if display is None:
         display = ''
     
-    return {'label':prop.verbose_name or prop.name, 'value':value, 'display':display}
+    return {'label':prop.verbose_name or prop.property_name, 'value':value, 'display':display}
 
 def view_object(model, condition, fields=None, types_convert_map={}, fields_convert_map={}):
     from uliweb.orm import get_model

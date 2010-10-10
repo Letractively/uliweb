@@ -11,11 +11,15 @@ def test_1():
     >>> class Test(Model):
     ...     username = Field(unicode)
     ...     year = Field(int, default=0)
-    >>> a = Test(username='limodou').save()
-    >>> print a
+    >>> a = Test(username='limodou')
+    >>> a.save()
+    True
+    >>> a
     <Test {'username':u'limodou','year':0,'id':1}>
-    >>> b = Test(username=u'limodou1').save()
-    >>> print b
+    >>> b = Test(username=u'limodou1')
+    >>> b.save()
+    True
+    >>> b
     <Test {'username':u'limodou1','year':0,'id':2}>
     >>> print list(Test.all())
     [<Test {'username':u'limodou','year':0,'id':1}>, <Test {'username':u'limodou1','year':0,'id':2}>]
@@ -70,12 +74,24 @@ def test_3():
     ...     test1 = Reference(Test, collection_name='test1')
     ...     test2 = Reference(Test, collection_name='test2')
     ...     name = Field(str)
-    >>> a1 = Test(username='limodou1').save()
-    >>> a2 = Test(username='limodou2').save()
-    >>> a3 = Test(username='limodou3').save()
-    >>> b1 = Test1(name='user', test1=a1, test2=a1).save()
-    >>> b2 = Test1(name='aaaa', test1=a1, test2=a2).save()
-    >>> b3 = Test1(name='bbbb', test1=a2, test2=a3).save()
+    >>> a1 = Test(username='limodou1')
+    >>> a1.save()
+    True
+    >>> a2 = Test(username='limodou2')
+    >>> a2.save()
+    True
+    >>> a3 = Test(username='limodou3')
+    >>> a3.save()
+    True
+    >>> b1 = Test1(name='user', test1=a1, test2=a1)
+    >>> b1.save()
+    True
+    >>> b2 = Test1(name='aaaa', test1=a1, test2=a2)
+    >>> b2.save()
+    True
+    >>> b3 = Test1(name='bbbb', test1=a2, test2=a3)
+    >>> b3.save()
+    True
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> list(a1.test1.all())[0]
@@ -107,20 +123,30 @@ def test_4():
     >>> class Test1(Model):
     ...     test = Reference(Test, collection_name='tttt')
     ...     name = Field(str)
-    >>> a1 = Test(username='limodou1').save()
-    >>> b1 = Test1(name='user', test=a1).save()
-    >>> b2 = Test1(name='aaaa', test=a1).save()
+    >>> a1 = Test(username='limodou1')
+    >>> a1.save()
+    True
+    >>> b1 = Test1(name='user', test=a1)
+    >>> b1.save()
+    True
+    >>> b2 = Test1(name='aaaa', test=a1)
+    >>> b2.save()
+    True
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> list(a1.tttt.all())[0]   #here we use tttt but not test1_set
     <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>
     >>> a1.tttt.count()
     2
-    >>> b3 = Test1(name='aaaa').save()
+    >>> b3 = Test1(name='aaaa')
+    >>> b3.save()
+    True
     >>> a1.tttt.count()
     2
     >>> b3.test = a1
     >>> b3.save()
+    True
+    >>> b3
     <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'aaaa','id':3}>
     >>> Test1.get(3)
     <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'aaaa','id':3}>
@@ -159,8 +185,12 @@ def test_6():
     >>> class Test1(Model):
     ...     test = OneToOne(Test)
     ...     name = Field(str)
-    >>> a1 = Test(username='limodou1').save()
-    >>> b1 = Test1(name='user', test=a1).save()
+    >>> a1 = Test(username='limodou1')
+    >>> a1.save()
+    True
+    >>> b1 = Test1(name='user', test=a1)
+    >>> b1.save()
+    True
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.test1
@@ -180,12 +210,24 @@ def test_7():
     >>> class Group(Model):
     ...     name = Field(str)
     ...     users = ManyToMany(User)
-    >>> a = User(username='limodou').save()
-    >>> b = User(username='user').save()
-    >>> c = User(username='abc').save()
-    >>> g1 = Group(name='python').save()
-    >>> g2 = Group(name='perl').save()
-    >>> g3 = Group(name='java').save()
+    >>> a = User(username='limodou')
+    >>> a.save()
+    True
+    >>> b = User(username='user')
+    >>> b.save()
+    True
+    >>> c = User(username='abc')
+    >>> c.save()
+    True
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
     >>> g1.users.add(a)
     >>> g1.users.add(b, 3) #add can support multiple object, and object can also int
     >>> try:
@@ -234,16 +276,22 @@ def test_8():
     >>> class User(Model):
     ...     username = Field(unicode)
     ...     parent = SelfReference(collection_name='children')
-    >>> a = User(username='a').save()
-    >>> b = User(username='b', parent=a).save()
-    >>> c = User(username='c', parent=a).save()
+    >>> a = User(username='a')
+    >>> a.save()
+    True
+    >>> b = User(username='b', parent=a)
+    >>> b.save()
+    True
+    >>> c = User(username='c', parent=a)
+    >>> c.save()
+    True
     >>> for i in User.all():
-    ...     print i
+    ...     print repr(i)
     <User {'username':u'a','parent':None,'id':1}>
     <User {'username':u'b','parent':<User {'username':u'a','parent':None,'id':1}>,'id':2}>
     <User {'username':u'c','parent':<User {'username':u'a','parent':None,'id':1}>,'id':3}>
     >>> for i in a.children.all():
-    ...     print i
+    ...     print repr(i)
     <User {'username':u'b','parent':<User {'username':u'a','parent':None,'id':1}>,'id':2}>
     <User {'username':u'c','parent':<User {'username':u'a','parent':None,'id':1}>,'id':3}>
     """
@@ -255,7 +303,7 @@ def test_floatproperty():
     >>> class Test(Model):
     ...     f = FloatProperty()
     >>> Test.f.precision
-    10
+    2
     >>> class Test1(Model):
     ...     f = FloatProperty(precision=6)
     >>> Test1.f.precision
@@ -264,7 +312,9 @@ def test_floatproperty():
     ...     f = FloatProperty(max_length=5)
     >>> Test2.f.precision
     5
-    >>> a = Test2(f=23.123456789).save()
+    >>> a = Test2(f=23.123456789)
+    >>> a.save()
+    True
     >>> a
     <Test2 {'f':23.123456788999999,'id':1}>
     >>> Test2.get(1)
@@ -287,7 +337,7 @@ def test_datetime_property():
     >>> #test to_dict function
     >>> print a.to_dict()
     {'date1': '2009-01-01 14:00:05', 'date3': '14:00:05', 'date2': '2009-01-01', 'id': None}
-    >>> print a.to_dict('date1', 'date2')
+    >>> print a.to_dict(fields=('date1', 'date2'))
     {'date1': '2009-01-01 14:00:05', 'date2': '2009-01-01'}
     >>> print repr(a.date1)
     datetime.datetime(2009, 1, 1, 14, 0, 5)
@@ -296,7 +346,9 @@ def test_datetime_property():
     >>> print repr(a.date3)
     datetime.time(14, 0, 5)
     >>> #test saving result
-    >>> print a.save()
+    >>> a.save()
+    True
+    >>> a
     <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'id':1}>
     >>> #test to_dict function
     >>> print a.to_dict()
@@ -355,11 +407,13 @@ def test_to_dict():
     >>> a.float = 200.02
     >>> a.decimal = decimal.Decimal("10.2")
     >>> a.to_dict()
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': u'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': None}
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': None}
     >>> a.save()
+    True
+    >>> a
     <Test {'string':u'limodou','boolean':True,'integer':200,'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'float':200.02000000000001,'decimal':Decimal('10.2'),'id':1}>
     >>> a.to_dict()
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': u'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': 1}
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': 1}
     """
     
 def test_match():
@@ -374,24 +428,24 @@ def test_match():
     >>> a
     <Test {'string':u'','id':None}>
     >>> #test the correct assign
-    >>> a.string = 'abc'
-    >>> #test the error assign
-    >>> try:
-    ...     a.string = 'aaa'
-    ... except Exception, e:
-    ...     print e
-    Property string is 'aaa'; must be one of ['abc', 'def']
+    #>>> a.string = 'abc'
+    #>>> #test the error assign
+    #>>> try:
+    #...     a.string = 'aaa'
+    #... except Exception, e:
+    #...     print e
+    #Property string is 'aaa'; must be one of ['abc', 'def']
     >>> #test tuple choices
     >>> c = [('abc', 'Prompt'), ('def', 'Hello')]
     >>> Test.string.choices = c
     >>> #test the correct assign
-    >>> a.string = 'abc'
-    >>> #test the error assign
-    >>> try:
-    ...     a.string = 'aaa'
-    ... except Exception, e:
-    ...     print e
-    Property string is 'aaa'; must be one of ['abc', 'def']
+    #>>> a.string = 'abc'
+    #>>> #test the error assign
+    #>>> try:
+    #...     a.string = 'aaa'
+    #... except Exception, e:
+    #...     print e
+    #Property string is 'aaa'; must be one of ['abc', 'def']
     """
 
 def test_result():
@@ -402,10 +456,13 @@ def test_result():
     >>> class Test(Model):
     ...     username = Field(CHAR, max_length=20)
     ...     year = Field(int, default=0)
-    >>> Test(username='limodou', year=10).save()
+    >>> a = Test(username='limodou', year=10)
+    >>> a.save()
+    True
+    >>> a
     <Test {'username':u'limodou','year':10,'id':1}>
     >>> Test(username='user', year=5).save()
-    <Test {'username':u'user','year':5,'id':2}>
+    True
     >>> print list(Test.all())
     [<Test {'username':u'limodou','year':10,'id':1}>, <Test {'username':u'user','year':5,'id':2}>]
     >>> print list(Test.filter(Test.c.year > 5))
@@ -418,15 +475,17 @@ def test_result():
     2
     >>> print Test.filter(Test.c.year>5).count()
     1
-    >>> print list(Test.all().values(Test.c.username))
-    [(u'limodou',)]
+    >>> print list(Test.all().values(Test.c.username, 'year'))
+    [(u'limodou', 10), (u'user', 5)]
+    >>> print list(Test.all().values('username'))
+    [(u'limodou',), (u'user',)]
     >>> print Test.all().values_one(Test.c.username)
     (u'limodou',)
     >>> print list(Test.filter(Test.c.year<0))
     []
     >>> print Test.filter(Test.c.year<0).one()
     None
-    >>> print Test.filter(Test.c.year>5).one()
+    >>> print repr(Test.filter(Test.c.year>5).one())
     <Test {'username':u'limodou','year':10,'id':1}>
     """
     
