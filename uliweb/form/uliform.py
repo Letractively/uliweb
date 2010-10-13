@@ -183,6 +183,7 @@ class BaseField(object):
         if not isinstance(request, (tuple, list)):
             request = [request]
         for r in request:
+            v = None
             if self.multiple:
                 if hasattr(r, 'getlist'):
                     func = getattr(r, 'getlist')
@@ -191,7 +192,7 @@ class BaseField(object):
                 v = all_data[self.name] = func(self.name)
             else:
                 v = all_data[self.name] = r.get(self.name, None)
-            if v:
+            if v is not None:
                 break
 
     def get_data(self, all_data):
@@ -556,10 +557,11 @@ class SelectField(BaseField):
     """
     default_build = Select
 
-    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
+    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', size=5, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.choices = choices or []
         self.empty = empty
+        self.size = size
 #        if self.choices:
 #            self._default = default or self.choices[0][0]
 #        self.validators.append(IS_IN_SET(lambda :self.get_choices()))
@@ -579,7 +581,7 @@ class SelectField(BaseField):
         if self.empty is not True:
             if not '' in dict(choices):
                 choices.insert(0, ('', self.empty))
-        return str(self.build(choices, data, id=self.id, name=self.name, **self.html_attrs))
+        return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
 
 class RadioSelectField(SelectField):
     """

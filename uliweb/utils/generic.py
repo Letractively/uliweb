@@ -25,6 +25,10 @@ class ReferenceSelectField(SelectField):
     def to_python(self, data):
         return int(data)
 
+class ManyToManySelectField(ReferenceSelectField):
+    def __init__(self, model, value_field=None, key_field='id', condition=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
+        ReferenceSelectField.__init__(self, model=model, value_field=value_field, key_field=key_field, condition=condition, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=True, multiple=True, **kwargs)
+    
 def make_form_field(prop, model, field_cls=None, builds_args_map=None, disabled=False, hidden=False):
     import uliweb.orm as orm
     import uliweb.form as form
@@ -43,9 +47,7 @@ def make_form_field(prop, model, field_cls=None, builds_args_map=None, disabled=
     if field_cls:
         field_type = field_cls
     else:
-        if isinstance(prop, orm.ManyToMany):
-            pass
-        elif isinstance(prop, orm.BlobProperty):
+        if isinstance(prop, orm.BlobProperty):
             pass
         elif isinstance(prop, orm.TextProperty):
             field_type = form.TextField
@@ -78,6 +80,9 @@ def make_form_field(prop, model, field_cls=None, builds_args_map=None, disabled=
                     kwargs['datetype'] = int
                 else:
                     field_type = form.IntField
+        elif isinstance(prop, orm.ManyToMany):
+            kwargs['model'] = prop.reference_class
+            field_type = ManyToManySelectField
         elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOneProperty):
             #field_type = form.IntField
             kwargs['model'] = prop.reference_class
@@ -140,6 +145,14 @@ def view_add_object(model, ok_url, form=None, success_msg=None, fail_msg=None, d
         if flag:
             obj = get_model(model)(**form.data)
             obj.save()
+            
+            #process manytomany property
+            for k, v in obj._manytomany.iteritems():
+                if k in form.data:
+                    value = form.data[k]
+                    if value:
+                        getattr(obj, k).add(*value)
+                    
             msg = success_msg or _('The information has been saved successfully!')
             flash(msg)
             return redirect(ok_url)
@@ -179,6 +192,8 @@ def make_edit_form(model, obj, fields=None, form_cls=None, data=None, builds_arg
         fields_list.insert(0, ('id', model.id))
         fields_name.insert(0, 'id')
     
+    data = data or obj.to_dict(fields_name, convert=False)
+
     for field_name, prop in fields_list:
         hidden = False
         if field_name == 'id':
@@ -190,8 +205,11 @@ def make_edit_form(model, obj, fields=None, form_cls=None, data=None, builds_arg
         
         if field:
             DummyForm.add_field(field.name, field, True)
+            
+            if isinstance(prop, orm.ManyToMany):
+                value = getattr(obj, field_name).ids()
+                data[field_name] = value
     
-    data = data or obj.to_dict(fields_name, convert=False)
     return DummyForm(data=data, **kwargs)
 
 def view_edit_object(model, condition, ok_url, form=None, success_msg=None, fail_msg=None, data=None, **kwargs):
@@ -211,10 +229,20 @@ def view_edit_object(model, condition, ok_url, form=None, success_msg=None, fail
         form = make_edit_form(model, obj, data=data, **kwargs)
     
     if request.method == 'POST':
-        flag = form.validate(request.params)
+        flag = form.validate(request.values)
         if flag:
             obj.update(**form.data)
-            if obj.save():
+            r = obj.save()
+            
+            #process manytomany property
+            for k, v in obj._manytomany.iteritems():
+                if k in form.data:
+                    field = getattr(obj, k)
+                    value = form.data[k]
+                    if value:
+                        r = r or getattr(obj, k).update(*value)
+            
+            if r:
                 msg = success_msg or _('The information has been saved successfully!')
             else:
                 msg = _("The object has not been changed.")

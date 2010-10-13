@@ -49,19 +49,27 @@ class Reset(Text): type = 'reset'
 class File(Text): type = 'file'
 class Radio(Text): type = 'radio'
 class Select(Build):
-    def __init__(self, choices, value=None, **kwargs):
+    def __init__(self, choices, value=None, multiple=False, size=10, **kwargs):
         self.choices = choices
         self.value = value
+        self.multiple = multiple
+        self.size = size
         super(Select, self).__init__(**kwargs)
 
     def to_html(self):
         s = []
         for v, caption in self.choices:
             args = {'value': v}
-            if v == self.value:
+            if isinstance(self.value, (tuple, list)) and v in self.value:
+                args['selected'] = None
+            elif v == self.value:
                 args['selected'] = None
             s.append(str(Tag('option', caption, **args)))
-        return str(Tag('select', '\n'.join(s), **self.kwargs))
+        args = self.kwargs.copy()
+        if self.multiple:
+            args['multiple'] = None
+            args['size'] = self.size
+        return str(Tag('select', '\n'.join(s), **args))
     
 class RadioSelect(Select):
     _id = 0

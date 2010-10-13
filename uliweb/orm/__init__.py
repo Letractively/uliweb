@@ -204,6 +204,7 @@ class ModelMetaclass(type):
                 defined.update(property_keys)
                 cls.properties.update(base.properties)
         
+        cls._manytomany = {}
         for attr_name in dct.keys():
             attr = dct[attr_name]
             if isinstance(attr, Property):
@@ -213,6 +214,9 @@ class ModelMetaclass(type):
                 defined.add(attr_name)
                 cls.properties[attr_name] = attr
                 attr.__property_config__(cls, attr_name)
+                
+                if isinstance(attr, ManyToMany):
+                    cls._manytomany[attr_name] = attr
                 
         #if there is already defined primary_key, the id will not be primary_key
         has_primary_key = bool([v for v in cls.properties.itervalues() if 'primary_key' in v.kwargs])
@@ -917,6 +921,34 @@ class ManyResult(Result):
                 v = o.id
             d = {self.fielda:self.valuea, self.fieldb:v}
             self.table.insert().execute(**d)
+         
+    def ids(self):
+        query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
+        ids = [x[0] for x in query.execute()]
+        return ids
+    
+    def update(self, *objs):
+        ids = self.ids()
+
+        modified = False
+        for o in objs:
+            assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
+            if isinstance(o, (int, long)):
+                v = o
+            else:
+                v = o.id
+            if v in ids:    #the id has been existed, so don't insert new record
+                ids.remove(v)
+            else:
+                d = {self.fielda:self.valuea, self.fieldb:v}
+                self.table.insert().execute(**d)
+                modified = True
+                
+        if ids: #if there are still ids, so delete them
+            self.delete(*ids)
+            modified = True
+            
+        return modified
             
     def clear(self):
         self.delete()
@@ -962,8 +994,8 @@ class ManyResult(Result):
         return count > 0
         
     def run(self):
-        query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
-        ids = [x[0] for x in query.execute()]
+        ids = self.ids()
+
         if not ids:
             self.result = []
         else:
