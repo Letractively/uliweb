@@ -260,8 +260,9 @@ class Property(object):
     def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
-        if callable(self.default):
-            args['default'] = self.default
+#        if callable(self.default):
+#            args['default'] = self.default()
+        args['default'] = self.default
         args['primary_key'] = self.kwargs.get('primary_key', False)
         args['autoincrement'] = self.kwargs.get('autoincrement', False)
         args['index'] = self.kwargs.get('index', False)
@@ -604,7 +605,7 @@ class ReferenceProperty(Property):
     field_class = Integer
 
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
-        reference_fieldname=None, **attrs):
+        reference_fieldname=None, required=False, **attrs):
         """Construct ReferenceProperty.
 
         Args:
@@ -620,6 +621,7 @@ class ReferenceProperty(Property):
 
         self.collection_name = collection_name
         self.reference_fieldname = reference_fieldname
+        self.required = required
 
         if reference_class is None:
             reference_class = Model
@@ -634,8 +636,8 @@ class ReferenceProperty(Property):
     def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
-        if not callable(self.default):
-            args['default'] = self.default
+#        if not callable(self.default):
+        args['default'] = self.default
         args['primary_key'] = self.kwargs.get('primary_key', False)
         args['autoincrement'] = self.kwargs.get('autoincrement', False)
         args['index'] = self.kwargs.get('index', False)
@@ -764,8 +766,8 @@ class OneToOne(ReferenceProperty):
     def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
-        if not callable(self.default):
-            args['default'] = self.default
+#        if not callable(self.default):
+        args['default'] = self.default
         args['primary_key'] = self.kwargs.get('primary_key', False)
         args['autoincrement'] = self.kwargs.get('autoincrement', False)
         args['index'] = self.kwargs.get('index', False)

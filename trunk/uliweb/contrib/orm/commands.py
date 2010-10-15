@@ -86,6 +86,9 @@ def load_table(name, table, dir, con):
             for c in table.c:
                 if c.name in record:
                     params[c.name] = record[c.name]
+#                else:
+#                    params[c.name] = c.default
+#                    print c.name, c.default
             
             ins = table.insert().values(**params)
             con.execute(ins)
