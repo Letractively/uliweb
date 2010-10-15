@@ -72,7 +72,8 @@ class FieldProxy(object):
     
     @property
     def html(self):
-        default = self.field.to_html(self.field.default)
+#        default = self.field.to_html(self.field.default)
+        default = self.field.default
         return self.field.html(self.form.data.get(self.field.field_name, default), self.form.ok)
     
     def __str__(self):
@@ -573,12 +574,12 @@ class SelectField(BaseField):
             return self.choices
         
     def html(self, data, py=True):
-        if py:
-            value = self.to_html(data)
-        else:
-            value = data
+#        if py:
+#            value = self.to_html(data)
+#        else:
+#            value = data
         choices = self.get_choices()
-        if self.empty is not True:
+        if self.empty is not True and self.default is None:
             if not '' in dict(choices):
                 choices.insert(0, ('', self.empty))
         return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
@@ -621,10 +622,10 @@ class FileField(BaseField):
         return d
     
     def html(self, data, py=True):
-        if py:
-            value = self.to_html(data)
-        else:
-            value = data
+#        if py:
+#            value = self.to_html(data)
+#        else:
+#            value = data
         return str(self.build(name=self.name, id=self.id, **self.html_attrs))
     
 class ImageField(FileField):
