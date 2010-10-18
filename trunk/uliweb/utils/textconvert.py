@@ -14,8 +14,6 @@ def text2html(text, tabstop=4):
             t = m.group().replace('\t', '&nbsp;'*tabstop)
             t = t.replace(' ', '&nbsp;')
             return t
-        elif c['space'] == '\t':
-            return ' '*tabstop;
         else:
             url = m.group('protocal')
             if url.startswith(' '):
