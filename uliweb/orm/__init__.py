@@ -15,7 +15,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'create_all',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError',
-    'BadPropertyTypeError']
+    'BadPropertyTypeError', 'FILE']
 
 __default_connection__ = None  #global connection instance
 __auto_create__ = True
@@ -414,6 +414,9 @@ class CharProperty(Property):
 class StringProperty(CharProperty):
     field_class = String
     
+class FileProperty(StringProperty):
+    pass
+
 class UnicodeProperty(CharProperty):
     field_class = Unicode
     
@@ -425,6 +428,7 @@ class TextProperty(StringProperty):
     
 class BlobProperty(StringProperty):
     field_class = BLOB
+    data_type = str
     
     def __init__(self, verbose_name=None, default='', **kwds):
         super(BlobProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
@@ -1193,13 +1197,15 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
             return self
 
 
+FILE = FileProperty
+
 _fields_mapping = {
     str:StringProperty,
     CHAR:CharProperty,
     unicode: UnicodeProperty,
     TEXT:TextProperty,
     BLOB:BlobProperty,
-#    file:FileProperty,
+    FILE:FileProperty,
     int:IntegerProperty,
     float:FloatProperty,
     bool:BooleanProperty,

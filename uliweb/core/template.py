@@ -402,7 +402,7 @@ class Out(object):
         else:
             self.buf.write(s)
             
-    def noescape(self, text):
+    def xml(self, text):
         self.write(self._str(text), escape=False)
         
 #    def json(self, text):
@@ -428,7 +428,7 @@ def _prepare_run(vars, env, out):
     e.update(new_e)
     e.update(vars)
     e['out'] = out
-    e['xml'] = out.noescape
+    e['xml'] = out.xml
     e['_vars'] = vars
     e['defined'] = f(vars, new_e)
     e['_env'] = e

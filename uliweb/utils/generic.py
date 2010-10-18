@@ -161,7 +161,7 @@ class AddView(object):
     
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
-        disabled_fields=None, hidden_fields=None):
+        disabled_fields=None, hidden_fields=None, saving_data_process=None):
 
         self.model = model
         self.ok_url = ok_url
@@ -180,10 +180,11 @@ class AddView(object):
         self.form_args = form_args or {}
         self.disabled_fields = disabled_fields or []
         self.hidden_fields = hidden_fields or []
+        self.saving_data_process = saving_data_process
         
-    def get_fields(self):
+    def get_fields(self, meta='AddForm'):
         f = []
-        for field_name, prop in get_fields(self.model, self.fields, 'AddForm'):
+        for field_name, prop in get_fields(self.model, self.fields, meta):
             d = {'name':field_name, 
                 'prop':prop, 
                 'disabled':field_name in self.disabled_fields,
@@ -306,6 +307,9 @@ class AddView(object):
                 d = self.default_data.copy()
                 d.update(self.form.data)
                 
+                if self.saving_data_process:
+                    self.saving_data_process(d)
+                    
                 self.save(d)
                         
                 flash(self.success_msg)
@@ -358,6 +362,8 @@ class EditView(AddView):
             flag = self.form.validate(request.values, request.files)
             if flag:
                 data = self.form.data.copy()
+                if self.saving_data_process:
+                    self.saving_data_process(data, obj)
                 r = self.save(obj, data)
                 
                 if r:
@@ -409,7 +415,7 @@ class EditView(AddView):
             class DummyForm(form.Form):
                 form_buttons = form.Submit(value=_('Save'), _class=".submit")
             
-        fields_list = self.get_fields()
+        fields_list = self.get_fields('EditForm')
         fields_name = [x['name'] for x in fields_list]
         if 'id' not in fields_name:
             d = {'name':'id', 'prop':self.model.id, 'disabled':False, 'hidden':False}
