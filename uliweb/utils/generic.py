@@ -500,7 +500,7 @@ class DeleteView(object):
 class ListView(object):
     def __init__(self, model, condition=None, pageno=0, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, 
-        fields_convert_map=None):
+        fields_convert_map=None, id=None):
             
         self.model = model
         self.condition = condition
@@ -510,20 +510,26 @@ class ListView(object):
         self.rows_per_page = rows_per_page
         self.types_convert_map = types_convert_map
         self.fields_convert_map = fields_convert_map
+        self.id = id
         
-    def run(self):
+    def run(self, head=True, body=True):
         from uliweb.orm import get_model
         
         if isinstance(self.model, str):
             self.model = get_model(self.model)
+            
+        if not self.id:
+            self.id = self.model.tablename
         
         #create table header
         table = self.table_info()
-        count, query = self.query(self.model, self.condition, offset=self.pageno*self.rows_per_page, limit=self.rows_per_page, order_by=self.order_by)
-        
-        return {'table':self.render(table, query), 'info':{'total':count, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno}}
+        query = self.query(self.model, self.condition, offset=self.pageno*self.rows_per_page, limit=self.rows_per_page, order_by=self.order_by)
+        if head:
+            return {'table':self.render(table, query, head=head, body=body), 'info':{'total':query.count(), 'rows_per_page':self.rows_per_page, 'pageno':self.pageno}}
+        else:
+            return {'table':self.render(table, query, head=head, body=body)}
 
-    def render(self, table, query):
+    def render(self, table, query, head=True, body=True):
         """
         table is a dict, just like
         table = {'fields_name':[fieldname,...],
@@ -532,29 +538,34 @@ class ListView(object):
         """
         from uliweb.core.html import Tag
 
-        s = ['<table class="table">']
-        s.append('<thead><tr>')
-        for i, field_name in enumerate(table['fields_name']):
-            kwargs = {}
-            x = table['fields_list'][i]
-            if 'width' in x:
-                kwargs['width'] = x['width']
-            kwargs['align'] = x.get('align', 'left')
-            s.append(str(Tag('th', field_name, **kwargs)))
-        s.append('</tr></thead>')
-        
-        #create table body
-        s.append('<tbody>')
-        for record in query:
-            s.append('<tr>')
-            for i, f in enumerate(table['fields_list']):
+        s = []
+        if head:
+            s = ['<table class="table" id=%s>' % self.id]
+            s.append('<thead><tr>')
+            for i, field_name in enumerate(table['fields_name']):
                 kwargs = {}
                 x = table['fields_list'][i]
-                v = make_view_field(getattr(self.model, x['name']), record, self.types_convert_map, self.fields_convert_map)
-                s.append(str(Tag('td', v['display'], **kwargs)))
-            s.append('</tr>')
-        s.append('</tbody>')
-        s.append('</table>')
+                if 'width' in x:
+                    kwargs['width'] = x['width']
+                kwargs['align'] = x.get('align', 'left')
+                s.append(str(Tag('th', field_name, **kwargs)))
+            s.append('</tr></thead>')
+            s.append('<tbody>')
+        
+        if body:
+            #create table body
+            for record in query:
+                s.append('<tr>')
+                for i, f in enumerate(table['fields_list']):
+                    kwargs = {}
+                    x = table['fields_list'][i]
+                    v = make_view_field(getattr(self.model, x['name']), record, self.types_convert_map, self.fields_convert_map)
+                    s.append(str(Tag('td', v['display'], **kwargs)))
+                s.append('</tr>')
+        
+        if head:
+            s.append('</tbody>')
+            s.append('</table>')
         
         return '\n'.join(s)
     
@@ -566,7 +577,7 @@ class ListView(object):
             query.limit(int(limit))
         if order_by is not None:
             query.order_by(order_by)
-        return query.count(), query
+        return query
         
     def table_info(self):
         t = {'fields_name':[], 'fields_list':[]}

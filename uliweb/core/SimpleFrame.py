@@ -436,6 +436,22 @@ class Dispatcher(object):
             output = dispatch.get(self, 'after_render_template', text, vars, e)
             return output or text
     
+    def render_text(self, text, vars=None, env=None, dirs=None, request=None, default_template=None):
+        vars = vars or {}
+        env = env or self.get_view_env()
+        dirs = dirs or self.template_dirs
+        request = request or local.request
+        if request:
+            dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
+        
+        d = dispatch.get(self, 'get_template_dirs', dirs, request)
+        if d:
+            dirs = d
+        
+        handlers = {}
+        dispatch.call(self, 'get_template_tag_handlers', handlers)
+        return template.template(text, vars, env, dirs, default_template)
+    
     def render(self, templatefile, vars, env=None, dirs=None, request=None, default_template=None):
         return Response(self.template(templatefile, vars, env, dirs, request, default_template=default_template), content_type='text/html')
     
