@@ -382,8 +382,8 @@ class EditView(AddView):
         obj.update(**data)
         r = obj.save()
         
-        r = r or self.save_manytomany(obj, data)
-        return r
+        r1 = self.save_manytomany(obj, data)
+        return r or r1
         
     def save_manytomany(self, obj, data):
         #process manytomany property
@@ -498,7 +498,7 @@ class DeleteView(object):
         return redirect(self.ok_url)
         
 class ListView(object):
-    def __init__(self, model, condition=None, pageno=0, order_by=None, 
+    def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, 
         fields_convert_map=None, id=None):
             
@@ -511,6 +511,7 @@ class ListView(object):
         self.types_convert_map = types_convert_map
         self.fields_convert_map = fields_convert_map
         self.id = id
+        self._query = query
         
     def run(self, head=True, body=True):
         from uliweb.orm import get_model
@@ -570,7 +571,10 @@ class ListView(object):
         return '\n'.join(s)
     
     def query(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
-        query = model.filter(condition)
+        if self._query:
+            query = self._query.filter(condition)
+        else:
+            query = model.filter(condition)
         if offset is not None:
             query.offset(int(offset))
         if limit is not None:
