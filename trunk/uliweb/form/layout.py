@@ -1,6 +1,8 @@
+from __future__ import with_statement
+
 __all__ = ['Layout', 'TableLayout', 'CSSLayout', 'YamlLayout']
 
-from html import Buf, Tag
+from uliweb.core.html import Buf, Tag
 
 class Layout(object):
     def __init__(self, form, layout=None):
@@ -153,42 +155,45 @@ class YamlLayout(Layout):
             return fs
         else:
             div = Tag('div', _class=_class)
-            if error:
-                div << Tag('strong', error, _class="message")
-            if self.get_widget_name(obj) == 'Checkbox':
-                div << input
-                div << label
-                div << help_string
-            else:
-                div << label
-                div << help_string
-                div << input
+            with div:
+                if error:
+                    div.strong(error, _class="message")
+                if self.get_widget_name(obj) == 'Checkbox':
+                    div << input
+                    div << label
+                    div << help_string
+                else:
+                    div << label
+                    div << help_string
+                    div << input
             return div
 
     def buttons_line(self, buttons):
         div = Tag('div', _class='type-button')
-        div << buttons
-        return div
+        with div:
+            div << buttons
+        return str(div)
 
     def html(self):
         buf = Buf()
         if 'yform' not in self.form.html_attrs['_class']:
             self.form.html_attrs['_class'] = 'yform'
         buf << self.form.form_begin
+            
+#            if self.form.fieldset:
+#                with buf.fieldset:
+##                form = buf << Tag('fieldset')
+#                    if self.form.form_title:
+#                        buf.legend(self.form.form_title)
+##            else:
+##                form = buf
         
-        if self.form.fieldset:
-            form = buf << Tag('fieldset')
-            if self.form.form_title:
-                form << Tag('legend', self.form.form_title)
-        else:
-            form = buf
-    
         for name, obj in self.form.fields_list:
             f = getattr(self.form, name)
             if self.is_hidden(obj):
-                form << f
+                buf << f
             else:
-                form << self.line(obj, f.label, f, f.help_string, f.error)
+                buf << self.line(obj, f.label, f, f.help_string, f.error)
         
         buf << self.buttons_line(self.form.get_buttons())
         buf << self.form.form_end

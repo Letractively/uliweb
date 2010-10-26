@@ -903,7 +903,7 @@ class ManyResult(Result):
     def __init__(self, modela, modelb, table, fielda, fieldb, valuea):
         self.modela = modela
         self.modelb = modelb
-        self.table = table
+        self.table = table  #third table
         self.fielda = fielda
         self.fieldb = fieldb
         self.valuea = valuea
@@ -973,7 +973,7 @@ class ManyResult(Result):
             self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
     
     def count(self):
-        result = self.table.count(self.table.c[self.fielda]==self.valuea).execute()
+        result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb] == self.modelb.c.id) & self.condition).execute()
         count = 0
         if result:
             r = result.fetchone()
@@ -1000,15 +1000,10 @@ class ManyResult(Result):
         return count > 0
         
     def run(self):
-        ids = self.ids()
-
-        if not ids:
-            self.result = []
-        else:
-            query = select(self.columns, self.modelb.c.id.in_(ids) & self.condition)
-            for func, args, kwargs in self.funcs:
-                query = getattr(query, func)(*args, **kwargs)
-            self.result = query.execute()
+        query = select(self.columns, (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c.id) & self.condition)
+        for func, args, kwargs in self.funcs:
+            query = getattr(query, func)(*args, **kwargs)
+        self.result = query.execute()
         return self.result
         
     def one(self):
