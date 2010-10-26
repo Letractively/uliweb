@@ -1,16 +1,8 @@
-__all__ = ['u_str', 'Buf', 'Tag']
-
+from __future__ import with_statement
 import cgi
+import StringIO
 
-DEFAULT_CHARSET = 'utf-8'
-
-##################################################################
-#  HTML Helper
-##################################################################
-
-def u_str(v, encoding=None):
-    if not encoding:
-        encoding = DEFAULT_CHARSET
+def u_str(v, encoding='utf-8'):
     if isinstance(v, str):
         pass
     elif isinstance(v, unicode):
@@ -48,67 +40,103 @@ def _create_kwargs(args, nocreate_if_none=['id', 'for']):
             s.append('%s="%s"' % (k, cgi.escape(u_str(v))))
     return ' '.join(s)
 
+__tags__ = {}
+
 class Buf(object):
-    def __init__(self, begin='', end=''):
-        self.buf = []
-        self.begin = begin
-        self.end = end
-
-    def __lshift__(self, obj):
-        if obj:
-            if isinstance(obj, (tuple, list)):
-                self.buf.extend(obj)
-            else:
-                self.buf.append(obj)
-                obj = [obj]
-            return obj[0]
-        else:
-            return None
-
+    def __init__(self, encoding='utf-8'):
+        self._document = StringIO.StringIO()
+        self._indentation = 0
+        self._indent = ' '*4
+        self._encoding = encoding
+        self._builder = self
+        
+    def bind(self, builder):
+        self._builder = builder
+        
+    def __getattr__(self, name):
+        tag = __tags__.get(name, Tag)
+        t = tag(name)
+        t.bind(self._builder)
+        return t
+    __getitem__ = __getattr__
+    
     def __str__(self):
-        return self.html()
-
-    def html(self):
-        s = [self.begin]
-        s.extend(self.buf)
-        s.append(self.end)
-        s = filter(None, s)
-        return '\n'.join([str(x) for x in s])
+        return self._document.getvalue().encode(self._encoding)
+    
+    def __unicode__(self):
+        return self._document.getvalue().decode(self._encoding)
+    
+    def _write(self, line):
+        line = line.decode(self._encoding)
+        self._document.write('%s%s\n' % (self._indentation * self._indent, line))
+        
+    def __lshift__(self, obj):
+        if isinstance(obj, (tuple, list)):
+            (self._builder._write(str(x)) for x in obj)
+        else:
+            self._builder._write(str(obj))
+        return self
 
 class Tag(Buf):
-    """
-    Creating a tag. For example:
+    _dummy = {}
+    def __init__(self, tag_name, _value=_dummy, encoding='utf-8', **kwargs):
+        Buf.__init__(self, encoding=encoding)
+        self.name = tag_name
+        self.attributes = {}
+        self(_value, **kwargs)
+#        if _value is None:
+#            self._builder._write('<%s%s />' % (self.name, _create_kwargs(self.attributes)))
+#        elif _value != Tag._dummy:
+#            self._builder._write('<%s%s>%s</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value), self.name))
+    
+    def __enter__(self):
+        self._builder._write('<%s%s>' % (self.name, _create_kwargs(self.attributes)))
+        self._builder._indentation += 1
+        return self
+    
+    def __exit__(self, type, value, tb):
+        self._builder._indentation -= 1
+        self._builder._write('</%s>' % self.name)
         
-        >>> print Tag('br/').html()
-        <br/>
-        >>> print Tag('a', 'Hello', href="/")
-        <a href="/">
-        Hello
-        </a>
-    """
-    def __init__(self, tag, *children, **args):
-        self.tag = tag
-        self.buf = list(children)
-        if tag.endswith('/'):
-            self.begin = '<%s%s>' % (tag, _create_kwargs(args))
-            self.end = ''
+    def __call__(self, _value=_dummy, **kwargs):
+        self.attributes.update(kwargs)
+        if _value is None:
+            self._builder._write('<%s%s />' % (self.name, _create_kwargs(self.attributes)))
+        elif _value != Tag._dummy:
+            self._builder._write('<%s%s>%s</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value), self.name))
+            return
+        return self
+    
+class Script(Tag):
+    def __init__(self, src=Tag._dummy, **kwargs):
+        kwargs['type'] = 'text/javascript'
+        if src != Tag._dummy:
+            kwargs['src'] = src
+            Tag.__init__(self, tag_name="script", _value='', **kwargs)
         else:
-            self.begin = '<%s%s>' % (tag, _create_kwargs(args))
-            self.end = '</%s>' % tag
-
-    def html(self):
-        if not self.tag.endswith('/'):
-            b = ''.join([u_str(x) for x in self.buf])
-            if not b:
-                s = [self.begin+self.end]
-            else:
-                s = [self.begin, b, self.end]
-        else:
-            s = [self.begin]
-        return '\n'.join(s)
-
+            Tag.__init__(self, tag_name="script", _value=Tag._dummy, **kwargs)
+    
 def begin_tag(tag, **kwargs):
     return '<%s%s>' % (tag, _create_kwargs(kwargs))
 
 def end_tag(tag):
     return '</%s>' % tag
+
+if __name__ == '__main__':
+    b = Buf()
+    with b.html(name='xml'):
+        b.head('Hello')
+    print str(b)
+    div = Tag('div', _class="demo")
+    with div:
+        with div.span:
+            div.a('Test', href='#')
+    print div
+    print Tag('a', 'Link', href='#')
+    print Tag('br', None)
+    with div:
+        with div.span:
+            div.a('Test', href='#')
+        div << '<p>This is a paragraph</p>'
+    print div
+    b = Buf()

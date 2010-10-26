@@ -108,20 +108,22 @@ def function(fname, *args, **kwargs):
     else:
         raise Exception, "Can't find the function [%s] in settings" % func
  
-def json(data):
-    try:
-        import json as JSON
-    except:
-        import simplejson as JSON
+def json(data, unicode=False):
+    from js import json_dumps
+        
+    if unicode:
+        ensure_ascii = True
+    else:
+        ensure_ascii = False
     
     if callable(data):
         @wraps(data)
         def f(*arg, **kwargs):
             ret = data(*arg, **kwargs)
-            return Response(JSON.dumps(ret), content_type='application/json; charset=utf-8')
+            return Response(json_dumps(ret), content_type='application/json; charset=utf-8')
         return f
     else:
-        return Response(JSON.dumps(data), content_type='application/json; charset=utf-8')
+        return Response(json_dumps(data), content_type='application/json; charset=utf-8')
 
 class ReservedKeyError(Exception):pass
 

@@ -1,4 +1,4 @@
-from html import Tag
+from uliweb.core.html import Tag
 
 class Build(object):
     def __init__(self, **kwargs):
@@ -29,7 +29,7 @@ class Text(Build):
     def to_html(self):
         args = self.kwargs.copy()
         args.setdefault('type', self.type)
-        return str(Tag('input', **args))
+        return str(Tag('input', '', **args))
 
 class Password(Text): type = 'password'
 class TextArea(Build):
@@ -102,4 +102,4 @@ class Checkbox(Build):
         if self.value:
             args.setdefault('checked', None)
         args.setdefault('type', 'checkbox')
-        return str(Tag('input', **args))
+        return str(Tag('input', '', **args))

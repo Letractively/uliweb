@@ -5,7 +5,7 @@ import datetime
 import time
 from validators import *
 from uliweb.i18n import gettext_lazy as _
-from html import *
+from uliweb.core.html import Buf, Tag, begin_tag, u_str
 from widgets import *
 from layout import *
 
@@ -928,8 +928,7 @@ class Form(object):
             if isinstance(field, FileField):
                 args['enctype'] = "multipart/form-data"
                 break
-        form = Tag('form', **args)
-        return form.begin
+        return begin_tag('form', **args)
     
     @property
     def form_end(self):
