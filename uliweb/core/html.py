@@ -72,7 +72,8 @@ class Buf(object):
         
     def __lshift__(self, obj):
         if isinstance(obj, (tuple, list)):
-            (self._builder._write(str(x)) for x in obj)
+            for x in obj:
+                self._builder._write(str(x))
         else:
             self._builder._write(str(obj))
         return self
@@ -140,3 +141,6 @@ if __name__ == '__main__':
         div << '<p>This is a paragraph</p>'
     print div
     b = Buf()
+    b << 'hello'
+    b << [Tag('a', 'Link', href='#'), Tag('a', 'Link', href='#')]
+    print str(b)
