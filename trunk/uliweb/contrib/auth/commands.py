@@ -31,7 +31,7 @@ def action_createsuperuser(apps_dir):
             print "The password is not matched, can't create super user!"
             return
         
-        from models import User
+        User = orm.get_model('user')
         user = User(username=username, email=email)
         user.set_password(password)
         user.is_superuser = True
