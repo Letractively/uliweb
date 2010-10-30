@@ -172,12 +172,11 @@ def extracturls(urlfile='urls.py'):
     application = SimpleFrame.Dispatcher(apps_dir=apps_dir, use_urls=False, start=False)
     filename = os.path.join(application.apps_dir, urlfile)
     if os.path.exists(filename):
-        answer = raw_input("Error: [%s] is existed already, do you want to overwrite it(y/n):" % urlfile)
-        if answer.strip() != 'y':
+        answer = raw_input("Error: [%s] is existed already, do you want to overwrite it[Y/n]:" % urlfile)
+        if answer.strip() and answer.strip.lower() != 'y':
             return
     f = file(filename, 'w')
-    print >>f, "from uliweb.core.rules import Mapping, add_rule\n"
-    print >>f, "url_map = Mapping()"
+    print >>f, "from uliweb import simple_expose\n"
     application.url_infos.sort()
     for url, kw in application.url_infos:
         endpoint = kw.pop('endpoint')
@@ -186,8 +185,9 @@ def extracturls(urlfile='urls.py'):
             t = ', %s' % ', '.join(s)
         else:
             t = ''
-        print >>f, "add_rule(url_map, %r, %r%s)" % (url, endpoint, t)
+        print >>f, "simple_expose(%r, %r%s)" % (url, endpoint, t)
     f.close()
+    print 'urls.py has been created successfully.'
 
 def collcet_commands():
     from uliweb import get_apps
