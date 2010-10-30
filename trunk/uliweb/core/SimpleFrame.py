@@ -28,6 +28,7 @@ local_manager = LocalManager([local])
 conf.url_map = Mapping()
 __app_dirs = {}
 _use_urls = False
+__url_names__ = {}
 
 class Request(OriginalRequest):
     GET = OriginalRequest.args
@@ -127,7 +128,8 @@ def json(data, unicode=False):
 
 class ReservedKeyError(Exception):pass
 
-reserved_keys = ['settings', 'redirect', 'application', 'request', 'response', 'error']
+reserved_keys = ['settings', 'redirect', 'application', 'request', 'response', 'error',
+    'json']
 
 def _get_rule(f):
     import inspect
@@ -170,7 +172,7 @@ def expose(rule=None, **kw):
         else:
             return url
         
-    static = kw.get('static', None)
+    static = kw.pop('static', None)
     if callable(rule):
         if conf.use_urls:
             return rule
@@ -181,8 +183,6 @@ def expose(rule=None, **kw):
         conf.urls.append((rule, kw))
         if static:
             conf.static_views.append(kw['endpoint'])
-        if 'static' in kw:
-            kw.pop('static')
         add_rule(conf.url_map, rule, **kw)
         return f
         
@@ -206,14 +206,29 @@ def expose(rule=None, **kw):
             raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f_name
         kw['endpoint'] = endpoint
         rule = fix_url(module, rule)
-        conf.urls.append((rule, kw))
+        conf.urls.append((rule, kw.copy()))
         if static:
             conf.static_views.append(kw['endpoint'])
-        if 'static' in kw:
-            kw.pop('static')
+        name = kw.pop('name', None)
+        if name:
+            __url_names__[name] = endpoint
         add_rule(conf.url_map, rule, **kw)
         return f
     return decorate
+
+def simple_expose(url, endpoint, **kw):
+    static = kw.pop('static', None)
+    if callable(endpoint):
+        f_name = endpoint.__name__
+        endpoint = endpoint.__module__ + '.' + endpoint.__name__
+    kw['endpoint'] = endpoint
+    conf.urls.append((url, kw.copy()))
+    if static:
+        conf.static_views.append(endpoint)
+    name = kw.pop('name', None)
+    if name:
+        __url_names__[name] = endpoint
+    add_rule(conf.url_map, url, **kw)
 
 def POST(rule, **kw):
     kw['methods'] = ['POST']
@@ -227,6 +242,8 @@ def url_for(endpoint, **values):
     if callable(endpoint):
         endpoint = endpoint.__module__ + '.' + endpoint.__name__
     _external = values.pop('_external', False)
+    if endpoint in __url_names__:
+        endpoint = __url_names__[endpoint]
     return conf.local.url_adapter.build(endpoint, values, force_external=_external)
 
 def get_app_dir(app):
@@ -331,7 +348,7 @@ class Dispatcher(object):
             try:
                 import urls
                 from uliweb.core import rules
-                conf.url_map = urls.url_map
+#                conf.url_map = urls.url_map
                 conf.static_views = rules.static_views
                 flag = False
             except ImportError:
@@ -617,9 +634,9 @@ class Dispatcher(object):
         modules = {}
         views = set()
         settings = []
-        set_ini = os.path.join(self.apps_dir, 'settings.ini')
-        if os.path.exists(set_ini):
-            settings.append(set_ini)
+
+        inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
+        settings.insert(0, inifile)
         
         def enum_views(views_path, appname, subfolder=None, pattern=None):
             for f in os.listdir(views_path):
@@ -645,9 +662,14 @@ class Dispatcher(object):
                     enum_views(path, p, pattern='views*')
             #deal with settings
             inifile =os.path.join(get_app_dir(p), 'settings.ini')
+            
             if os.path.exists(inifile):
-                settings.insert(0, inifile)
-           
+                settings.append(inifile)
+
+        set_ini = os.path.join(self.apps_dir, 'settings.ini')
+        if os.path.exists(set_ini):
+            settings.append(set_ini)
+        
         modules['views'] = list(views)
         modules['settings'] = settings
         return modules
@@ -669,8 +691,6 @@ class Dispatcher(object):
                 log.exception(e)
             
     def install_settings(self, s):
-        inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
-        s.insert(0, inifile)
         env = dispatch.get(self, 'init_settings_env')
         conf.settings = Ini(env=env)
         for v in s:
