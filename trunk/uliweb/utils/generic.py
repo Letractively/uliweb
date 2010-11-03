@@ -1,39 +1,55 @@
 #coding=utf-8
 from uliweb.i18n import gettext_lazy as _
-from uliweb.form import SelectField
+from uliweb.form import SelectField, BaseField
 
 class ReferenceSelectField(SelectField):
-    def __init__(self, model, value_field=None, key_field='id', condition=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
+    def __init__(self, model, display_field=None, value_field='id', condition=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
         SelectField.__init__(self, label=label, default=default, choices=[], required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
         self.model = model
+        self.display_field = display_field
         self.value_field = value_field
-        self.key_field = key_field
         self.condition = condition
     
     def get_choices(self):
         from uliweb.orm import get_model
         
         model = get_model(self.model)
-        if not self.value_field:
+        if not self.display_field:
             if hasattr(model, 'Meta'):
-                self.value_field = getattr(model.Meta, 'display_field', 'id')
-        else:
-            self.value_field = 'id'
-            
-        return list(model.all().values(self.key_field, self.value_field))
+                self.display_field = getattr(model.Meta, 'display_field', 'id')
+            else:
+                self.display_field = 'id'
+           
+        r = list(model.all().values(self.value_field, self.display_field))
+        return r
     
     def to_python(self, data):
         return int(data)
 
 class ManyToManySelectField(ReferenceSelectField):
-    def __init__(self, model, value_field=None, key_field='id', condition=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
-        ReferenceSelectField.__init__(self, model=model, value_field=value_field, key_field=key_field, condition=condition, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=True, multiple=True, **kwargs)
+    def __init__(self, model, display_field=None, value_field='id', condition=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
+        ReferenceSelectField.__init__(self, model=model, display_field=display_field, value_field=value_field, condition=condition, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=True, multiple=True, **kwargs)
   
 def get_fields(model, fields, meta):
     if fields:
-        fields_list = [(x, getattr(model, x)) for x in fields]
+        fields_list = []
+        for x in fields:
+            if isinstance(x, str):  #so x is field_name
+                fields_list.append((x, getattr(model, x)))
+            elif isinstance(x, tuple):
+                fields_list.append(x)   #x should be a tuple, just like (field_name, form_field_obj)
+            else:
+                raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
     elif hasattr(model, meta):
-        fields_list = [(x, getattr(model, x)) for x in getattr(model, meta).fields]
+        fields_list = []
+        for x in getattr(model, meta).fields:
+            if isinstance(x, str):  #so x is field_name
+                fields_list.append((x, getattr(model, x)))
+            elif isinstance(x, tuple):
+                fields_list.append(x)   #x should be a tuple, just like (field_name, form_field_obj)
+            else:
+                raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
+            
     else:
         fields_list = [(x, y) for x, y in model._fields_list]
     
@@ -45,6 +61,8 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     
     field_type = None
     prop = field['prop']
+    if isinstance(prop, BaseField): #if the prop is already Form.BaseField, so just return it
+        return prop
     
     kwargs = dict(label=prop.verbose_name or prop.property_name, default=prop.default, 
         name=prop.property_name, required=prop.required, help_string=prop.hint)
@@ -151,7 +169,7 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
         display = display.encode('utf-8')
     if display is None:
         display = ''
-    
+        
     return {'label':prop.verbose_name or prop.property_name, 'value':value, 'display':display}
 
 class AddView(object):
@@ -161,7 +179,7 @@ class AddView(object):
     
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
-        disabled_fields=None, hidden_fields=None, saving_data_process=None):
+        disabled_fields=None, hidden_fields=None, pre_save=None, post_save=None):
 
         self.model = model
         self.ok_url = ok_url
@@ -180,7 +198,8 @@ class AddView(object):
         self.form_args = form_args or {}
         self.disabled_fields = disabled_fields or []
         self.hidden_fields = hidden_fields or []
-        self.saving_data_process = saving_data_process
+        self.pre_save = pre_save
+        self.post_save = post_save
         
     def get_fields(self, meta='AddForm'):
         f = []
@@ -216,78 +235,10 @@ class AddView(object):
             field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
             
             if field:
-                DummyForm.add_field(field.name, field, True)
+                DummyForm.add_field(f['name'], field, True)
         
         return DummyForm(data=self.data, **self.form_args)
     
-    def make_field(self, field, model, field_cls=None):
-        import uliweb.orm as orm
-        import uliweb.form as form
-        
-        field_type = None
-        prop = field['prop']
-        
-        kwargs = dict(label=prop.verbose_name or prop.property_name, default=prop.default, 
-            name=prop.property_name, required=prop.required, help_string=prop.hint)
-        if field['disabled']:
-            kwargs['disabled'] = None
-        if field['hidden']:
-            field_type = form.HiddenField
-            
-        if field_cls:
-            field_type = field_cls
-        else:
-            cls = prop.__class__
-            if cls is orm.BlobProperty:
-                pass
-            elif cls is orm.TextProperty:
-                field_type = form.TextField
-            elif cls is orm.CharProperty or cls is orm.StringProperty:
-                if prop.choices is not None:
-                    field_type = form.SelectField
-                    kwargs['choices'] = prop.get_choices()
-                else:
-                    field_type = form.StringField
-            elif cls is orm.BooleanProperty:
-                field_type = form.BooleanField
-            elif cls is orm.DateProperty:
-                if not prop.auto_now and not prop.auto_now_add:
-                    field_type = form.DateField
-            elif cls is orm.TimeProperty:
-                if not prop.auto_now and not prop.auto_now_add:
-                    field_type = form.TimeField
-            elif cls is orm.DateTimeProperty:
-                if not prop.auto_now and not prop.auto_now_add:
-                    field_type = form.DateTimeField
-            elif cls is orm.DecimalProperty:
-                field_type = form.StringField
-            elif cls is orm.FloatProperty:
-                field_type = form.FloatField
-            elif cls is orm.IntegerProperty:
-                if 'autoincrement' not in prop.kwargs:
-                    if prop.choices is not None:
-                        field_type = form.SelectField
-                        kwargs['choices'] = prop.get_choices()
-                        kwargs['datetype'] = int
-                    else:
-                        field_type = form.IntField
-            elif cls is orm.ManyToMany:
-                kwargs['model'] = prop.reference_class
-                field_type = ManyToManySelectField
-            elif cls is orm.ReferenceProperty or cls is orm.OneToOne:
-                #field_type = form.IntField
-                kwargs['model'] = prop.reference_class
-                field_type = ReferenceSelectField
-            else:
-                raise Exception, "Can't support the Property [%s=%s]" % (field['name'], prop.__class__.__name__)
-            
-        if field_type:
-            build_args = self.builds_args_map.get(field_type, {})
-            kwargs.update(build_args)
-            f = field_type(**kwargs)
-        
-            return f
-
     def run(self):
         from uliweb import request, function
         from uliweb.orm import get_model
@@ -307,10 +258,13 @@ class AddView(object):
                 d = self.default_data.copy()
                 d.update(self.form.data)
                 
-                if self.saving_data_process:
-                    self.saving_data_process(d)
+                if self.pre_save:
+                    self.pre_save(d)
                     
-                self.save(d)
+                obj = self.save(d)
+                
+                if self.post_save:
+                    self.post_save(obj, d)
                         
                 flash(self.success_msg)
                 return redirect(self.ok_url)
@@ -325,6 +279,7 @@ class AddView(object):
         obj.save()
         
         self.save_manytomany(obj, data)
+        return obj
         
     def save_manytomany(self, obj, data):
         #process manytomany property
@@ -362,9 +317,11 @@ class EditView(AddView):
             flag = self.form.validate(request.values, request.files)
             if flag:
                 data = self.form.data.copy()
-                if self.saving_data_process:
-                    self.saving_data_process(data, obj)
+                if self.pre_save:
+                    self.pre_save(data, obj)
                 r = self.save(obj, data)
+                if self.post_save:
+                    self.post_save(obj, data)
                 
                 if r:
                     msg = self.success_msg
@@ -433,7 +390,7 @@ class EditView(AddView):
             field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
             
             if field:
-                DummyForm.add_field(field.name, field, True)
+                DummyForm.add_field(f['name'], field, True)
                 
                 if isinstance(f['prop'], orm.ManyToMany):
                     value = getattr(obj, f['name']).ids()

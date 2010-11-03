@@ -787,7 +787,9 @@ class DateTimeField(StringField):
 class FormMetaclass(type):
     def __init__(cls, name, bases, dct):
         cls.fields = {}
-        for field_name, obj in dct.items():
+        cls.fields_list = [(k, v) for k, v in dct.items() if isinstance(v, BaseField)]
+        cls.fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
+        for (field_name, obj) in cls.fields_list:
             cls.add_field(field_name, obj)
 #            if isinstance(obj, BaseField):
 #                check_reserved_word(field_name)
@@ -842,8 +844,6 @@ class Form(object):
         self.html_attrs = html_attrs or {}
         self.idtype = idtype
         self.vars = vars
-        self.fields_list = [(k, v) for k, v in self.fields.items()]
-        self.fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
         if '_class' in self.html_attrs:
@@ -874,7 +874,7 @@ class Form(object):
         if func and callable(func):
             self.validators.append(func)
 
-    def validate(self, *data, **kwargs):
+    def validate(self, *data):
         all_data = {}
         for k, v in self.fields.items():
             v.parse_data(data, all_data)
