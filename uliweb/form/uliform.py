@@ -787,9 +787,11 @@ class DateTimeField(StringField):
 class FormMetaclass(type):
     def __init__(cls, name, bases, dct):
         cls.fields = {}
-        cls.fields_list = [(k, v) for k, v in dct.items() if isinstance(v, BaseField)]
-        cls.fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
-        for (field_name, obj) in cls.fields_list:
+        cls.fields_list = []
+        fields_list = [(k, v) for k, v in dct.items() if isinstance(v, BaseField)]
+        fields_list, dct.items()
+        fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
+        for (field_name, obj) in fields_list:
             cls.add_field(field_name, obj)
 #            if isinstance(obj, BaseField):
 #                check_reserved_word(field_name)
@@ -863,6 +865,7 @@ class Form(object):
             field.__property_config__(cls, field_name)
             if attribute:
                 setattr(cls, field_name, field)
+            cls.fields_list.append((field_name, field))
         
     def __init_validators(self):
         for k, obj in self.fields.items():
