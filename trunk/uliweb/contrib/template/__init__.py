@@ -83,7 +83,7 @@ def link_tag_handler(app):
         from uliweb.contrib.staticfiles import url_for_static
         global __id
         
-        links, args = _parse_arguments(links, key='to')
+        links, args, kwargs = _parse_arguments(links, key='to')
         links = eval_vars(links, vars, env)
 #        args = eval_vars(args, vars, env)
         collection = env.dicts[0].get('collection', SortedDict())
