@@ -29,7 +29,7 @@ class LoginForm(Form):
     form_buttons = Submit(value=_('Login'), _class="button")
     form_title = _('Login')
     
-    username = StringField(label=_('Username:'), required=True)
+    username = UnicodeField(label=_('Username:'), required=True)
     password = PasswordField(label=_('Password:'), required=True)
     rememberme = BooleanField(label=_('Remember Me'))
     next = HiddenField()

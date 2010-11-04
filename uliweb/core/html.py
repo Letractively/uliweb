@@ -116,7 +116,9 @@ class Script(Tag):
             Tag.__init__(self, tag_name="script", _value='', **kwargs)
         else:
             Tag.__init__(self, tag_name="script", _value=Tag._dummy, **kwargs)
-    
+ 
+__tags__['script'] = Script
+
 def begin_tag(tag, **kwargs):
     return '<%s%s>' % (tag, _create_kwargs(kwargs))
 

@@ -3,12 +3,13 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 
 class ReferenceSelectField(SelectField):
-    def __init__(self, model, display_field=None, value_field='id', condition=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
+    def __init__(self, model, display_field=None, value_field='id', condition=None, query=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
         SelectField.__init__(self, label=label, default=default, choices=[], required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
         self.model = model
         self.display_field = display_field
         self.value_field = value_field
         self.condition = condition
+        self.query = query
     
     def get_choices(self):
         from uliweb.orm import get_model
@@ -20,15 +21,26 @@ class ReferenceSelectField(SelectField):
             else:
                 self.display_field = 'id'
            
-        r = list(model.all().values(self.value_field, self.display_field))
+        if self.query:
+            query = self.query
+        else:
+            query = model.all()
+        r = list(query.values(self.value_field, self.display_field))
         return r
     
     def to_python(self, data):
         return int(data)
 
 class ManyToManySelectField(ReferenceSelectField):
-    def __init__(self, model, display_field=None, value_field='id', condition=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
-        ReferenceSelectField.__init__(self, model=model, display_field=display_field, value_field=value_field, condition=condition, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=True, multiple=True, **kwargs)
+    def __init__(self, model, display_field=None, value_field='id', 
+            condition=None, query=None, label='', default=None, 
+            required=False, validators=None, name='', html_attrs=None, 
+            help_string='', build=None, **kwargs):
+        ReferenceSelectField.__init__(self, model=model, display_field=display_field, 
+            value_field=value_field, condition=condition, query=query, label=label, 
+            default=default, required=required, validators=validators, name=name, 
+            html_attrs=html_attrs, help_string=help_string, build=build, 
+            empty=True, multiple=True, **kwargs)
   
 def get_fields(model, fields, meta):
     if fields:
@@ -84,7 +96,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
                 field_type = form.SelectField
                 kwargs['choices'] = prop.get_choices()
             else:
-                field_type = form.StringField
+                field_type = form.UnicodeField
         elif cls is orm.BooleanProperty:
             field_type = form.BooleanField
         elif cls is orm.DateProperty:
@@ -134,15 +146,27 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
     fields_convert_map = fields_convert_map or {}
     default_convert_map = {orm.TextProperty:lambda v,o:text2html(v)}
     
-    value = prop.get_value_for_datastore(obj)
-    display = value
-        
-    if prop.property_name in fields_convert_map:
-        convert = fields_convert_map.get(prop.property_name, None)
+    #not real Property instance, then return itself, so if should return
+    #just like {'label':xxx, 'value':xxx, 'display':xxx}
+    if not isinstance(prop, orm.Property):  
+        value = prop.get('value', '')
+        display = prop.get('display', '')
+        label = prop.get('label', '')
+        name = prop.get('name', '')
+        convert = prop.get('convert', None)
     else:
-        convert = types_convert_map.get(prop.__class__, None)
-        if not convert:
-            convert = default_convert_map.get(prop.__class__, None)
+        value = prop.get_value_for_datastore(obj)
+        display = value
+        name = prop.property_name
+        label = prop.verbose_name or prop.property_name
+        
+    if name in fields_convert_map:
+        convert = fields_convert_map.get(name, None)
+    else:
+        if isinstance(prop, orm.Property):
+            convert = types_convert_map.get(prop.__class__, None)
+            if not convert:
+                convert = default_convert_map.get(prop.__class__, None)
         
     if convert:
         display = convert(value, obj)
@@ -162,7 +186,7 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
                     display = v.get_url()
                 else:
                     display = unicode(v)
-            if prop.choices is not None:
+            if isinstance(prop, orm.Property) and prop.choices is not None:
                 display = get_choice(prop.choices, value)
         
     if isinstance(display, unicode):
@@ -170,7 +194,7 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
     if display is None:
         display = ''
         
-    return {'label':prop.verbose_name or prop.property_name, 'value':value, 'display':display}
+    return {'label':label, 'value':value, 'display':display}
 
 class AddView(object):
     success_msg = _('The information has been saved successfully!')
@@ -379,7 +403,8 @@ class EditView(AddView):
             fields_list.insert(0, d)
             fields_name.insert(0, 'id')
         
-        data = self.data or obj.to_dict(fields_name, convert=False)
+        data = obj.to_dict(fields_name, convert=False).copy()
+        data.update(self.data)
         
         for f in fields_list:
             if f['name'] == 'id':
