@@ -827,6 +827,8 @@ class Result(object):
         return self.model.remove(self.condition)
     
     def filter(self, condition):
+        if condition is None:
+            return self
         if self.condition is not None:
             self.condition = condition & self.condition
         else:
@@ -947,6 +949,7 @@ class ManyResult(Result):
                 ids.remove(v)
             else:
                 d = {self.fielda:self.valuea, self.fieldb:v}
+                print d
                 self.table.insert().execute(**d)
                 modified = True
                 
