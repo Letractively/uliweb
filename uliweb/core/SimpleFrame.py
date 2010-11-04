@@ -475,8 +475,8 @@ class Dispatcher(object):
         dispatch.call(self, 'get_template_tag_handlers', handlers)
         return template.template(text, vars, env, dirs, default_template)
     
-    def render(self, templatefile, vars, env=None, dirs=None, request=None, default_template=None):
-        return Response(self.template(templatefile, vars, env, dirs, request, default_template=default_template), content_type='text/html')
+    def render(self, templatefile, vars, env=None, dirs=None, request=None, default_template=None, content_type='text/html'):
+        return Response(self.template(templatefile, vars, env, dirs, request, default_template=default_template), content_type=content_type)
     
     def _page_not_found(self, description=None, **kwargs):
         description = 'The requested URL "{{=url}}" was not found on the server.'
@@ -581,13 +581,14 @@ class Dispatcher(object):
                 tmpfile = response.template
             else:
                 tmpfile = request.function + conf.settings.GLOBAL.TEMPLATE_SUFFIX
+            content_type = response.content_type
             
             #if debug mode, then display a default_template
             if self.debug:
                 d = ['default.html', self.default_template]
             else:
                 d = None
-            response = self.render(tmpfile, result, env=env, request=request, default_template=d)
+            response = self.render(tmpfile, result, env=env, request=request, default_template=d, content_type=content_type)
         elif isinstance(result, (str, unicode)):
             response = Response(result, content_type='text/html')
         elif isinstance(result, (Response, BaseResponse)):
