@@ -72,7 +72,7 @@ def var_table(var):
         return '\n'.join(tmp)
 
     # dicts
-    if isinstance(var, dict) or hasattr(var, 'items'):
+    if isinstance(var, dict):
         value = var.items()
         if not value:
             typ = 'empty'
