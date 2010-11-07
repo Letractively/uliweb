@@ -16,7 +16,7 @@ import code
 from werkzeug.debug.render import debug_page, load_resource
 from werkzeug.debug.util import ThreadedStream, Namespace, get_uid, \
      get_frame_info, ExceptionRepr
-from werkzeug.utils import url_decode
+from werkzeug.urls import url_decode
 
 
 try:

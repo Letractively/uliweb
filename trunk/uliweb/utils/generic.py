@@ -40,7 +40,7 @@ class ManyToManySelectField(ReferenceSelectField):
             value_field=value_field, condition=condition, query=query, label=label, 
             default=default, required=required, validators=validators, name=name, 
             html_attrs=html_attrs, help_string=help_string, build=build, 
-            empty=True, multiple=True, **kwargs)
+            empty=None, multiple=True, **kwargs)
   
 def get_fields(model, fields, meta):
     if fields:
@@ -188,6 +188,9 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
                     display = unicode(v)
             if isinstance(prop, orm.Property) and prop.choices is not None:
                 display = get_choice(prop.choices, value)
+            if prop.__class__ is orm.TextProperty:
+                from uliweb.utils.textconvert import text2html
+                display = text2html(value)
         
     if isinstance(display, unicode):
         display = display.encode('utf-8')
@@ -318,9 +321,10 @@ class EditView(AddView):
     fail_msg = _('There are somethings wrong.')
     builds_args_map = {}
     
-    def __init__(self, model, condition, ok_url, **kwargs):
+    def __init__(self, model, ok_url, condition=None, obj=None, **kwargs):
         AddView.__init__(self, model, ok_url, **kwargs)
         self.condition = condition
+        self.obj = obj
         
     def run(self):
         from uliweb import request, function
@@ -332,7 +336,10 @@ class EditView(AddView):
         
         flash = function('flash')
         
-        obj = self.query()
+        if not self.obj:
+            obj = self.query()
+        else:
+            obj = self.obj
         
         if not self.form:
             self.form = self.make_form(obj)
@@ -428,9 +435,10 @@ class DetailView(object):
     types_convert_map = {}
     fields_convert_map = {}
     
-    def __init__(self, model, condition, fields=None, types_convert_map=None, fields_convert_map=None):
+    def __init__(self, model, condition=None, obj=None, fields=None, types_convert_map=None, fields_convert_map=None):
         self.model = model
         self.condition = condition
+        self.obj = obj
         self.fields = fields
         if self.types_convert_map:
             self.types_convert_map = types_convert_map
@@ -443,7 +451,10 @@ class DetailView(object):
         if isinstance(self.model, str):
             self.model = get_model(self.model)
         
-        obj = self.query()
+        if not self.obj:
+            obj = self.query()
+        else:
+            obj = self.obj
         view_text = self.render(obj)
         
         return {'object':obj, 'view':''.join(view_text)}
@@ -463,9 +474,10 @@ class DetailView(object):
         return view_text
 
 class DeleteView(object):
-    def __init__(self, model, condition, ok_url):
+    def __init__(self, model, ok_url, condition=None, obj=None):
         self.model = model
         self.condition = condition
+        self.obj = obj
         self.ok_url = ok_url
         
     def run(self):
@@ -475,7 +487,10 @@ class DeleteView(object):
         if isinstance(self.model, str):
             self.model = get_model(self.model)
         
-        self.model.filter(self.condition).delete()
+        if self.obj:
+            self.obj.delete()
+        else:
+            self.model.filter(self.condition).delete()
         
         return redirect(self.ok_url)
         

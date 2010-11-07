@@ -417,7 +417,7 @@ class TextField(StringField):
     """
     default_build = TextArea
 
-    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=5, cols=75, **kwargs):
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=10, cols=75, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.rows = rows
         self.cols = cols
@@ -579,9 +579,8 @@ class SelectField(BaseField):
 #        else:
 #            value = data
         choices = self.get_choices()
-        if self.empty is not True and self.default is None:
-            if not '' in dict(choices):
-                choices.insert(0, ('', self.empty))
+        if self.empty is not None and not self.default in dict(choices):
+            choices.insert(0, ('', self.empty))
         return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
 
 class RadioSelectField(SelectField):
