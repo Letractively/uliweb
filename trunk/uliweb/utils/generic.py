@@ -76,7 +76,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     if isinstance(prop, BaseField): #if the prop is already Form.BaseField, so just return it
         return prop
     
-    kwargs = dict(label=prop.verbose_name or prop.property_name, default=prop.default, 
+    kwargs = dict(label=prop.verbose_name or prop.property_name, default=prop.default_value(), 
         name=prop.property_name, required=prop.required, help_string=prop.hint)
     if field['disabled']:
         kwargs['disabled'] = None
@@ -349,10 +349,10 @@ class EditView(AddView):
             if flag:
                 data = self.form.data.copy()
                 if self.pre_save:
-                    self.pre_save(data, obj)
+                    self.pre_save(obj, data)
                 r = self.save(obj, data)
                 if self.post_save:
-                    self.post_save(obj, data)
+                    r = r or self.post_save(obj, data)
                 
                 if r:
                     msg = self.success_msg
