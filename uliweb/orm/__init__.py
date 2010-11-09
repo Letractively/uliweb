@@ -302,9 +302,13 @@ class Property(object):
         #a object really need to save
         setattr(model_instance, self._attr_name(), value)
 
-    def default_value(self, model_instance=None):
+#    def default_value(self, model_instance=None):
+#        if callable(self.default):
+#            return self.default(model_instance)
+#        return self.default
+    def default_value(self):
         if callable(self.default):
-            return self.default(model_instance)
+            return self.default()
         return self.default
     
     def get_choices(self):
@@ -1231,7 +1235,7 @@ class Model(object):
                 if prop.name in kwargs:
                     value = kwargs[prop.name]
                 else:
-                    value = prop.default_value(self)
+                    value = prop.default_value()
                 prop.__set__(self, value)
         
     def _set_saved(self):
@@ -1277,14 +1281,15 @@ class Model(object):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
                         x = x.id
-                    if isinstance(v, DateTimeProperty) and v.auto_now_add:
-                        d[k] = v.now()
-                    elif x is not None:
+#                    if isinstance(v, DateTimeProperty) and v.auto_now_add:
+#                        d[k] = v.now()
+#                    elif x is not None:
+                    if x is not None:
                         d[k] = x
-                    else:
-                        x = v.default_value(self)
-                        if x:
-                            d[k] = x
+#                    else:
+#                        x = v.default_value(self)
+#                        if x:
+#                            d[k] = x
         else:
             d = {}
             d['id'] = self.id
@@ -1294,9 +1299,10 @@ class Model(object):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
                         x = x.id
-                    if isinstance(v, DateTimeProperty) and v.auto_now:
-                        d[k] = v.now()
-                    elif (x is not None) and (t != self.field_str(x)):
+#                    if isinstance(v, DateTimeProperty) and v.auto_now:
+#                        d[k] = v.now()
+#                    elif (x is not None) and (t != self.field_str(x)):
+                    if (x is not None) and (t != self.field_str(x)):
                         d[k] = x
         
         return d
@@ -1318,6 +1324,10 @@ class Model(object):
         d = self._get_data()
         if d:
             if not self.id:
+                #process auto_now_add
+                for k, v in self.properties.items():
+                    if isinstance(v, DateTimeProperty) and v.auto_now:
+                        d[k] = v.now()
                 obj = self.table.insert().execute(**d)
                 setattr(self, 'id', obj.lastrowid)
                 dispatch.call(self.__class__, 'post_save', instance=self, created=True, data=d)
@@ -1325,14 +1335,19 @@ class Model(object):
             else:
                 _id = d.pop('id')
                 if d:
+                    #process auto_now
+                    for k, v in self.properties.items():
+                        if isinstance(v, DateTimeProperty) and v.auto_now:
+                            d[k] = v.now()
                     self.table.update(self.table.c.id == self.id).execute(**d)
                     dispatch.call(self.__class__, 'post_save', instance=self, created=False, data=d)
                     saved = True
-            for k, v in d.items():
-                x = self.properties[k].get_value_for_datastore(self)
-                if self.field_str(x) != self.field_str(v):
-                    setattr(self, k, v)
-            self._set_saved()
+            if saved:
+                for k, v in d.items():
+                    x = self.properties[k].get_value_for_datastore(self)
+                    if self.field_str(x) != self.field_str(v):
+                        setattr(self, k, v)
+                self._set_saved()
         return saved
     
     save = put

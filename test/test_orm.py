@@ -425,7 +425,7 @@ def test_match():
     >>> class Test(Model):
     ...     string = StringProperty(max_length=40, choices=c)
     >>> a = Test()
-    >>> a
+    >>> a #because you didn't assign a value to string, so the default will only affect at saving
     <Test {'string':u'','id':None}>
     >>> #test the correct assign
     #>>> a.string = 'abc'
@@ -487,6 +487,26 @@ def test_result():
     None
     >>> print repr(Test.filter(Test.c.year>5).one())
     <Test {'username':u'limodou','year':10,'id':1}>
+    """
+    
+def test_save():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(datetime.datetime, auto_now_add=True, auto_now=True)
+    >>> a = Test(username='limodou')
+    >>> a._get_data()
+    {'username': u'limodou'}
+    >>> a.save()
+    True
+    >>> a.to_dict() # doctest:+ELLIPSIS
+    {'username': 'limodou', 'id': 1, 'year': '... ...'}
+    >>> a.username = 'newuser'
+    >>> a._get_data()
+    {'username': u'newuser', 'id': 1}
     """
     
 
