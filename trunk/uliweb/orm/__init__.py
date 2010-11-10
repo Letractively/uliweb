@@ -1326,7 +1326,7 @@ class Model(object):
             if not self.id:
                 #process auto_now_add
                 for k, v in self.properties.items():
-                    if isinstance(v, DateTimeProperty) and v.auto_now:
+                    if isinstance(v, DateTimeProperty) and v.auto_now_add:
                         d[k] = v.now()
                 obj = self.table.insert().execute(**d)
                 setattr(self, 'id', obj.lastrowid)
