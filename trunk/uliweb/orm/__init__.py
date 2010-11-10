@@ -953,7 +953,6 @@ class ManyResult(Result):
                 ids.remove(v)
             else:
                 d = {self.fielda:self.valuea, self.fieldb:v}
-                print d
                 self.table.insert().execute(**d)
                 modified = True
                 
@@ -1318,29 +1317,36 @@ class Model(object):
                     setattr(self, k, v)
             
     def put(self):
-        dispatch.call(self.__class__, 'pre_save', instance=self)
-        
         saved = False
+        created = False
         d = self._get_data()
         if d:
             if not self.id:
+                created = True
+                old = d.copy()
+                
+                dispatch.call(self.__class__, 'pre_save', instance=self, created=True, data=d)
+                
                 #process auto_now_add
                 for k, v in self.properties.items():
                     if isinstance(v, DateTimeProperty) and v.auto_now_add:
                         d[k] = v.now()
                 obj = self.table.insert().execute(**d)
                 setattr(self, 'id', obj.lastrowid)
-                dispatch.call(self.__class__, 'post_save', instance=self, created=True, data=d)
+                
                 saved = True
             else:
                 _id = d.pop('id')
                 if d:
+                    old = d.copy()
+                    
+                    dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d)
+
                     #process auto_now
                     for k, v in self.properties.items():
                         if isinstance(v, DateTimeProperty) and v.auto_now:
                             d[k] = v.now()
                     self.table.update(self.table.c.id == self.id).execute(**d)
-                    dispatch.call(self.__class__, 'post_save', instance=self, created=False, data=d)
                     saved = True
             if saved:
                 for k, v in d.items():
@@ -1348,6 +1354,9 @@ class Model(object):
                     if self.field_str(x) != self.field_str(v):
                         setattr(self, k, v)
                 self._set_saved()
+                
+                dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old)
+                
         return saved
     
     save = put

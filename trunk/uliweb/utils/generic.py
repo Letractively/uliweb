@@ -206,7 +206,8 @@ class AddView(object):
     
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
-        disabled_fields=None, hidden_fields=None, pre_save=None, post_save=None):
+        disabled_fields=None, hidden_fields=None, pre_save=None, post_save=None,
+        post_created_form=None):
 
         self.model = model
         self.ok_url = ok_url
@@ -227,6 +228,7 @@ class AddView(object):
         self.hidden_fields = hidden_fields or []
         self.pre_save = pre_save
         self.post_save = post_save
+        self.post_created_form = post_created_form
         
     def get_fields(self, meta='AddForm'):
         f = []
@@ -250,7 +252,7 @@ class AddView(object):
             self.model = orm.get_model(self.model)
             
         if self.form_cls:
-            DummyForm = self.form_cls
+            class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
                 DummyForm.form_buttons = form.Submit(value=_('Create'), _class=".submit")
            
@@ -264,6 +266,9 @@ class AddView(object):
             if field:
                 DummyForm.add_field(f['name'], field, True)
         
+        if self.post_created_form:
+            self.post_created_form(DummyForm, self.model)
+            
         return DummyForm(data=self.data, **self.form_args)
     
     def run(self):
@@ -395,7 +400,7 @@ class EditView(AddView):
             return self.form
 
         if self.form_cls:
-            DummyForm = self.form_cls
+            class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
                 DummyForm.form_buttons = form.Submit(value=_('Save'), _class=".submit")
            
@@ -428,6 +433,9 @@ class EditView(AddView):
                     value = getattr(obj, f['name']).ids()
                     data[f['name']] = value
         
+        if self.post_created_form:
+            self.post_created_form(DummyForm, self.model, obj)
+            
         return DummyForm(data=data, **self.form_args)
         
     
