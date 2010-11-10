@@ -700,27 +700,36 @@ class Dispatcher(object):
             
     def dispatch_hooks(self):
         #process DISPATCH hooks
-        d = conf.settings.get('DISPATCH', None)
-        if d:
-            hooks = d.get('bind', [])
-            if hooks:
-                for h in hooks:
-                    try:
-                        func = h.pop('function')
-                    except:
-                        log.error("Can't find function in bind option, %r" % h)
-                        continue
-                    dispatch.bind(**h)(func)
-            exposes = d.get('expose', [])
-            if exposes:
-                for h in exposes:
-                    try:
-                        func = h.pop('function')
-                    except:
-                        log.error("Can't find function in bind option, %r" % h)
-                        continue
-                    expose(**h)(func)
-            
+        d = conf.settings.get('BINDS', {})
+        for func, args in d.iteritems():
+            if not isinstance(args, (tuple, list)):
+                args = (args,)
+            for x in args:
+                if isinstance(x, (tuple, list)):
+                    dispatch.bind(*x)(func)
+                elif isinstance(x, dict):
+                    dispatch.bind(**x)(func)
+                elif isinstance(x, str):
+                    dispatch.bind(x)(func)
+                else:
+                    log.error("BINDS definition [%s=%r] is not right" % (func, args))
+                    raise Exception, 'BINDS definition [%s=%r] is not right' % (func, args)
+                
+        d = conf.settings.get('EXPOSES', {})
+        for func, args in d.iteritems():
+            if not isinstance(args, (tuple, list)):
+                args = (args,)
+            for x in args:
+                if isinstance(x, (tuple, list)):
+                    expose(*x)(func)
+                elif isinstance(x, dict):
+                    expose(**x)(func)
+                elif isinstance(x, str):
+                    expose(x)(func)
+                else:
+                    log.error("EXPOSES definition [%s=%r] is not right" % (func, args))
+                    raise Exception, 'EXPOSES definition [%s=%r] is not right' % (func, args)
+
     def get_template_dirs(self):
         template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in self.apps]
         return template_dirs

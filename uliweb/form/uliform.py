@@ -783,28 +783,22 @@ class DateTimeField(StringField):
         else:
             return ''
 
+#Only support single root derive
 class FormMetaclass(type):
     def __init__(cls, name, bases, dct):
         cls.fields = {}
         cls.fields_list = []
+        
+        for base in bases[:1]:
+            if hasattr(base, 'fields'):
+                for name, field in base.fields.iteritems():
+                    cls.add_field(name, field)
+        
         fields_list = [(k, v) for k, v in dct.items() if isinstance(v, BaseField)]
         fields_list, dct.items()
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         for (field_name, obj) in fields_list:
             cls.add_field(field_name, obj)
-#            if isinstance(obj, BaseField):
-#                check_reserved_word(field_name)
-#                fields[field_name] = obj
-#                obj.__property_config__(cls, field_name)
-                
-
-#        f = {}
-#        for base in bases[::-1]:
-#            if hasattr(base, 'fields'):
-#                f.update(base.fields)
-#
-#        f.update(fields)
-#        cls.fields = fields
 
 class Form(object):
     """
