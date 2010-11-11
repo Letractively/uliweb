@@ -1325,7 +1325,7 @@ class Model(object):
                 created = True
                 old = d.copy()
                 
-                dispatch.call(self.__class__, 'pre_save', instance=self, created=True, data=d)
+                dispatch.call(self.__class__, 'pre_save', instance=self, created=True, data=d, old_data=self._old_values)
                 
                 #process auto_now_add
                 for k, v in self.properties.items():
@@ -1340,7 +1340,7 @@ class Model(object):
                 if d:
                     old = d.copy()
                     
-                    dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d)
+                    dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d, old_data=self._old_values)
 
                     #process auto_now
                     for k, v in self.properties.items():
@@ -1353,9 +1353,8 @@ class Model(object):
                     x = self.properties[k].get_value_for_datastore(self)
                     if self.field_str(x) != self.field_str(v):
                         setattr(self, k, v)
+                dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old, old_data=self._old_values)
                 self._set_saved()
-                
-                dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old)
                 
         return saved
     
