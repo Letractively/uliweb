@@ -237,7 +237,7 @@ def test_7():
     (IntegrityError) columns group_id, user_id are not unique u'INSERT INTO group_user_users (group_id, user_id) VALUES (?, ?)' (1, 1)
     >>> list(g1.users.all())
     [<User {'username':u'limodou','id':1}>, <User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
-    >>> g1.users.delete(a)
+    >>> g1.users.clear(a)
     >>> g1.users.clear()
     >>> g1.users.count()
     0
@@ -254,7 +254,7 @@ def test_7():
     >>> a.group_set.add(g3)
     >>> list(a.group_set.all())
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
-    >>> g1.users.delete(a)
+    >>> g1.users.clear(a)
     >>> list(g1.users.all())
     [<User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
     >>> list(g2.users.all())

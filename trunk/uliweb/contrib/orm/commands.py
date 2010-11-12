@@ -126,7 +126,7 @@ def action_reset(apps_dir):
         """Reset the appname models(drop and recreate)"""
         from sqlalchemy import create_engine
 
-        ans = raw_input("""This command will drop tables, are you sure to reset[Y/n]""")
+        ans = raw_input("""This command will drop all tables of app [%s], are you sure to reset[Y/n]""" % appname)
         if ans and ans.upper() != 'Y':
             print "Command be cancelled!"
             return
