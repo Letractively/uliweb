@@ -183,7 +183,7 @@ def valid_model(model):
     if isinstance(model, type) and issubclass(model, Model):
         return True
     return model in __models__
-        
+
 class ModelMetaclass(type):
     def __init__(cls, name, bases, dct):
         super(ModelMetaclass, cls).__init__(name, bases, dct)
@@ -800,7 +800,17 @@ class OneToOne(ReferenceProperty):
                  % (self.reference_class.__name__, self.collection_name))
         setattr(self.reference_class, self.collection_name,
             _OneToOneReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
-    
+  
+def get_objs_ids(*objs):
+    ids = []
+    for o in objs:
+        assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
+        if isinstance(o, (int, long)):
+            ids.append(o)
+        else:
+            ids.append(o.id)
+    return ids
+
 class Result(object):
     def __init__(self, model=None, condition=None, *args, **kwargs):
         self.model = model
@@ -821,15 +831,8 @@ class Result(object):
             return self.filter(condition).one()
     
     def count(self):
-        if self.model is None:
-            return 0
         return self.model.count(self.condition)
 
-    def delete(self):
-        if self.model is None or self.condition is None:
-            return
-        return self.model.remove(self.condition)
-    
     def filter(self, condition):
         if condition is None:
             return self
@@ -887,9 +890,14 @@ class Result(object):
         if result:
             d = self.model._data_prepare(result)
             o = self.model(**d)
-            o._set_saved()
+            o.set_saved()
             return o
     
+    def clear(self):
+        if self.condition is None:
+            return
+        return self.model.remove(self.condition)
+            
     def __del__(self):
         if self.result:
             self.result.close()
@@ -902,9 +910,51 @@ class Result(object):
                 raise StopIteration
             d = self.model._data_prepare(obj)
             o = self.model(**d)
-            o._set_saved()
+            o.set_saved()
             yield o
-   
+  
+class ReverseResult(Result):
+    def __init__(self, model, condition, reference_id, table, instance, table_field, *args, **kwargs):
+        self.model = model
+        self.table = table
+        self.table_field = table_field
+        self.instance = instance
+        self.condition = condition
+        self.reference_id = reference_id
+        self.columns = [self.model.table]
+        self.funcs = []
+        self.args = args
+        self.kwargs = kwargs
+        self.result = None
+        
+    def has(self, *objs):
+        ids = get_objs_ids(*objs)
+        
+        result = self.model.table.count(self.condition & (self.model.table.c[self.reference_id].in_(ids))).execute()
+        count = 0
+        if result:
+            r = result.fetchone()
+            if r:
+                count = r[0]
+        else:
+            count = 0
+        return count > 0
+    
+    def ids(self):
+        query = select([self.model.c.id], self.condition)
+        ids = [x[0] for x in query.execute()]
+        return ids
+    
+    def clear(self, *objs):
+        """
+        Clear the third relationship table, but not the ModelA or ModelB
+        """
+        if objs:
+            ids = get_objs_ids(*objs)
+            self.model.table.delete(self.condition & self.model.table.c[self.table_field].in_(ids)).execute()
+        else:
+            self.model.table.delete(self.condition).execute()
+    
 class ManyResult(Result):
     def __init__(self, modela, modelb, table, fielda, fieldb, valuea):
         self.modela = modela
@@ -940,15 +990,17 @@ class ManyResult(Result):
         return ids
     
     def update(self, *objs):
+        """
+        Update the third relationship table, but not the ModelA or ModelB
+        """
         ids = self.ids()
+        old_ids = ids[:]
+        new_ids = get_objs_ids(*objs)
 
+        dispatch.call(self.__class__, 'pre_update', instance=self, data=new_ids, old_data=ids)
+        
         modified = False
-        for o in objs:
-            assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
-            if isinstance(o, (int, long)):
-                v = o
-            else:
-                v = o.id
+        for v in new_ids:
             if v in ids:    #the id has been existed, so don't insert new record
                 ids.remove(v)
             else:
@@ -957,23 +1009,20 @@ class ManyResult(Result):
                 modified = True
                 
         if ids: #if there are still ids, so delete them
-            self.delete(*ids)
+            self.clear(*ids)
             modified = True
             
+        if modified:
+            dispatch.call(self.__class__, 'post_update', instance=self, data=new_ids, old_data=old_ids)
+
         return modified
             
-    def clear(self):
-        self.delete()
-            
-    def delete(self, *objs):
+    def clear(self, *objs):
+        """
+        Clear the third relationship table, but not the ModelA or ModelB
+        """
         if objs:
-            ids = []
-            for o in objs:
-                assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
-                if isinstance(o, (int, long)):
-                    ids.append(o)
-                else:
-                    ids.append(o.id)
+            ids = get_objs_ids(*objs)
             self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
         else:
             self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
@@ -989,13 +1038,10 @@ class ManyResult(Result):
             count = 0
         return count
     
-    def has(self, obj):
-        if isinstance(obj, (int, long)):
-            _id = obj
-        else:
-            _id = obj.id
+    def has(self, *objs):
+        ids = get_objs_ids(*objs)
         
-        result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb]==_id)).execute()
+        result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
         count = 0
         if result:
             r = result.fetchone()
@@ -1020,7 +1066,7 @@ class ManyResult(Result):
         if result:
             d = self.modelb._data_prepare(result)
             o = self.modelb(**d)
-            o._set_saved()
+            o.set_saved()
             return o
 
     def __del__(self):
@@ -1037,7 +1083,7 @@ class ManyResult(Result):
                 raise StopIteration
             d = self.modelb._data_prepare(obj)
             o = self.modelb(**d)
-            o._set_saved()
+            o.set_saved()
             yield o
         
 class ManyToMany(ReferenceProperty):
@@ -1139,9 +1185,10 @@ class _ReverseReferenceProperty(Property):
             if _id is not None:
                 b_id = self._reference_id
                 d = self._model.c[self._reference_id]
-                return Result(self._model, d==_id)
+                return ReverseResult(self._model, d==_id, self._reference_id, model_class.table, model_instance, self._reversed_id)
             else:
-                return Result()
+#                return Result()
+                return None
         else:
             return self
 
@@ -1237,7 +1284,7 @@ class Model(object):
                     value = prop.default_value()
                 prop.__set__(self, value)
         
-    def _set_saved(self):
+    def set_saved(self):
         self._old_values = self.to_dict()
         
     def to_dict(self, fields=[], convert=True):
@@ -1316,12 +1363,15 @@ class Model(object):
                 if self.field_str(x) != self.field_str(v):
                     setattr(self, k, v)
             
-    def put(self):
+    def put(self, insert=False):
+        """
+        If insert=True, then it'll use insert() indead of update()
+        """
         saved = False
         created = False
         d = self._get_data()
         if d:
-            if not self.id:
+            if not self.id or insert:
                 created = True
                 old = d.copy()
                 
@@ -1354,7 +1404,7 @@ class Model(object):
                     if self.field_str(x) != self.field_str(v):
                         setattr(self, k, v)
                 dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old, old_data=self._old_values)
-                self._set_saved()
+                self.set_saved()
                 
         return saved
     
