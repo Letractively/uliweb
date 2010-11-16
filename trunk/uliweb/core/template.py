@@ -324,9 +324,6 @@ class Out(object):
         return self.buf.getvalue()
 
 class Template(object):
-    callbacks = []
-    exec_env = {}
-    
     def __init__(self, text='', vars=None, env=None, dirs=None, default_template=None, use_temp=False, compile=None):
         self.text = text
         self.filename = None
@@ -342,6 +339,8 @@ class Template(object):
         self.content = Content()
         self.stack = [self.content]
         self.depend_files = []  #used for template dump file check
+        self.callbacks = []
+        self.exec_env = {}
         self.root = self
         
     def add_callback(self, callback):
@@ -501,8 +500,6 @@ class Template(object):
             except:
                 pass
         
-#        print '---------------------'
-#        print code
         return self._run(code, filename or 'template')
         
     def _run(self, code, filename):
