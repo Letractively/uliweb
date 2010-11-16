@@ -3,7 +3,7 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 
 class ReferenceSelectField(SelectField):
-    def __init__(self, model, display_field=None, value_field='id', condition=None, query=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
+    def __init__(self, model, display_field=None, value_field='id', condition=None, query=None, label='', default=0, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
         SelectField.__init__(self, label=label, default=default, choices=[], required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
         self.model = model
         self.display_field = display_field
