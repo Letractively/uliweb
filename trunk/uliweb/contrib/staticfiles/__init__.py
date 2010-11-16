@@ -13,13 +13,14 @@ def prepare_default_env(sender, env):
 def url_for_static(filename=None, **kwargs):
     from uliweb import url_for
     from urlparse import urlparse
-#    filename = get(application, 'url_for_static_filename', filename, kwargs) or filename
-    kwargs['filename'] = filename
+    
+    if filename.startswith('/'):
+        return filename
     r = urlparse(filename)
     if r.scheme or r.netloc:
         return filename
-    else:
-        return url_for('uliweb.contrib.staticfiles.static', **kwargs)
+    kwargs['filename'] = filename
+    return url_for('uliweb.contrib.staticfiles.static', **kwargs)
 
 def static(filename):
     pass
