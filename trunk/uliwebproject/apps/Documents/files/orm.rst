@@ -360,8 +360,12 @@ You can use OneToOne to reference other model. For example:
 
 .. code:: python+console
 
-    >>> a1 = Test(username='limodou').save()
-    >>> b1 = Test1(name='user', test=a1).save()
+    >>> a1 = Test(username='limodou')
+    >>> a1.save()
+    True
+    >>> b1 = Test1(name='user', test=a1)
+    >>> b1.save()
+    True
     >>> a1
     <Test {'username':'limodou','year':0,'id':1}>
     >>> a1.test1
@@ -380,9 +384,15 @@ Many to One
     >>> class Test1(Model):
     ...     test = Reference(Test, collection_name='tttt')
     ...     name = Field(str)
-    >>> a1 = Test(username='limodou1').save()
-    >>> b1 = Test1(name='user', test=a1).save()
-    >>> b2 = Test1(name='aaaa', test=a1).save()
+    >>> a1 = Test(username='limodou1')
+    >>> a1.save()
+    True
+    >>> b1 = Test1(name='user', test=a1)
+    >>> b1.save()
+    True
+    >>> b2 = Test1(name='aaaa', test=a1)
+    >>> b2.save()
+    True
     >>> a1
     <Test {'username':'limodou1','year':0,'id':1}>
     >>> list(a1.tttt.all())[0]   #here we use tttt but not test1_set
@@ -422,12 +432,24 @@ Many to Many
     >>> class Group(Model):
     ...     name = Field(str, max_length=20)
     ...     users = ManyToMany(User)
-    >>> a = User(username='limodou', year=5).save()
-    >>> b = User(username='user', year=10).save()
-    >>> c = User(username='abc', year=20).save()
-    >>> g1 = Group(name='python').save()
-    >>> g2 = Group(name='perl').save()
-    >>> g3 = Group(name='java').save()
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='user', year=10)
+    >>> b.save()
+    True
+    >>> c = User(username='abc', year=20)
+    >>> c.save()
+    True
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
     >>> g1.users.add(a)
     >>> g1.users.add(b)
     
@@ -494,8 +516,6 @@ But it'll not be saved in database, it just creates an instance, you need call
     user.save()
     #or
     user.put()
-    #or
-    user = User(username='limodou', year=36).save()
     
 Get an Instance
 ^^^^^^^^^^^^^^^^^
@@ -574,7 +594,7 @@ combine them one by one, for example:
 
 .. code: python
 
-    result.all().filter(User.c.year>18).count()
+    User.all().filter(User.c.year>18).count()
 
 all()
     It'll return Result object itself.

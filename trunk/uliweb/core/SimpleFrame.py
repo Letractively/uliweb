@@ -310,14 +310,18 @@ class Loader(object):
         self.notest = notest
         
     def get_source(self, exc_type, exc_value, exc_info, tb):
-        f, t, e = template.render_file(self.tmpfilename, self.vars, self.env, self.dirs)
+        from uliweb.core.template import Template
+        t = Template('', self.vars, self.env, self.dirs)
+        t.set_filename(self.tmpfilename)
+        use_temp_flag, filename, text = t.get_parsed_code()
+        
         if exc_type is SyntaxError:
             import re
             r = re.search(r'line (\d+)', str(exc_value))
             lineno = int(r.group(1))
         else:
             lineno = tb.tb_frame.f_lineno
-        return self.tmpfilename, lineno, t 
+        return self.tmpfilename, lineno, text 
     
     def test(self, filename):
         if self.notest:
@@ -408,75 +412,50 @@ class Dispatcher(object):
                 return path
         return None
 
-    def template(self, filename, vars=None, env=None, dirs=None, request=None, default_template=None):
+    def template(self, filename, vars=None, env=None, dirs=None, default_template=None):
         vars = vars or {}
         dirs = dirs or self.template_dirs
         env = env or self.get_view_env()
-        request = request or local.request
-        if request:
-            dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
+        dirs = [os.path.join(get_app_dir(local.request.appname), 'templates')] + dirs
         
-        d = dispatch.get(self, 'get_template_dirs', dirs, request)
-        if d:
-            dirs = d
-        
-        handlers = {}
-        dispatch.call(self, 'get_template_tag_handlers', handlers)
         if self.debug:
-            def _compile(code, filename, action):
-                __loader__ = Loader(filename, vars, env, dirs, notest=True)
+            def _compile(code, filename, action, env, Loader=Loader):
+                env['__loader__'] = Loader(filename, vars, env, dirs, notest=True)
                 return compile(code, filename, 'exec')
             
-            dispatch.call(self, 'before_render_template', vars, env)
-            fname, code, e = template.render_file(filename, vars, env, dirs, 
-                default_template=default_template, handlers=handlers)
-                
-            #user can insert new local environment variables to e variable
-            #and e will be a Context object
-            dispatch.call(self, 'before_compile_template', fname, code, vars, e)
-            out = template.Out()
-            new_e = template._prepare_run(vars, e, out)
-
-            if isinstance(code, (str, unicode)):
-                code = _compile(code, fname, 'exec')
-            __loader__ = Loader(fname, vars, env, dirs)
-            exec code in new_e
-            text = out.getvalue()
-            output = dispatch.get(self, 'after_render_template', text, vars, e)
-            return output or text
+            return template.template_file(filename, vars, env, dirs, default_template, compile=_compile)
+            
+            
+#            dispatch.call(self, 'before_render_template', vars, env)
+#            fname, code, e = template.render_file(filename, vars, env, dirs, 
+#                default_template=default_template, handlers=handlers)
+#                
+#            #user can insert new local environment variables to e variable
+#            #and e will be a Context object
+#            dispatch.call(self, 'before_compile_template', fname, code, vars, e)
+#            out = template.Out()
+#            new_e = template._prepare_run(vars, e, out)
+#
+#            if isinstance(code, (str, unicode)):
+#                code = _compile(code, fname, 'exec')
+#            __loader__ = Loader(fname, vars, env, dirs)
+#            exec code in new_e
+#            text = out.getvalue()
+#            output = dispatch.get(self, 'after_render_template', text, vars, e)
+#            return output or text
         else:
-            dispatch.call(self, 'before_render_template', vars, env)
-            fname, code, e = template.render_file(filename, vars, env, dirs, 
-                default_template=default_template, handlers=handlers)
-                
-            dispatch.call(self, 'before_compile_template', vars, e)
-            out = template.Out()
-            new_e = template._prepare_run(vars, e, out)
-            if isinstance(code, (str, unicode)):
-                code = compile(code, fname, 'exec')
-            exec code in new_e
-            text = out.getvalue()
-            output = dispatch.get(self, 'after_render_template', text, vars, e)
-            return output or text
+            return template.template_file(filename, vars, env, dirs, default_template)
     
-    def render_text(self, text, vars=None, env=None, dirs=None, request=None, default_template=None):
+    def render_text(self, text, vars=None, env=None, dirs=None, default_template=None):
         vars = vars or {}
         env = env or self.get_view_env()
         dirs = dirs or self.template_dirs
-        request = request or local.request
-        if request:
-            dirs = [os.path.join(get_app_dir(request.appname), 'templates')] + dirs
+        dirs = [os.path.join(get_app_dir(local.request.appname), 'templates')] + dirs
         
-        d = dispatch.get(self, 'get_template_dirs', dirs, request)
-        if d:
-            dirs = d
-        
-        handlers = {}
-        dispatch.call(self, 'get_template_tag_handlers', handlers)
         return template.template(text, vars, env, dirs, default_template)
     
-    def render(self, templatefile, vars, env=None, dirs=None, request=None, default_template=None, content_type='text/html'):
-        return Response(self.template(templatefile, vars, env, dirs, request, default_template=default_template), content_type=content_type)
+    def render(self, templatefile, vars, env=None, dirs=None, default_template=None, content_type='text/html'):
+        return Response(self.template(templatefile, vars, env, dirs, default_template=default_template), content_type=content_type)
     
     def _page_not_found(self, description=None, **kwargs):
         description = 'The requested URL "{{=url}}" was not found on the server.'
@@ -492,7 +471,7 @@ class Dispatcher(object):
     """ % description
         return Response(template.template(text, kwargs), status=404, content_type='text/html')
         
-    def not_found(self, request, e):
+    def not_found(self, e):
         if self.debug:
             urls = []
             for r in self.url_map.iter_rules():
@@ -502,19 +481,19 @@ class Dispatcher(object):
                     methods = ''
                 urls.append((r.rule, methods, r.endpoint))
             urls.sort()
-            return self._page_not_found(url=request.path, urls=urls)
+            return self._page_not_found(url=local.request.path, urls=urls)
         tmp_file = template.get_templatefile('404'+conf.settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
-            response = self.render(tmp_file, {'url':request.path})
+            response = self.render(tmp_file, {'url':local.request.path})
             response.status = 404
         else:
             response = e
         return response
     
-    def internal_error(self, request, e):
+    def internal_error(self, e):
         tmp_file = template.get_templatefile('500'+conf.settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
-            response = self.render(tmp_file, {'url':request.path})
+            response = self.render(tmp_file, {'url':local.request.path})
             response.status = 500
         else:
             response = e
@@ -588,7 +567,7 @@ class Dispatcher(object):
                 d = ['default.html', self.default_template]
             else:
                 d = None
-            response = self.render(tmpfile, result, env=env, request=request, default_template=d, content_type=content_type)
+            response = self.render(tmpfile, result, env=env, default_template=d, content_type=content_type)
         elif isinstance(result, (str, unicode)):
             response = Response(result, content_type='text/html')
         elif isinstance(result, (Response, BaseResponse)):
@@ -816,11 +795,11 @@ class Dispatcher(object):
             #endif
             
         except HTTPError, e:
-            response = self.render(e.errorpage, Storage(e.errors), request=req)
+            response = self.render(e.errorpage, Storage(e.errors))
         except NotFound, e:
-            response = self.not_found(req, e)
+            response = self.not_found(e)
         except InternalServerError, e:
-            response = self.internal_error(req, e)
+            response = self.internal_error(e)
         except HTTPException, e:
             response = e
         return ClosingIterator(response(environ, start_response),

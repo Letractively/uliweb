@@ -1,4 +1,4 @@
-from uliweb.core.dispatch import bind, get
+from uliweb.core.dispatch import bind
 from uliweb.core.SimpleFrame import expose
 
 @bind('startup_installed')
@@ -11,10 +11,15 @@ def prepare_default_env(sender, env):
     env['url_for_static'] = url_for_static
     
 def url_for_static(filename=None, **kwargs):
-    from uliweb.core.SimpleFrame import url_for, local
-    filename = get(local.application, 'url_for_static_filename', filename, kwargs) or filename
+    from uliweb import url_for
+    from urlparse import urlparse
+#    filename = get(application, 'url_for_static_filename', filename, kwargs) or filename
     kwargs['filename'] = filename
-    return url_for('uliweb.contrib.staticfiles.static', **kwargs)
+    r = urlparse(filename)
+    if r.scheme or r.netloc:
+        return filename
+    else:
+        return url_for('uliweb.contrib.staticfiles.static', **kwargs)
 
 def static(filename):
     pass
