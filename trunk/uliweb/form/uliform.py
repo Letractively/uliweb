@@ -215,7 +215,8 @@ class BaseField(object):
                 raise Exception, 'Unsupport type %s' % type(data)
         else:
             v = data
-        if v is None:
+#        if v is None:
+        if not v:
             if not self.required:
                 return True, self.default
 #                if self.default is not None:
