@@ -30,6 +30,8 @@ def get_temp_template(filename):
         f, filename = os.path.splitdrive(filename)
         filename = filename.replace('\\', '_')
         filename = filename.replace('/', '_')
+        f, ext = os.path.splitext(filename)
+        filename = f + '.py'
         return os.path.normcase(os.path.join(__templates_temp_dir__, filename))
     return filename
 
@@ -343,6 +345,10 @@ class Template(object):
         self.exec_env = {}
         self.root = self
         
+        for k, v in __nodes__.iteritems():
+            if hasattr(v, 'init'):
+                v.init(self)
+        
     def add_callback(self, callback):
         if not callback in self.root.callbacks:
             self.root.callbacks.append(callback)
@@ -470,9 +476,10 @@ class Template(object):
                 fin = file(f, 'r')
                 line = fin.readline()
                 modified = False
-                files = [f]
+                files = [self.filename]
                 if line.startswith('#'):
                     files.extend(line[1:].split())
+                
                 for x in files:
                     if os.path.getmtime(x) > os.path.getmtime(f):
                         modified = True

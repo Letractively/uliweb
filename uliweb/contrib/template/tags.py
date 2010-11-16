@@ -14,9 +14,12 @@ class LinkNode(Node):
         self.value = value
         self.content = content
         self.template = template
-        self.template.add_callback(self.htmlmerge)
-        self.template.add_exec_env('link', self.link)
-        self.template.add_exec_env('__links__', {'toplinks':[], 'bottomlinks':[]})
+        
+    @staticmethod
+    def init(template):
+        template.add_callback(LinkNode.htmlmerge)
+        template.add_exec_env('link', LinkNode.link)
+        template.add_exec_env('__links__', {'toplinks':[], 'bottomlinks':[]})
         
     def render(self):
         return 'link(_env, %s)\n' % self.value
@@ -41,14 +44,12 @@ class LinkNode(Node):
 class UseNode(LinkNode):
     __saved_template_plugins_modules__ = {}
     
-    def __init__(self, value=None, content=None, template=None):
-        self.value = value
-        self.content = content
-        self.template = template
-        self.template.add_callback(self.htmlmerge)
-        self.template.add_exec_env('use', self.use)
-        self.template.add_exec_env('__links__', {'toplinks':[], 'bottomlinks':[]})
-        
+    @staticmethod
+    def init(template):
+        template.add_callback(UseNode.htmlmerge)
+        template.add_exec_env('use', UseNode.use)
+        template.add_exec_env('__links__', {'toplinks':[], 'bottomlinks':[]})
+
     def render(self):
         return 'use(_vars, _env, %s)\n' % self.value
     
