@@ -228,6 +228,7 @@ def get_frame_info(tb, context_lines=7, simple=False):
     loader = tb.tb_frame.f_globals.get('__loader__')
     if not loader:
         loader = tb.tb_frame.f_locals.get('__loader__')
+        
         b = tb.tb_frame
         while not loader:
             b = b.f_back

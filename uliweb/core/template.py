@@ -3,32 +3,39 @@
 
 import re
 import os
+import StringIO
+import cgi
 
-__templates_temp_dir = 'tmp/templates_temp'
-__options = {'use_temp_dir':False}
+__templates_temp_dir__ = 'tmp/templates_temp'
+__options__ = {'use_temp_dir':False}
+__nodes__ = {}   #user defined nodes
 
 def use_tempdir(dir=''):
-    global __options, __templates_temp_dir
+    global __options__, __templates_temp_dir__
     
     if dir:
-        __templates_temp_dir = dir
-        __options['use_temp_dir'] = True
-        if not os.path.exists(__templates_temp_dir):
-            os.makedirs(__templates_temp_dir)
+        __templates_temp_dir__ = dir
+        __options__['use_temp_dir'] = True
+        if not os.path.exists(__templates_temp_dir__):
+            os.makedirs(__templates_temp_dir__)
 
 def set_options(**options):
     """
     default use_temp_dir=False
     """
-    __options.update(options)
+    __options__.update(options)
 
 def get_temp_template(filename):
-    if __options['use_temp_dir']:
+    if __options__['use_temp_dir']:
         f, filename = os.path.splitdrive(filename)
         filename = filename.replace('\\', '_')
         filename = filename.replace('/', '_')
-        return os.path.normcase(os.path.join(__templates_temp_dir, filename))
+        return os.path.normcase(os.path.join(__templates_temp_dir__, filename))
     return filename
+
+def register_node(name, node):
+    assert issubclass(node, Node)
+    __nodes__[name] = node
 
 def reindent(text):
     lines=text.split('\n')
@@ -38,7 +45,7 @@ def reindent(text):
         line=raw_line.strip()
         if line[:5]=='elif ' or line[:5]=='else:' or    \
             line[:7]=='except:' or line[:7]=='except ' or \
-            line[:7]=='finally:':
+            line[:7]=='finally:' or line[:5]=='with ':
                 k=k+credit-1
         if k<0: k=0
         new_lines.append('    '*k+line)
@@ -74,24 +81,60 @@ def get_templatefile(filename, dirs, default_template=None):
         else:
             return get_templatefile(default_template, dirs)
 
+def parse_arguments(text, key='with'):
+    r = re.compile(r'\s+%s\s+' % key)
+    k = re.compile(r'^\s*([\w][a-zA-Z_0-9]*\s*)=\s*(.*)')
+    b = r.split(text)
+    if len(b) == 1:
+        name, args, kwargs = b[0], (), {}
+    else:
+        name = b[0]
+        s = b[1].split(',')
+        args = []
+        kwargs = {}
+        for x in s:
+            ret = k.search(x)
+            if ret:
+                kwargs[ret.group(1)] = ret.group(2)
+            else:
+                args.append(x)
+                
+    return name, args, kwargs
+
+def eval_vars(vs, vars, env):
+    if isinstance(vs, (tuple, list)):
+        return [eval_vars(x, vars, env) for x in vs]
+    elif isinstance(vs, dict):
+        return dict([(x, eval_vars(y, vars, env)) for x, y in vs.iteritems()])
+    else:
+        return eval(vs, vars, env)
+
 r_tag = re.compile(r'(\{\{.*?\}\})', re.DOTALL|re.M)
 
 class Node(object):
     block = 0
     var = False
-    def __init__(self, value=None):
+    def __init__(self, value=None, content=None, template=None):
         self.value = value
+        self.content = content
+        self.template = template
         
     def __str__(self):
+        return self.render()
+        
+    def render(self):
         if self.value:
             return self.value
         else:
             return ''
-    
+        
 class BlockNode(Node):
-    def __init__(self, name=''):
+    block = 1
+    def __init__(self, name='', content=None, template=None):
         self.nodes = []
         self.name = name
+        self.content = content
+        self.template = template
         
     def add(self, node):
         self.nodes.append(node)
@@ -118,17 +161,22 @@ class BlockNode(Node):
         s.append('{{end}}')
         return ''.join(s)
     
-    def __str__(self):
-        s = []
-        for x in self.nodes:
-            if not isinstance(x, BlockNode):
-                s.append(str(x))
-        return ''.join(s)
+    def render(self):
+        if self.name in self.content.vars and self is not self.content.vars[self.name]:
+            return str(self.content.vars[self.name])
+        else:
+            s = []
+            for x in self.nodes:
+                if not x.__class__ is BlockNode:
+                    s.append(str(x))
+            return ''.join(s)
 
 class Content(BlockNode):
     def __init__(self):
         self.nodes = []
         self.vars = {}
+        self.begin = []
+        self.end = []
         
     def add(self, node):
         self.nodes.append(node)
@@ -143,15 +191,16 @@ class Content(BlockNode):
         self.nodes = []
     
     def __str__(self):
-        s = []
+        s = self.begin[:]
         for x in self.nodes:
-            if isinstance(x, BlockNode):
+            if x.__class__ is BlockNode:
                 if x.name in self.vars:
                     s.append(self.vars[x.name].output(self.vars))
                 else:
                     s.append(x.output(self.vars))
             else:
                 s.append(str(x))
+        s.extend(self.end)
         return ''.join(s)
     
     def __repr__(self):
@@ -241,145 +290,7 @@ class Context(object):
             self.dirty = False
         return d
         
-class Lexer(object):
-    def __init__(self, text, vars=None, env=None, dirs=None, handlers=None):
-        self.text = text
-        self.vars = vars or {}
-        if not isinstance(env, Context):
-            env = Context(env)
-        self.env = env
-        self.dirs = dirs
-        self.writer = 'out.write'
-        self.handlers = handlers or {}
-        self.content = Content()
-        self.stack = [self.content]
-        self.parse(text)
-        
-    def output(self):
-        return str(self.content)
-        
-    def parse(self, text):
-        in_tag = False
-        extend = None  #if need to process extend node
-        for i in r_tag.split(text):
-            if i:
-                if len(self.stack) == 0:
-                    raise Exception, "The 'end' tag is unmatched, please check if you spell 'block' right"
-                top = self.stack[-1]
-                if in_tag:
-                    line = i[2:-2].strip()
-                    if not line:
-                        continue
-                    if line.startswith('='):
-                        name, value = '=', line[1:].strip()
-                    elif line.startswith('<<'):
-                        name, value = '<<', line[2:].strip()
-                    else:
-                        v = line.split(' ', 1)
-                        if len(v) == 1:
-                            name, value = v[0], ''
-                        else:
-                            name, value = v
-                    if name in self.handlers:
-                        self.handlers[name](value, top, self.stack, self.vars, self.env, self.dirs, self.writer)
-                    elif name == 'block':
-                        node = BlockNode(name=value.strip())
-                        top.add(node)
-                        self.stack.append(node)
-                    elif name == 'end':
-                        self.stack.pop()
-                    elif name == '=':
-                        buf = "\n%s(%s)\n" % (self.writer, value)
-                        top.add(buf)
-                    elif name == '<<':
-                        buf = "\n%s(%s, escape=False)\n" % (self.writer, value)
-                        top.add(buf)
-                    elif name == 'include':
-                        self._parse_include(top, value)
-                    elif name == 'embed':
-                        self._parse_text(top, value)
-                    elif name == 'extend':
-                        extend = value
-                    else:
-                        if line and in_tag:
-                            top.add(line)
-                else:
-                    buf = "\n%s(%r, escape=False)\n" % (self.writer, i)
-                    top.add(buf)
-                    
-            in_tag = not in_tag
-        if extend:
-            self._parse_extend(extend)
-            
-    def _parse_text(self, content, var):
-        text = str(eval(var, self.env.to_dict(), self.vars))
-        t = Lexer(text, self.vars, self.env, self.dirs, self.handlers)
-        content.merge(t.content)
-
-    def _parse_include(self, content, filename):
-        if not filename.strip():
-            return
-        filename = eval(filename, self.env.to_dict(), self.vars)
-        fname = get_templatefile(filename, self.dirs)
-        if not fname:
-            raise Exception, "Can't find the template %s" % filename
-        
-        f = open(fname, 'rb')
-        text = f.read()
-        f.close()
-        t = Lexer(text, self.vars, self.env, self.dirs, self.handlers)
-        content.merge(t.content)
-        
-    def _parse_extend(self, filename):
-        filename = eval(filename, self.env.to_dict(), self.vars)
-        fname = get_templatefile(filename, self.dirs)
-        if not fname:
-            raise Exception, "Can't find the template %s" % filename
-        
-        f = open(fname, 'rb')
-        text = f.read()
-        f.close()
-        self.env.push()
-        t = Lexer(text, self.vars, self.env, self.dirs, self.handlers)
-        self.content.clear_content()
-        t.content.merge(self.content)
-        self.content = t.content
- 
-def render_text(text, vars=None, env=None, dirs=None, default_template=None, handlers=None):
-    dirs = dirs or ['.']
-    content = Lexer(text, vars, Context(env), dirs, handlers=handlers)
-    return reindent(content.output()), content.env
-
-def render_file(filename, vars=None, env=None, dirs=None, default_template=None, use_temp=False, handlers=None):
-    fname = get_templatefile(filename, dirs, default_template)
-    if not fname:
-        raise Exception, "Can't find the template %s" % filename
-    if use_temp:
-        f = get_temp_template(fname)
-        if os.path.exists(f):
-            if os.path.getmtime(f) >= os.path.getmtime(fname):
-                return fname, file(f, 'rb').read()
-    text, e = render_text(file(fname).read(), vars, env, dirs, default_template, handlers)
-    if use_temp:
-        f = get_temp_template(fname)
-        try:
-            fo = file(f, 'wb')
-            fo.write(text)
-            fo.close()
-        except:
-            pass
-    return fname, text, e
-
-def template_file(filename, vars=None, env=None, dirs=None, default_template=None, handlers=None):
-    fname, code, e = render_file(filename, vars, env, dirs, default_template, use_temp=__options['use_temp_dir'], handlers=handlers)
-    return _run(code, vars, e, fname)
-
-def template(text, vars=None, env=None, dirs=None, default_template=None, handlers=None):
-    code, e = render_text(text, vars, env, dirs, default_template, handlers=handlers)
-    return _run(code, vars, e)
-
-import StringIO
-import cgi
+__nodes__['block'] = BlockNode
 
 class Out(object):
     encoding = 'utf-8'
@@ -412,38 +323,227 @@ class Out(object):
     def getvalue(self):
         return self.buf.getvalue()
 
-def _prepare_run(vars, env, out):
-    def f(_vars, _env):
-        def defined(v):
+class Template(object):
+    callbacks = []
+    exec_env = {}
+    
+    def __init__(self, text='', vars=None, env=None, dirs=None, default_template=None, use_temp=False, compile=None):
+        self.text = text
+        self.filename = None
+        self.vars = vars or {}
+        if not isinstance(env, Context):
+            env = Context(env)
+        self.env = env
+        self.dirs = dirs or '.'
+        self.default_template = default_template
+        self.use_temp = use_temp
+        self.compile = compile
+        self.writer = 'out.write'
+        self.content = Content()
+        self.stack = [self.content]
+        self.depend_files = []  #used for template dump file check
+        self.root = self
+        
+    def add_callback(self, callback):
+        if not callback in self.root.callbacks:
+            self.root.callbacks.append(callback)
+            
+    def add_exec_env(self, name, obj):
+        self.root.exec_env[name] = obj
+        
+    def add_root(self, root):
+        self.root = root
+        
+    def set_filename(self, filename):
+        fname = get_templatefile(filename, self.dirs, self.default_template)
+        if not fname:
+            raise Exception, "Can't find the template %s" % filename
+        self.filename = fname
+        
+    def parse(self):
+        text = self.text
+        in_tag = False
+        extend = None  #if need to process extend node
+        for i in r_tag.split(text):
+            if i:
+                if len(self.stack) == 0:
+                    raise Exception, "The 'end' tag is unmatched, please check if you have more '{{end}}'"
+                top = self.stack[-1]
+                if in_tag:
+                    line = i[2:-2].strip()
+                    if not line:
+                        continue
+                    if line.startswith('='):
+                        name, value = '=', line[1:].strip()
+                    elif line.startswith('<<'):
+                        name, value = '<<', line[2:].strip()
+                    else:
+                        v = line.split(' ', 1)
+                        if len(v) == 1:
+                            name, value = v[0], ''
+                        else:
+                            name, value = v
+                    if name in __nodes__:
+                        node_cls = __nodes__[name]
+                        #this will pass top template instance and top content instance to node_cls
+                        node = node_cls(value.strip(), self.root.content, self.root)
+                        if node.block:
+                            top.add(node)
+                            self.stack.append(node)
+                        else:
+                            buf = str(node)
+                            if buf:
+                                top.add(buf)
+                    elif name == 'end':
+                        self.stack.pop()
+                    elif name == '=':
+                        buf = "%s(%s)\n" % (self.writer, value)
+                        top.add(buf)
+                    elif name == '<<':
+                        buf = "%s(%s, escape=False)\n" % (self.writer, value)
+                        top.add(buf)
+                    elif name == 'include':
+                        self._parse_include(top, value)
+                    elif name == 'embed':
+                        self._parse_text(top, value)
+                    elif name == 'extend':
+                        extend = value
+                    else:
+                        if line and in_tag:
+                            top.add(line+'\n')
+                else:
+                    buf = "%s(%r, escape=False)\n" % (self.writer, i)
+                    top.add(buf)
+                    
+            in_tag = not in_tag
+        if extend:
+            self._parse_extend(extend)
+        return reindent(str(self.content))
+    
+    def _parse_text(self, content, var):
+        text = str(eval(var, self.env.to_dict(), self.vars))
+        t = Template(text, self.vars, self.env, self.dirs)
+        t.parse()
+        t.add_root(self)
+        content.merge(t.content)
+    
+    def _parse_include(self, content, filename):
+        if not filename.strip():
+            return
+        filename = eval(filename, self.env.to_dict(), self.vars)
+        fname = get_templatefile(filename, self.dirs)
+        if not fname:
+            raise Exception, "Can't find the template %s" % filename
+        
+        self.depend_files.append(fname)
+        
+        f = open(fname, 'rb')
+        text = f.read()
+        f.close()
+        t = Template(text, self.vars, self.env, self.dirs)
+        t.add_root(self)
+        t.parse()
+        content.merge(t.content)
+        
+    def _parse_extend(self, filename):
+        filename = eval(filename, self.env.to_dict(), self.vars)
+        fname = get_templatefile(filename, self.dirs)
+        if not fname:
+            raise Exception, "Can't find the template %s" % filename
+        
+        self.depend_files.append(fname)
+        
+        f = open(fname, 'rb')
+        text = f.read()
+        f.close()
+        self.env.push()
+        t = Template(text, self.vars, self.env, self.dirs)
+        t.add_root(self)
+        t.parse()
+        self.content.clear_content()
+        t.content.merge(self.content)
+        self.content = t.content
+    
+    def get_parsed_code(self):
+        if self.use_temp:
+            f = get_temp_template(self.filename)
+            if os.path.exists(f):
+                fin = file(f, 'r')
+                line = fin.readline()
+                modified = False
+                files = [f]
+                if line.startswith('#'):
+                    files.extend(line[1:].split())
+                for x in files:
+                    if os.path.getmtime(x) > os.path.getmtime(f):
+                        modified = True
+                        break
+                    
+                if not modified:
+                    text = fin.read()
+                    fin.close()
+                    return True, f, text
+        
+        if self.filename and not self.text:
+            self.text = file(self.filename, 'rb').read()        
+        return False, self.filename, self.parse()
+        
+    def __call__(self):
+        use_temp_flag, filename, code = self.get_parsed_code()
+        
+        if not use_temp_flag and self.use_temp:
+            f = get_temp_template(filename)
             try:
-                return v in _vars or v in _env
+                fo = file(f, 'wb')
+                fo.write('#%s\n' % ' '.join(self.depend_files))
+                fo.write(code)
+                fo.close()
             except:
-                return False
-        return defined
-    e = {}
-    if isinstance(env, Context):
-        new_e = env.to_dict()
-    else:
-        new_e = env
-    e.update(new_e)
-    e.update(vars)
-    e['out'] = out
-    e['xml'] = out.xml
-    e['_vars'] = vars
-    e['defined'] = f(vars, new_e)
-    e['_env'] = e
-    return e
+                pass
+        
+#        print '---------------------'
+#        print code
+        return self._run(code, filename or 'template')
+        
+    def _run(self, code, filename):
+        e = {}
+        if isinstance(self.env, Context):
+            new_e = self.env.to_dict()
+        else:
+            new_e = self.env
+        e.update(new_e)
+        e.update(self.vars)
+        out = Out()
+        e['out'] = out
+        e['Out'] = Out
+        e['xml'] = out.xml
+        e['_vars'] = vars
+        e['_env'] = e
+        
+        e.update(self.exec_env)
+        
+        if isinstance(code, (str, unicode)):
+            if self.compile:
+                code = self.compile(code, filename, 'exec', e)
+            else:
+                code = compile(code, filename, 'exec')
+        exec code in e
+        text = out.getvalue()
+        
+        for f in self.callbacks:
+            text = f(text, self, self.vars, e)
+
+        return text
     
-def _run(code, locals=None, env=None, filename='template'):
-    out = Out()
-    locals = locals or {}
-    env = env or {}
-    e = _prepare_run(locals, env, out)
-    
-    if isinstance(code, (str, unicode)):
-        code = compile(code, filename, 'exec')
-    exec code in e
-    return out.getvalue()
+def template_file(filename, vars=None, env=None, dirs=None, default_template=None, compile=None):
+    t = Template('', vars, env, dirs, default_template, use_temp=__options__['use_temp_dir'], compile=compile)
+    t.set_filename(filename)
+    return t()
+
+def template(text, vars=None, env=None, dirs=None, default_template=None):
+    t = Template(text, vars, env, dirs, default_template)
+    return t()
+
 
 def test():
     """
