@@ -131,7 +131,6 @@ class HtmlMerge(object):
                 #link will also be template string
                 if '{{' in link and '}}' in link:
                     link = template(link, self.env)
-                    print 'xxxxxxxxxxxxxxxxxxxxx', link
                 if not link in r[_type] and not link in existlinks:
                     r[_type].append(link)
         return r
