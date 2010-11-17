@@ -1382,7 +1382,7 @@ class Model(object):
                     if isinstance(v, DateTimeProperty) and v.auto_now_add:
                         d[k] = v.now()
                 obj = self.table.insert().execute(**d)
-                setattr(self, 'id', obj.lastrowid)
+                setattr(self, 'id', obj.inserted_primary_key[0])
                 
                 saved = True
             else:
