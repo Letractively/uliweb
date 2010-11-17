@@ -565,15 +565,18 @@ class ListView(object):
         s = []
         if head:
             s = ['<table class="table" id=%s>' % self.id]
-            s.append('<thead><tr>')
-            for i, field_name in enumerate(table['fields_name']):
-                kwargs = {}
-                x = table['fields_list'][i]
-                if 'width' in x:
-                    kwargs['width'] = x['width']
-                kwargs['align'] = x.get('align', 'left')
-                s.append(str(Tag('th', field_name, **kwargs)))
-            s.append('</tr></thead>')
+            s.append('<thead>')
+#            s.append('<tr>')
+#            for i, field_name in enumerate(table['fields_name']):
+#                kwargs = {}
+#                x = table['fields_list'][i]
+#                if 'width' in x:
+#                    kwargs['width'] = x['width']
+#                kwargs['align'] = x.get('align', 'left')
+#                s.append(str(Tag('th', field_name, **kwargs)))
+#            s.append('</tr>')
+            s.extend(self.create_table_head(table))
+            s.append('</thead>')
             s.append('<tbody>')
         
         if body:
@@ -593,6 +596,67 @@ class ListView(object):
         
         return '\n'.join(s)
     
+    def create_table_head(self, table):
+        from uliweb.core.html import Tag
+
+        s = []
+        fields = []
+        max_rowspan = 0
+        for i, f in enumerate(table['fields_name']):
+            _f = list(f.split('/'))
+            max_rowspan = max(max_rowspan, len(_f))
+            fields.append((_f, i))
+        
+        def get_field(fields, i, m_rowspan):
+            f_list, col = fields[i]
+            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col]['width'], 'colspan':1, 'rowspan':1}
+            if len(f_list) == 1:
+                field['rowspan'] = m_rowspan
+            return field
+        
+        def remove_field(fields, i):
+            del fields[i][0][0]
+        
+        def clear_fields(fields):
+            for i in range(len(fields)-1, -1, -1):
+                if len(fields[i][0]) == 0:
+                    del fields[i]
+                    
+        n = len(fields)
+        y = 0
+        while n>0:
+            i = 0
+            s.append('<tr>')
+            while i<n:
+                field = get_field(fields, i, max_rowspan-y)
+                remove_field(fields, i)
+                j = i + 1
+                while j<n:
+                    field_n = get_field(fields, j, max_rowspan-y)
+                    if field['name'] == field_n['name'] and field['rowspan'] == field_n['rowspan']:
+                        #combine
+                        remove_field(fields, j)
+                        field['colspan'] += 1
+                        j += 1
+                    else:
+                        break
+                kwargs = {}
+                kwargs['align'] = 'left'
+                if field['colspan'] > 1:
+                    kwargs['colspan'] = field['colspan']
+                    kwargs['align'] = 'center'
+                if field['rowspan'] > 1:
+                    kwargs['rowspan'] = field['rowspan']
+                s.append(str(Tag('th', field['name'], **kwargs)))
+                
+                i = j
+            clear_fields(fields)
+            s.append('</tr>\n')
+            n = len(fields)
+            y += 1
+            
+        return s
+        
     def query(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
         if self._query:
             query = self._query.filter(condition)
