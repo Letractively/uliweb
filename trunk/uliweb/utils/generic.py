@@ -609,7 +609,7 @@ class ListView(object):
         
         def get_field(fields, i, m_rowspan):
             f_list, col = fields[i]
-            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col]['width'], 'colspan':1, 'rowspan':1}
+            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1}
             if len(f_list) == 1:
                 field['rowspan'] = m_rowspan
             return field
@@ -637,6 +637,7 @@ class ListView(object):
                         #combine
                         remove_field(fields, j)
                         field['colspan'] += 1
+                        field['width'] += field_n['width']
                         j += 1
                     else:
                         break
@@ -647,6 +648,8 @@ class ListView(object):
                     kwargs['align'] = 'center'
                 if field['rowspan'] > 1:
                     kwargs['rowspan'] = field['rowspan']
+                if field['width']:
+                    kwargs['width'] = field['width']
                 s.append(str(Tag('th', field['name'], **kwargs)))
                 
                 i = j
