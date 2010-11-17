@@ -203,11 +203,12 @@ class AddView(object):
     success_msg = _('The information has been saved successfully!')
     fail_msg = _('There are somethings wrong.')
     builds_args_map = {}
+    meta = 'AddForm'
     
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         disabled_fields=None, hidden_fields=None, pre_save=None, post_save=None,
-        post_created_form=None):
+        post_created_form=None, layout=None):
 
         self.model = model
         self.ok_url = ok_url
@@ -230,9 +231,12 @@ class AddView(object):
         self.post_save = post_save
         self.post_created_form = post_created_form
         
-    def get_fields(self, meta='AddForm'):
+        #add layout support
+        self.layout = layout
+        
+    def get_fields(self):
         f = []
-        for field_name, prop in get_fields(self.model, self.fields, meta):
+        for field_name, prop in get_fields(self.model, self.fields, self.meta):
             d = {'name':field_name, 
                 'prop':prop, 
                 'disabled':field_name in self.disabled_fields,
@@ -240,6 +244,14 @@ class AddView(object):
             f.append(d)
             
         return f
+    
+    def get_layout(self):
+        if self.layout:
+            return self.layout
+        if hasattr(self.model, self.meta):
+            m = getattr(self.model, self.meta)
+            if hasattr(m, 'layout'):
+                return getattr(m, 'layout')
     
     def make_form(self):
         import uliweb.orm as orm
@@ -260,6 +272,10 @@ class AddView(object):
             class DummyForm(form.Form):
                 form_buttons = form.Submit(value=_('Create'), _class=".submit")
             
+        #add layout support
+        layout = self.get_layout()
+        DummyForm.layout = layout
+        
         for f in self.get_fields():
             field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
             
@@ -325,6 +341,7 @@ class EditView(AddView):
     success_msg = _('The information has been saved successfully!')
     fail_msg = _('There are somethings wrong.')
     builds_args_map = {}
+    meta = 'EditForm'
     
     def __init__(self, model, ok_url, condition=None, obj=None, **kwargs):
         AddView.__init__(self, model, ok_url, **kwargs)
@@ -408,7 +425,7 @@ class EditView(AddView):
             class DummyForm(form.Form):
                 form_buttons = form.Submit(value=_('Save'), _class=".submit")
             
-        fields_list = self.get_fields('EditForm')
+        fields_list = self.get_fields()
         fields_name = [x['name'] for x in fields_list]
         if 'id' not in fields_name:
             d = {'name':'id', 'prop':self.model.id, 'disabled':False, 'hidden':False}
@@ -442,6 +459,7 @@ class EditView(AddView):
 class DetailView(object):
     types_convert_map = {}
     fields_convert_map = {}
+    meta = 'DetailView'
     
     def __init__(self, model, condition=None, obj=None, fields=None, types_convert_map=None, fields_convert_map=None):
         self.model = model
@@ -472,7 +490,7 @@ class DetailView(object):
     
     def render(self, obj):
         view_text = ['<table class="table">']
-        for field_name, prop in get_fields(self.model, self.fields, 'DetailView'):
+        for field_name, prop in get_fields(self.model, self.fields, self.meta):
             field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
             
             if field:

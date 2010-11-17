@@ -411,6 +411,8 @@ class Template(object):
                         self._parse_include(top, value)
                     elif name == 'embed':
                         self._parse_text(top, value)
+                    elif name == 'template':
+                        self._parse_template(top, value)
                     elif name == 'extend':
                         extend = value
                     else:
@@ -425,8 +427,20 @@ class Template(object):
             self._parse_extend(extend)
         return reindent(str(self.content))
     
+    def _parse_template(self, content, var):
+        v = eval(var, self.vars, self.env.to_dict())
+        #add v.template support
+        if hasattr(v, 'template'):
+            text = str(v.template)
+        else:
+            text = '{{<< %s}}' % var
+        t = Template(text, self.vars, self.env, self.dirs)
+        t.parse()
+        t.add_root(self)
+        content.merge(t.content)
+
     def _parse_text(self, content, var):
-        text = str(eval(var, self.env.to_dict(), self.vars))
+        text = str(eval(var, self.vars, self.env.to_dict()))
         t = Template(text, self.vars, self.env, self.dirs)
         t.parse()
         t.add_root(self)
@@ -435,7 +449,7 @@ class Template(object):
     def _parse_include(self, content, filename):
         if not filename.strip():
             return
-        filename = eval(filename, self.env.to_dict(), self.vars)
+        filename = eval(filename, self.vars, self.env.to_dict())
         fname = get_templatefile(filename, self.dirs)
         if not fname:
             raise Exception, "Can't find the template %s" % filename
@@ -451,7 +465,7 @@ class Template(object):
         content.merge(t.content)
         
     def _parse_extend(self, filename):
-        filename = eval(filename, self.env.to_dict(), self.vars)
+        filename = eval(filename, self.vars, self.env.to_dict())
         fname = get_templatefile(filename, self.dirs)
         if not fname:
             raise Exception, "Can't find the template %s" % filename
