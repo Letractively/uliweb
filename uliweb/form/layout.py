@@ -169,9 +169,10 @@ class YamlLayout(Layout):
             return div
 
     def buttons_line(self, buttons):
-        div = Tag('div', _class='type-button')
+        div = Tag('div', _class='line')
         with div:
-            div << buttons
+            with div.div(_class='type-button'):
+                div << buttons
         return str(div)
 
     def html(self):
@@ -187,14 +188,29 @@ class YamlLayout(Layout):
 #                        buf.legend(self.form.form_title)
 ##            else:
 ##                form = buf
-        
-        for name, obj in self.form.fields_list:
-            f = getattr(self.form, name)
-            if self.is_hidden(obj):
-                buf << f
-            else:
-                buf << self.line(obj, f.label, f, f.help_string, f.error)
+        if not self.layout:
+            self.layout = [name for name, obj in self.form.fields_list]
+        self.process_layout(buf)
         
         buf << self.buttons_line(self.form.get_buttons())
         buf << self.form.form_end
         return str(buf)
+
+    def process_layout(self, buf):
+        for line in self.layout:
+            if isinstance(line, (tuple, list)):
+                with buf.div(_class='line'):
+                    for x in line:
+                        f = getattr(self.form, x)
+                        obj = self.form.fields[x]
+                        if self.is_hidden(obj):
+                            buf << f
+                        else:
+                            buf << self.line(obj, f.label, f, f.help_string, f.error)
+            else:
+                f = getattr(self.form, line)
+                obj = self.form.fields[line]
+                if self.is_hidden(obj):
+                    buf << f
+                else:
+                    buf << self.line(obj, f.label, f, f.help_string, f.error)
