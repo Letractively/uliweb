@@ -2,15 +2,30 @@
 from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 
+__default_fields_builds__ = {}
+
+def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
+    if not __default_fields_builds__:
+        from uliweb import settings
+        from uliweb.utils.common import import_attr
+        import uliweb.form as form
+        
+        if settings and section in settings:
+            for k, v in settings[section].iteritems():
+                if v.get('build', None):
+                    v['build'] = import_attr(v['build'])
+                __default_fields_builds__[getattr(form, k)] = v
+    return __default_fields_builds__
+
 class ReferenceSelectField(SelectField):
     def __init__(self, model, display_field=None, value_field='id', condition=None, query=None, label='', default=0, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
-        SelectField.__init__(self, label=label, default=default, choices=[], required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
+        super(ReferenceSelectField, self).__init__(label=label, default=default, choices=[], required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
         self.model = model
         self.display_field = display_field
         self.value_field = value_field
         self.condition = condition
         self.query = query
-    
+        
     def get_choices(self):
         from uliweb.orm import get_model
         
@@ -33,15 +48,15 @@ class ReferenceSelectField(SelectField):
 
 class ManyToManySelectField(ReferenceSelectField):
     def __init__(self, model, display_field=None, value_field='id', 
-            condition=None, query=None, label='', default=None, 
+            condition=None, query=None, label='', default=[], 
             required=False, validators=None, name='', html_attrs=None, 
             help_string='', build=None, **kwargs):
-        ReferenceSelectField.__init__(self, model=model, display_field=display_field, 
+        super(ManyToManySelectField, self).__init__(model=model, display_field=display_field, 
             value_field=value_field, condition=condition, query=query, label=label, 
             default=default, required=required, validators=validators, name=name, 
             html_attrs=html_attrs, help_string=help_string, build=build, 
             empty=None, multiple=True, **kwargs)
-  
+            
 def get_fields(model, fields, meta):
     if fields:
         fields_list = []
@@ -76,8 +91,13 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     if isinstance(prop, BaseField): #if the prop is already Form.BaseField, so just return it
         return prop
     
-    kwargs = dict(label=prop.verbose_name or prop.property_name, default=prop.default_value(), 
+    kwargs = dict(label=prop.verbose_name or prop.property_name, 
         name=prop.property_name, required=prop.required, help_string=prop.hint)
+    
+    v = prop.default_value()
+    if v is not None:
+        kwargs['default'] = v
+        
     if field['disabled']:
         kwargs['disabled'] = None
     if field['hidden']:
@@ -129,9 +149,19 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
             field_type = ReferenceSelectField
         else:
             raise Exception, "Can't support the Property [%s=%s]" % (field['name'], prop.__class__.__name__)
-        
+       
     if field_type:
         build_args = builds_args_map.get(field_type, {})
+        #add settings.ini configure support
+        #so you could add options in settings.ini like this
+        #  [GENERIC_FIELDS_MAPPING]
+        #  FormFieldClassName = {'build':'model.NewFormFieldTypeClassName', **other args}
+        #  
+        #  e.g.
+        #  [GENERIC_FIELDS_MAPPING]
+        #  DateField = {'build':'jquery.widgets.DatePicker'}
+        if not build_args:
+            build_args = get_fileds_builds().get(field_type, {})
         kwargs.update(build_args)
         f = field_type(**kwargs)
     
