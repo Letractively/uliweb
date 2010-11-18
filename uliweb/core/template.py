@@ -378,7 +378,11 @@ class Template(object):
                     line = i[2:-2].strip()
                     if not line:
                         continue
-                    if line.startswith('='):
+                    if line.startswith('T='):
+                        name, value = 'T=', line[2:].strip()
+                    elif line.startswith('T<<'):
+                        name, value = 'T<<', line[3:].strip()
+                    elif line.startswith('='):
                         name, value = '=', line[1:].strip()
                     elif line.startswith('<<'):
                         name, value = '<<', line[2:].strip()
@@ -401,18 +405,26 @@ class Template(object):
                                 top.add(buf)
                     elif name == 'end':
                         self.stack.pop()
-                    elif name == '=':
+                    elif name == 'T=':
                         buf = "%s(%s)\n" % (self.writer, value)
                         top.add(buf)
-                    elif name == '<<':
+                    elif name == 'T<<':
                         buf = "%s(%s, escape=False)\n" % (self.writer, value)
                         top.add(buf)
+                    elif name == '=':
+                        if not self._parse_template(top, value):
+                            buf = "%s(%s)\n" % (self.writer, value)
+                            top.add(buf)
+                    elif name == '<<':
+                        if not self._parse_template(top, value):
+                            buf = "%s(%s, escape=False)\n" % (self.writer, value)
+                            top.add(buf)
                     elif name == 'include':
                         self._parse_include(top, value)
                     elif name == 'embed':
                         self._parse_text(top, value)
-                    elif name == 'template':
-                        self._parse_template(top, value)
+#                    elif name == 'template':
+#                        self._parse_template(top, value)
                     elif name == 'extend':
                         extend = value
                     else:
@@ -428,16 +440,22 @@ class Template(object):
         return reindent(str(self.content))
     
     def _parse_template(self, content, var):
-        v = eval(var, self.vars, self.env.to_dict())
-        #add v.template support
-        if hasattr(v, 'template'):
-            text = str(v.template)
+        if var in self.vars:
+            v = self.vars[var]
         else:
-            text = '{{<< %s}}' % var
-        t = Template(text, self.vars, self.env, self.dirs)
-        t.parse()
-        t.add_root(self)
-        content.merge(t.content)
+            return False
+        
+        #add v.__template__ support
+        if hasattr(v, '__template__'):
+            text = str(v.__template__(var))
+            if text:
+                t = Template(text, self.vars, self.env, self.dirs)
+                t.parse()
+                t.add_root(self)
+                content.merge(t.content)
+                return True
+        
+        return False
 
     def _parse_text(self, content, var):
         text = str(eval(var, self.vars, self.env.to_dict()))
