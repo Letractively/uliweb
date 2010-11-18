@@ -580,7 +580,7 @@ class SelectField(BaseField):
 #        else:
 #            value = data
         choices = self.get_choices()
-        if self.empty is not None and not self.default in dict(choices):
+        if (self.empty is not None) and (not self.multiple) and (not self.default in dict(choices)):
             choices.insert(0, ('', self.empty))
         return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
 
