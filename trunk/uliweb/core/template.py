@@ -405,17 +405,17 @@ class Template(object):
                                 top.add(buf)
                     elif name == 'end':
                         self.stack.pop()
-                    elif name == 'T=':
+                    elif name == '=':
                         buf = "%s(%s)\n" % (self.writer, value)
                         top.add(buf)
-                    elif name == 'T<<':
+                    elif name == '<<':
                         buf = "%s(%s, escape=False)\n" % (self.writer, value)
                         top.add(buf)
-                    elif name == '=':
+                    elif name == 'T=':
                         if not self._parse_template(top, value):
                             buf = "%s(%s)\n" % (self.writer, value)
                             top.add(buf)
-                    elif name == '<<':
+                    elif name == 'T<<':
                         if not self._parse_template(top, value):
                             buf = "%s(%s, escape=False)\n" % (self.writer, value)
                             top.add(buf)
