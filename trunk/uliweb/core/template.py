@@ -423,8 +423,6 @@ class Template(object):
                         self._parse_include(top, value)
                     elif name == 'embed':
                         self._parse_text(top, value)
-#                    elif name == 'template':
-#                        self._parse_template(top, value)
                     elif name == 'extend':
                         extend = value
                     else:

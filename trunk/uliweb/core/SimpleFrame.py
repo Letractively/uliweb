@@ -421,28 +421,13 @@ class Dispatcher(object):
         if self.debug:
             def _compile(code, filename, action, env, Loader=Loader):
                 env['__loader__'] = Loader(filename, vars, env, dirs, notest=True)
-                return compile(code, filename, 'exec')
+                try:
+                    return compile(code, filename, 'exec')
+                except:
+                    file('out.html', 'wb').write(code)
+                    raise
             
             return template.template_file(filename, vars, env, dirs, default_template, compile=_compile)
-            
-            
-#            dispatch.call(self, 'before_render_template', vars, env)
-#            fname, code, e = template.render_file(filename, vars, env, dirs, 
-#                default_template=default_template, handlers=handlers)
-#                
-#            #user can insert new local environment variables to e variable
-#            #and e will be a Context object
-#            dispatch.call(self, 'before_compile_template', fname, code, vars, e)
-#            out = template.Out()
-#            new_e = template._prepare_run(vars, e, out)
-#
-#            if isinstance(code, (str, unicode)):
-#                code = _compile(code, fname, 'exec')
-#            __loader__ = Loader(fname, vars, env, dirs)
-#            exec code in new_e
-#            text = out.getvalue()
-#            output = dispatch.get(self, 'after_render_template', text, vars, e)
-#            return output or text
         else:
             return template.template_file(filename, vars, env, dirs, default_template)
     

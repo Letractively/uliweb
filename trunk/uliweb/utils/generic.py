@@ -491,7 +491,7 @@ class DetailView(object):
     fields_convert_map = {}
     meta = 'DetailView'
     
-    def __init__(self, model, condition=None, obj=None, fields=None, types_convert_map=None, fields_convert_map=None):
+    def __init__(self, model, condition=None, obj=None, fields=None, types_convert_map=None, fields_convert_map=None, table_class_attr='table'):
         self.model = model
         self.condition = condition
         self.obj = obj
@@ -500,7 +500,8 @@ class DetailView(object):
             self.types_convert_map = types_convert_map
         if self.fields_convert_map:
             self.fields_convert_map = fields_convert_map or {}
-            
+        self.table_class_attr = table_class_attr
+        
     def run(self):
         from uliweb.orm import get_model
         
@@ -519,7 +520,7 @@ class DetailView(object):
         return self.model.get(self.condition)
     
     def render(self, obj):
-        view_text = ['<table class="table">']
+        view_text = ['<table class="%s">' % self.table_class_attr]
         for field_name, prop in get_fields(self.model, self.fields, self.meta):
             field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
             
@@ -553,7 +554,7 @@ class DeleteView(object):
 class ListView(object):
     def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, 
-        fields_convert_map=None, id=None):
+        fields_convert_map=None, id=None, table_class_attr='table'):
             
         self.model = model
         self.condition = condition
@@ -565,6 +566,7 @@ class ListView(object):
         self.fields_convert_map = fields_convert_map
         self.id = id
         self._query = query
+        self.table_class_attr = table_class_attr
         
     def run(self, head=True, body=True):
         from uliweb.orm import get_model
@@ -594,7 +596,7 @@ class ListView(object):
 
         s = []
         if head:
-            s = ['<table class="table" id=%s>' % self.id]
+            s = ['<table class="%s" id=%s>' % (self.table_class_attr, self.id)]
             s.append('<thead>')
 #            s.append('<tr>')
 #            for i, field_name in enumerate(table['fields_name']):
@@ -680,6 +682,8 @@ class ListView(object):
                     kwargs['rowspan'] = field['rowspan']
                 if field['width']:
                     kwargs['width'] = field['width']
+                else:
+                    kwargs['width'] = '100'
                 s.append(str(Tag('th', field['name'], **kwargs)))
                 
                 i = j
