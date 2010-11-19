@@ -955,7 +955,7 @@ class Form(object):
         result = []
         if hasattr(self, 'pre_html'):
             result.append(self.pre_html())
-        result.append('{{<<< %s}}' % name)
+        result.append('{{<< %s}}' % name)
         if hasattr(self, 'post_html'):
             result.append(self.post_html())
         
