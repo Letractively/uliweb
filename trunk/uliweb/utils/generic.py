@@ -531,6 +531,8 @@ class DetailView(object):
         return view_text
 
 class DeleteView(object):
+    success_msg = _('The object has been deleted successfully!')
+
     def __init__(self, model, ok_url, condition=None, obj=None):
         self.model = model
         self.condition = condition
@@ -539,7 +541,7 @@ class DeleteView(object):
         
     def run(self):
         from uliweb.orm import get_model
-        from uliweb import redirect
+        from uliweb import redirect, function
         
         if isinstance(self.model, str):
             self.model = get_model(self.model)
@@ -549,6 +551,8 @@ class DeleteView(object):
         else:
             self.model.filter(self.condition).delete()
         
+        flash = function('flash')
+        flash(self.success_msg)
         return redirect(self.ok_url)
         
 class ListView(object):
@@ -619,7 +623,7 @@ class ListView(object):
                     kwargs = {}
                     x = table['fields_list'][i]
                     v = make_view_field(getattr(self.model, x['name']), record, self.types_convert_map, self.fields_convert_map)
-                    s.append(str(Tag('td', v['display'], **kwargs)))
+                    s.append(str(Tag('td', v['display'] or '&nbsp;', **kwargs)))
                 s.append('</tr>')
         
         if head:
