@@ -219,13 +219,12 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
             if isinstance(prop, orm.Property) and prop.choices is not None:
                 display = get_choice(prop.choices, value)
             if prop.__class__ is orm.TextProperty:
-                from uliweb.utils.textconvert import text2html
                 display = text2html(value)
         
     if isinstance(display, unicode):
         display = display.encode('utf-8')
     if display is None:
-        display = ''
+        display = '&nbsp;'
         
     return {'label':label, 'value':value, 'display':display}
 
@@ -623,7 +622,7 @@ class ListView(object):
                     kwargs = {}
                     x = table['fields_list'][i]
                     v = make_view_field(getattr(self.model, x['name']), record, self.types_convert_map, self.fields_convert_map)
-                    s.append(str(Tag('td', v['display'] or '&nbsp;', **kwargs)))
+                    s.append(str(Tag('td', v['display'], **kwargs)))
                 s.append('</tr>')
         
         if head:
