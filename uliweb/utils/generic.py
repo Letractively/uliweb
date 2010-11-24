@@ -599,7 +599,7 @@ class ListView(object):
 
         s = []
         if head:
-            s = ['<table class="%s" id=%s>' % (self.table_class_attr, self.id)]
+            s = ['<table class="%s" id=%s width="%dpx">' % (self.table_class_attr, self.id, table['width'])]
             s.append('<thead>')
 #            s.append('<tr>')
 #            for i, field_name in enumerate(table['fields_name']):
@@ -616,6 +616,7 @@ class ListView(object):
         
         if body:
             #create table body
+            s.append('<tbody>')
             for record in query:
                 s.append('<tr>')
                 for i, f in enumerate(table['fields_list']):
@@ -624,6 +625,7 @@ class ListView(object):
                     v = make_view_field(getattr(self.model, x['name']), record, self.types_convert_map, self.fields_convert_map)
                     s.append(str(Tag('td', v['display'], **kwargs)))
                 s.append('</tr>')
+            s.append('</tbody>')
         
         if head:
             s.append('</tbody>')
@@ -722,12 +724,16 @@ class ListView(object):
         else:
             fields_list = [(x, y) for x, y in self.model._fields_list]
         
+        w = 0
         for i, (x, y) in enumerate(fields_list):
             t['fields_name'].append(str(y.verbose_name or x))
             
             if is_table:
                 t['fields_list'].append(self.model.Table.fields[i])
+                w += self.model.Table.fields[i].get('width', 100)
             else:
                 t['fields_list'].append({'name':x})
+                w += 100
+        t['width'] = w
         return t
     
