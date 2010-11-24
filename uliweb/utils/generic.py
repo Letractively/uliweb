@@ -524,7 +524,7 @@ class DetailView(object):
             field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
             
             if field:
-                view_text.append('<tr><th align="right" valign="top" width=150>%s</th><td>%s</td></tr>' % (field["label"], field["display"]))
+                view_text.append('<tr><th align="right" valign="top" width=150>%s</th><td width=200>%s</td></tr>' % (field["label"], field["display"]))
                 
         view_text.append('</table>')
         return view_text
