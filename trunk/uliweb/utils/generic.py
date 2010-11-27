@@ -545,14 +545,25 @@ class DeleteView(object):
         if isinstance(self.model, str):
             self.model = get_model(self.model)
         
-        if self.obj:
-            self.obj.delete()
-        else:
-            self.model.filter(self.condition).delete()
+        self.delete()
         
         flash = function('flash')
         flash(self.success_msg)
         return redirect(self.ok_url)
+    
+    def delete(self):
+        if not self.obj:
+            obj = self.model.get(self.condition)
+        else:
+            obj = self.obj
+            
+        if obj:
+            self.delete_manytomany(obj)
+            obj.delete()
+        
+    def delete_manytomany(self, obj):
+        for k, v in obj._manytomany.iteritems():
+            getattr(obj, k).clear()
         
 class ListView(object):
     def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 

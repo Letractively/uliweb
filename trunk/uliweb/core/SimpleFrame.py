@@ -26,8 +26,8 @@ conf.local = local = Local()
 local_manager = LocalManager([local])
 
 conf.url_map = Mapping()
-__app_dirs = {}
-_use_urls = False
+__app_dirs__ = {}
+__use_urls__ = False
 __url_names__ = {}
 
 class Request(OriginalRequest):
@@ -250,7 +250,7 @@ def get_app_dir(app):
     """
     Get an app's directory
     """
-    path = __app_dirs.get(app)
+    path = __app_dirs__.get(app)
     if path is not None:
         return path
     else:
@@ -263,7 +263,7 @@ def get_app_dir(app):
         if len(p) > 1:
             path = os.path.join(path, *p[1:])
         
-        __app_dirs[app] = path
+        __app_dirs__[app] = path
         return path
 
 def get_apps(apps_dir, include_apps=None):
