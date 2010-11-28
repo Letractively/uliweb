@@ -42,7 +42,7 @@ def set_log(app):
     set_log_handers(log, [handler])
     log.setLevel(getattr(logging, level, logging.INFO))
 
-def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True):
+def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True, settings_file='settings.ini'):
     from uliweb.utils.common import sort_list
     
     if apps_dir not in sys.path:
@@ -50,7 +50,7 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
         
     install_config(apps_dir)
     
-    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps)
+    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps, settings_file=settings_file)
     
     #settings global application object
     conf.application = app
@@ -155,7 +155,7 @@ def exportstatic(outputdir=('o', ''), verbose=('v', False), check=True):
     from uliweb.utils.common import copy_dir_with_check
 
     if not outputdir:
-        log.error("Error: outputdir should be a directory and can't be empty")
+        log.error("Error: outputdir should be a directory and existed")
         sys.exit(0)
 
     application = SimpleFrame.Dispatcher(apps_dir=apps_dir, start=False)
@@ -270,9 +270,15 @@ def runserver(apps_dir, hostname='localhost', port=5000,
                    extra_files, 1, threaded, processes)
     return action
 
-    
+def make_shell_env():
+    application = SimpleFrame.Dispatcher(apps_dir=apps_dir, use_urls=False, start=False)
+    env = {'application':application, 'settings':application.settings}
+    return env
+
 def main():
     global apps_dir
+    
+    from werkzeug.script import make_shell
 
     apps_dir = os.path.join(os.getcwd(), apps_dir)
     if os.path.exists(apps_dir):
@@ -284,6 +290,7 @@ def main():
     action_develop = runserver(apps_dir, port=8000, develop=True)
     action_makeapp = make_app
     action_makepkg = make_pkg
+    action_shell = make_shell(make_shell_env)
     action_exportstatic = exportstatic
     from uliweb.i18n.i18ntool import make_extract
     action_i18n = make_extract(apps_dir)
