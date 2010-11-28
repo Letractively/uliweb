@@ -175,28 +175,7 @@ uliweb.core.SimpleFrame
   Dispatcher has already startuped, will be executed when creating every Dispatcher
   instance.
 
-* **dispatch.call(self, 'before_init_apps')**
-
-  Dispatcher is starting, and the settings is already initialized, and it'll begin to
-  initialize the apps.
-
 * **dispatch.call(application, 'prepare_view_env', Dispatcher.env)**
 
   Used for prepare global view and template execution environment. All objects in env can 
   be used in any view function directly.
-
-* **dispatch.get(application, 'get_template_tag_handlers')**
-
-  Used for registering custom template tag handler.
-
-* **dispatch.call(application, 'before_render_template', vars, env)**
-
-  Invoking before render template
-
-* **dispatch.call(application, 'before_compile_template', templatefilename, code, vars, env)**
-
-  template has been transformed to Python code, and before compiling
-
-* **dispatch.get(application, 'after_render_template', text, vars, env)**
-
-  after the template has been rendered to the result
