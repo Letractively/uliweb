@@ -161,7 +161,7 @@ Below are real properties defined in Uliewb ORM::
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
-    'TextProperty', 'UnicodeProperty'
+    'TextProperty', 'UnicodeProperty', 'FileProperty'
 
 But you may think they are not easy to remember, so you can use the second way
 to define a property. Just using ``Field()``.
@@ -176,6 +176,7 @@ The mapping of Python data type and Property are::
     unicode: UnicodeProperty,
     TEXT:TextProperty,
     BLOB:BlobProperty,
+    FILE:FileProperty
     int:IntegerProperty,
     float:FloatProperty,
     bool:BooleanProperty,
