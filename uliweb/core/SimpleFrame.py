@@ -266,9 +266,9 @@ def get_app_dir(app):
         __app_dirs__[app] = path
         return path
 
-def get_apps(apps_dir, include_apps=None):
+def get_apps(apps_dir, include_apps=None, settings_file='settings.ini'):
     include_apps = include_apps or []
-    inifile = os.path.join(apps_dir, 'settings.ini')
+    inifile = os.path.join(apps_dir, settings_file)
     apps = []
     if os.path.exists(inifile):
         x = Ini(inifile)
@@ -291,12 +291,11 @@ def get_apps(apps_dir, include_apps=None):
             
             if os.path.exists(configfile):
                 x = Ini(configfile)
-                if 'DEFAULT' in x:
-                    for i in x.DEFAULT.get('REQUIRED_APPS', []):
-                        if i not in apps:
-                            apps.append(i)
-                        if i not in visited:
-                            s.append(i)
+                for i in x.get_var('DEFAULT/REQUIRED_APPS', []):
+                    if i not in apps:
+                        apps.append(i)
+                    if i not in visited:
+                        s.append(i)
             visited.add(p)
 
     return apps
@@ -330,11 +329,12 @@ class Loader(object):
     
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir='apps', use_urls=None, include_apps=None, start=True, default_settings=None):
+    def __init__(self, apps_dir='apps', use_urls=None, include_apps=None, start=True, default_settings=None, settings_file='settings.ini'):
         self.debug = False
         self.use_urls = conf.use_urls = use_urls
         self.include_apps = include_apps or []
         self.default_settings = default_settings or {}
+        self.settings_file = settings_file
         if not Dispatcher.installed:
             self.init(apps_dir)
             dispatch.call(self, 'startup_installed')
@@ -416,7 +416,6 @@ class Dispatcher(object):
         vars = vars or {}
         dirs = dirs or self.template_dirs
         env = env or self.get_view_env()
-        dirs = [os.path.join(get_app_dir(local.request.appname), 'templates')] + dirs
         
         if self.debug:
             def _compile(code, filename, action, env, Loader=Loader):
@@ -435,7 +434,6 @@ class Dispatcher(object):
         vars = vars or {}
         env = env or self.get_view_env()
         dirs = dirs or self.template_dirs
-        dirs = [os.path.join(get_app_dir(local.request.appname), 'templates')] + dirs
         
         return template.template(text, vars, env, dirs, default_template)
     
@@ -631,7 +629,7 @@ class Dispatcher(object):
             if os.path.exists(inifile):
                 settings.append(inifile)
 
-        set_ini = os.path.join(self.apps_dir, 'settings.ini')
+        set_ini = os.path.join(self.apps_dir, self.settings_file)
         if os.path.exists(set_ini):
             settings.append(set_ini)
         
@@ -695,7 +693,11 @@ class Dispatcher(object):
                     raise Exception, 'EXPOSES definition [%s=%r] is not right' % (func, args)
 
     def get_template_dirs(self):
-        template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in self.apps]
+        """
+        Get templates directory from apps, but in reversed order, so the same named template
+        file will be overrided by latter defined app
+        """
+        template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in reversed(self.apps)]
         return template_dirs
     
     def get_templateplugins_dirs(self):
