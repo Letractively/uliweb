@@ -565,46 +565,58 @@ class DeleteView(object):
         for k, v in obj._manytomany.iteritems():
             getattr(obj, k).clear()
         
-class ListView(object):
-    def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
-        fields=None, rows_per_page=10, types_convert_map=None, 
-        fields_convert_map=None, id=None, table_class_attr='table'):
-            
-        self.model = model
-        self.condition = condition
-        self.pageno = pageno
-        self.order_by = order_by
+class SimpleListView(object):
+    def __init__(self, fields=None, query_data=None, cache_file=None, total=None, pageno=0, rows_per_page=10, id=None, fields_convert_map=None, table_class_attr='table'):
+        """
+        Pass a data structure to fields just like:
+            [
+                {'name':'field_name', 'verbose_name':'Caption', 'width':100},
+                ...
+            ]
+        """
         self.fields = fields
+        self.query_data = query_data
+        self.pageno = pageno
         self.rows_per_page = rows_per_page
-        self.types_convert_map = types_convert_map
-        self.fields_convert_map = fields_convert_map
         self.id = id
-        self._query = query
         self.table_class_attr = table_class_attr
+        self.fields_convert_map = fields_convert_map
+        self.cache_file = cache_file
+        self.total = total
+        self._query = False
+        
+    def query(self):
+        if not self._query:
+            if callable(self.query_data):
+                self.query_result = self.query_data()
+            else:
+                self.query_result = self.query_data
+            self._query = True
+            return self.query_result
+        else:
+            return self.query_result
         
     def run(self, head=True, body=True):
-        from uliweb.orm import get_model
-        
-        if isinstance(self.model, str):
-            self.model = get_model(self.model)
-            
-        if not self.id:
-            self.id = self.model.tablename
-        
         #create table header
         table = self.table_info()
-        query = self.query(self.model, self.condition, offset=self.pageno*self.rows_per_page, limit=self.rows_per_page, order_by=self.order_by)
-        if head:
-            return {'table':self.render(table, query, head=head, body=body), 'info':{'total':query.count(), 'rows_per_page':self.rows_per_page, 'pageno':self.pageno}}
+        if self.total is None:
+            query = self.query()
+            total = len(query)
         else:
-            return {'table':self.render(table, query, head=head, body=body)}
+            total = self.total
+            
+        if head:
+            return {'table':self.render(table, head=head, body=body), 'info':{'total':total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
+        else:
+            query = self.query()
+            return {'table':self.render(table, head=head, body=body, query=query)}
 
-    def render(self, table, query, head=True, body=True):
+    def render(self, table, head=True, body=True, query=None):
         """
         table is a dict, just like
         table = {'fields_name':[fieldname,...],
             'fields_list':[{'name':fieldname,'width':100,'align':'left'},...],
-            'count':10,
+            'total':10,
         """
         from uliweb.core.html import Tag
 
@@ -628,13 +640,13 @@ class ListView(object):
         if body:
             #create table body
             s.append('<tbody>')
-            for record in query:
+            for record in query[self.pageno*self.rows_per_page : (self.pageno+1)*self.rows_per_page]:
                 s.append('<tr>')
-                for i, f in enumerate(table['fields_list']):
-                    kwargs = {}
-                    x = table['fields_list'][i]
-                    v = make_view_field(getattr(self.model, x['name']), record, self.types_convert_map, self.fields_convert_map)
-                    s.append(str(Tag('td', v['display'], **kwargs)))
+                if not isinstance(record, dict):
+                    record = dict(zip(table['fields'], record))
+                for i, x in enumerate(table['fields_list']):
+                    v = self.make_view_field(x, record, self.fields_convert_map)
+                    s.append(str(Tag('td', v['display'])))
                 s.append('</tr>')
             s.append('</tbody>')
         
@@ -644,6 +656,27 @@ class ListView(object):
         
         return '\n'.join(s)
     
+    def make_view_field(self, field, record, fields_convert_map):
+        fields_convert_map = fields_convert_map or {}
+        convert = None
+        name = field['name']
+        label = field.get('verbose_name', None) or field['name']
+        if name in fields_convert_map:
+            convert = fields_convert_map.get(name, None)
+        value = record[name]
+            
+        if convert:
+            display = convert(value, record)
+        else:
+            display = value
+            
+        if isinstance(display, unicode):
+            display = display.encode('utf-8')
+        if display is None:
+            display = '&nbsp;'
+            
+        return {'label':label, 'value':value, 'display':display}
+        
     def create_table_head(self, table):
         from uliweb.core.html import Tag
 
@@ -710,6 +743,96 @@ class ListView(object):
             
         return s
         
+    def table_info(self):
+        t = {'fields_name':[], 'fields':[]}
+        t['fields_list'] = self.fields
+        
+        w = 0
+        for x in self.fields:
+            t['fields_name'].append(x['verbose_name'])
+            t['fields'].append(x['name'])
+            w += x.get('width', 100)
+            
+        t['width'] = w
+        return t
+    
+class ListView(SimpleListView):
+    def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
+        fields=None, rows_per_page=10, types_convert_map=None, 
+        fields_convert_map=None, id=None, table_class_attr='table'):
+            
+        self.model = model
+        self.condition = condition
+        self.pageno = pageno
+        self.order_by = order_by
+        self.fields = fields
+        self.rows_per_page = rows_per_page
+        self.types_convert_map = types_convert_map
+        self.fields_convert_map = fields_convert_map
+        self.id = id
+        self._query = query
+        self.table_class_attr = table_class_attr
+        
+    def run(self, head=True, body=True):
+        from uliweb.orm import get_model
+        
+        if isinstance(self.model, str):
+            self.model = get_model(self.model)
+            
+        if not self.id:
+            self.id = self.model.tablename
+        
+        #create table header
+        table = self.table_info()
+        query = self.query(self.model, self.condition, offset=self.pageno*self.rows_per_page, limit=self.rows_per_page, order_by=self.order_by)
+        if head:
+            return {'table':self.render(table, query, head=head, body=body), 'info':{'total':query.count(), 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
+        else:
+            return {'table':self.render(table, query, head=head, body=body)}
+
+    def render(self, table, query, head=True, body=True):
+        """
+        table is a dict, just like
+        table = {'fields_name':[fieldname,...],
+            'fields_list':[{'name':fieldname,'width':100,'align':'left'},...],
+            'count':10,
+        """
+        from uliweb.core.html import Tag
+
+        s = []
+        if head:
+            s = ['<table class="%s" id=%s width="%dpx">' % (self.table_class_attr, self.id, table['width'])]
+            s.append('<thead>')
+#            s.append('<tr>')
+#            for i, field_name in enumerate(table['fields_name']):
+#                kwargs = {}
+#                x = table['fields_list'][i]
+#                if 'width' in x:
+#                    kwargs['width'] = x['width']
+#                kwargs['align'] = x.get('align', 'left')
+#                s.append(str(Tag('th', field_name, **kwargs)))
+#            s.append('</tr>')
+            s.extend(self.create_table_head(table))
+            s.append('</thead>')
+            s.append('<tbody>')
+        
+        if body:
+            #create table body
+            s.append('<tbody>')
+            for record in query:
+                s.append('<tr>')
+                for i, x in enumerate(table['fields_list']):
+                    v = make_view_field(getattr(self.model, x['name']), record, self.types_convert_map, self.fields_convert_map)
+                    s.append(str(Tag('td', v['display'])))
+                s.append('</tr>')
+            s.append('</tbody>')
+        
+        if head:
+            s.append('</tbody>')
+            s.append('</table>')
+        
+        return '\n'.join(s)
+    
     def query(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
         if self._query:
             query = self._query.filter(condition)
