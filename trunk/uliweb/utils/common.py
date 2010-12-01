@@ -250,6 +250,35 @@ def get_choice(choices, value):
         choices = choices()
     return dict(choices).get(value, '')
 
+def simple_value(v, encoding='utf-8'):
+    import datetime
+    import decimal
+    
+    if callable(v):
+        v = v()
+    if isinstance(v, datetime.datetime):
+        return v.strftime('%Y-%m-%d %H:%M:%S')
+    elif isinstance(v, datetime.date):
+        return v.strftime('%Y-%m-%d')
+    elif isinstance(v, datetime.time):
+        return v.strftime('%H:%M:%S')
+    elif isinstance(v, decimal.Decimal):
+        return str(v)
+    elif isinstance(v, unicode):
+        return v.encode(encoding)
+    elif isinstance(v, (tuple, list)):
+        s = []
+        for x in v:
+            s.append(simple_value(x, encoding))
+        return s
+    elif isinstance(v, dict):
+        d = {}
+        for k, v in v.iteritems():
+            d[simple_value(k)] = simple_value(v)
+        return d
+    else:
+        return v
+
 if __name__ == '__main__':
     log.info('Info: info')
     try:

@@ -2,7 +2,7 @@
 from __future__ import with_statement
 from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
-import os
+import os, sys
 import time
 
 __default_fields_builds__ = {}
@@ -607,6 +607,7 @@ class SimpleListView(object):
     def download(self, filename, timeout=3600, inline=False, download=False):
         from uliweb.utils.filedown import filedown
         from uliweb import request, settings
+        from uliweb.utils.common import simple_value
         import csv
         
         if os.path.exists(filename):
@@ -617,13 +618,15 @@ class SimpleListView(object):
         query = self.query()
         
         path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
+        encoding = settings.get_var('GENERIC/ENCODING', sys.getfilesystemencoding() or 'utf-8')
         filename = os.path.join(path, filename)
         dirname = os.path.dirname(filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         with open(filename, 'wb') as f:
             w = csv.writer(f)
-            w.writerow(table['fields'])
+            row = [unicode(x, 'utf-8') for x in table['fields_name']]
+            w.writerow(simple_value(row, encoding))
             for record in query:
                 row = []
                 if isinstance(record, dict):
@@ -631,7 +634,7 @@ class SimpleListView(object):
                         row.append(record[x]) 
                 else:
                     row = record
-                w.writerow(row)
+                w.writerow(simple_value(row, encoding))
         return filedown(request.environ, filename, inline=inline, download=download)
         
     def run(self, head=True, body=True):
