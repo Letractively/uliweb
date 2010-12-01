@@ -606,7 +606,7 @@ class SimpleListView(object):
         
     def download(self, filename, timeout=3600, inline=False, download=False):
         from uliweb.utils.filedown import filedown
-        from uliweb import request
+        from uliweb import request, settings
         import csv
         
         if os.path.exists(filename):
@@ -615,6 +615,9 @@ class SimpleListView(object):
             
         table = self.table_info()
         query = self.query()
+        
+        path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
+        filename = os.path.join(path, filename)
         dirname = os.path.dirname(filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
