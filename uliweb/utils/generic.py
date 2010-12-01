@@ -566,7 +566,9 @@ class DeleteView(object):
             getattr(obj, k).clear()
         
 class SimpleListView(object):
-    def __init__(self, fields=None, query_data=None, cache_file=None, total=None, pageno=0, rows_per_page=10, id=None, fields_convert_map=None, table_class_attr='table'):
+    def __init__(self, fields=None, query_data=None, cache_file=None, total=None, 
+        pageno=None, rows_per_page=10, id='listview_table', fields_convert_map=None, 
+            table_class_attr='table'):
         """
         Pass a data structure to fields just like:
             [
@@ -592,23 +594,25 @@ class SimpleListView(object):
             else:
                 self.query_result = self.query_data
             self._query = True
+            
+        #process pageno
+        if self.pageno is None:
             return self.query_result
         else:
-            return self.query_result
+            return self.query_result[self.pageno*self.rows_per_page : (self.pageno+1)*self.rows_per_page]
         
     def run(self, head=True, body=True):
         #create table header
         table = self.table_info()
+            
+        query = self.query()
         if self.total is None:
-            query = self.query()
             total = len(query)
         else:
             total = self.total
-            
         if head:
-            return {'table':self.render(table, head=head, body=body), 'info':{'total':total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
+            return {'table':self.render(table, head=head, body=body, query=query), 'info':{'total':total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
         else:
-            query = self.query()
             return {'table':self.render(table, head=head, body=body, query=query)}
 
     def render(self, table, head=True, body=True, query=None):
@@ -624,15 +628,6 @@ class SimpleListView(object):
         if head:
             s = ['<table class="%s" id=%s width="%dpx">' % (self.table_class_attr, self.id, table['width'])]
             s.append('<thead>')
-#            s.append('<tr>')
-#            for i, field_name in enumerate(table['fields_name']):
-#                kwargs = {}
-#                x = table['fields_list'][i]
-#                if 'width' in x:
-#                    kwargs['width'] = x['width']
-#                kwargs['align'] = x.get('align', 'left')
-#                s.append(str(Tag('th', field_name, **kwargs)))
-#            s.append('</tr>')
             s.extend(self.create_table_head(table))
             s.append('</thead>')
             s.append('<tbody>')
@@ -640,7 +635,7 @@ class SimpleListView(object):
         if body:
             #create table body
             s.append('<tbody>')
-            for record in query[self.pageno*self.rows_per_page : (self.pageno+1)*self.rows_per_page]:
+            for record in query:
                 s.append('<tr>')
                 if not isinstance(record, dict):
                     record = dict(zip(table['fields'], record))
@@ -757,9 +752,12 @@ class SimpleListView(object):
         return t
     
 class ListView(SimpleListView):
-    def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
+    def __init__(self, model, condition=None, query=None, pageno=None, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, 
-        fields_convert_map=None, id=None, table_class_attr='table'):
+        fields_convert_map=None, id='listview_table', table_class_attr='table'):
+        """
+        If pageno is None, then the ListView will not paginate 
+        """
             
         self.model = model
         self.condition = condition
@@ -784,7 +782,13 @@ class ListView(SimpleListView):
         
         #create table header
         table = self.table_info()
-        query = self.query(self.model, self.condition, offset=self.pageno*self.rows_per_page, limit=self.rows_per_page, order_by=self.order_by)
+        if self.pageno is None:
+            offset = None
+            limit = None
+        else:
+            offset = self.pageno*self.rows_per_page
+            limit = self.rows_per_page
+        query = self.query(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
         if head:
             return {'table':self.render(table, query, head=head, body=body), 'info':{'total':query.count(), 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
         else:
@@ -803,15 +807,6 @@ class ListView(SimpleListView):
         if head:
             s = ['<table class="%s" id=%s width="%dpx">' % (self.table_class_attr, self.id, table['width'])]
             s.append('<thead>')
-#            s.append('<tr>')
-#            for i, field_name in enumerate(table['fields_name']):
-#                kwargs = {}
-#                x = table['fields_list'][i]
-#                if 'width' in x:
-#                    kwargs['width'] = x['width']
-#                kwargs['align'] = x.get('align', 'left')
-#                s.append(str(Tag('th', field_name, **kwargs)))
-#            s.append('</tr>')
             s.extend(self.create_table_head(table))
             s.append('</thead>')
             s.append('<tbody>')
