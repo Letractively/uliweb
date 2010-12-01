@@ -1,6 +1,9 @@
 #coding=utf-8
+from __future__ import with_statement
 from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
+import os
+import time
 
 __default_fields_builds__ = {}
 
@@ -587,7 +590,7 @@ class SimpleListView(object):
         self.total = total
         self._query = False
         
-    def query(self):
+    def query(self, pageno=None):
         if not self._query:
             if callable(self.query_data):
                 self.query_result = self.query_data()
@@ -596,16 +599,43 @@ class SimpleListView(object):
             self._query = True
             
         #process pageno
-        if self.pageno is None:
+        if pageno is None:
             return self.query_result
         else:
-            return self.query_result[self.pageno*self.rows_per_page : (self.pageno+1)*self.rows_per_page]
+            return self.query_result[pageno*self.rows_per_page : (pageno+1)*self.rows_per_page]
+        
+    def download(self, filename, timeout=3600, inline=False, download=False):
+        from uliweb.utils.filedown import filedown
+        from uliweb import request
+        import csv
+        
+        if os.path.exists(filename):
+            if not timeout or os.path.getmtime(filename) + timeout < time.time():
+                return filedown(request.environ, filename, inline=inline, download=download)
+            
+        table = self.table_info()
+        query = self.query()
+        dirname = os.path.dirname(filename)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        with open(filename, 'wb') as f:
+            w = csv.writer(f)
+            w.writerow(table['fields'])
+            for record in query:
+                row = []
+                if isinstance(record, dict):
+                    for x in table['fields']:
+                        row.append(record[x]) 
+                else:
+                    row = record
+                w.writerow(row)
+        return filedown(request.environ, filename, inline=inline, download=download)
         
     def run(self, head=True, body=True):
         #create table header
         table = self.table_info()
             
-        query = self.query()
+        query = self.query(self.pageno)
         if self.total is None:
             total = len(query)
         else:
