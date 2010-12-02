@@ -313,9 +313,10 @@ class Property(object):
     
     def get_choices(self):
         if callable(self.choices):
-            return self.choices()
+            choices = self.choices()
         else:
-            return self.choices
+            choices = self.choices
+        return choices or {}
         
     def get_display_value(self, value):
         if self.choices:
