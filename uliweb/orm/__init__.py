@@ -316,6 +316,12 @@ class Property(object):
             return self.choices()
         else:
             return self.choices
+        
+    def get_display_value(self, value):
+        if self.choices:
+            return dict(self.get_choices()).get(value, '')
+        else:
+            return self.to_str()
 
     def validate(self, value):
         if self.empty(value):
@@ -1429,6 +1435,12 @@ class Model(object):
     
     def __unicode__(self):
         return str(self.id)
+    
+    def get_display_value(self, field_name):
+        return self.properties[field_name].get_display_value(getattr(self, field_name))
+        
+    def get_datastore_value(self, field_name):
+        return self.properties[field_name].get_value_for_datastore(self)
            
     #classmethod========================================================
 

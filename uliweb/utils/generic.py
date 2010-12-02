@@ -102,13 +102,16 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         kwargs['default'] = v
         
     if field['disabled']:
-        kwargs['disabled'] = None
+        kwargs['html_attrs'] = {'disabled':None}
+        field_type = form.StringField
+        kwargs['required'] = False
+        
     if field['hidden']:
         field_type = form.HiddenField
         
     if field_cls:
         field_type = field_cls
-    else:
+    elif not field_type:
         cls = prop.__class__
         if cls is orm.BlobProperty:
             pass
@@ -527,7 +530,7 @@ class DetailView(object):
             field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
             
             if field:
-                view_text.append('<tr><th align="right" valign="top" width=150>%s</th><td width=200>%s</td></tr>' % (field["label"], field["display"]))
+                view_text.append('<tr><th align="right" valign="top" width=200>%s</th><td width=200>%s</td></tr>' % (field["label"], field["display"]))
                 
         view_text.append('</table>')
         return view_text
@@ -607,7 +610,7 @@ class SimpleListView(object):
     def download(self, filename, timeout=3600, inline=False, download=False):
         from uliweb.utils.filedown import filedown
         from uliweb import request, settings
-        from uliweb.utils.common import simple_value
+        from uliweb.utils.common import simple_value, safe_unicode
         import csv
         
         if os.path.exists(filename):
@@ -619,13 +622,14 @@ class SimpleListView(object):
         
         path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
         encoding = settings.get_var('GENERIC/ENCODING', sys.getfilesystemencoding() or 'utf-8')
+        default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
         filename = os.path.join(path, filename)
         dirname = os.path.dirname(filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         with open(filename, 'wb') as f:
             w = csv.writer(f)
-            row = [unicode(x, 'utf-8') for x in table['fields_name']]
+            row = [safe_unicode(x, default_encoding) for x in table['fields_name']]
             w.writerow(simple_value(row, encoding))
             for record in query:
                 row = []

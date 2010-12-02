@@ -659,6 +659,10 @@ class Dispatcher(object):
         for v in s:
             conf.settings.read(v)
         conf.settings.update(self.default_settings)
+        
+        #process FILESYSTEM_ENCODING
+        if conf.settings.GLOBAL.FILESYSTEM_ENCODING:
+            conf.settings.GLOBAL.FILESYSTEM_ENCODING = sys.getfilesystemencoding() or conf.settings.GLOBAL.DEFAULT_ENCODING
             
     def dispatch_hooks(self):
         #process DISPATCH hooks
