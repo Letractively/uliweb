@@ -223,7 +223,7 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
                 else:
                     display = unicode(v)
             if isinstance(prop, orm.Property) and prop.choices is not None:
-                display = get_choice(prop.choices, value)
+                display = prop.get_display_value(value)
             if prop.__class__ is orm.TextProperty:
                 display = text2html(value)
         
