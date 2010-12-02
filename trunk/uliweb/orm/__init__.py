@@ -322,7 +322,7 @@ class Property(object):
         if self.choices:
             return dict(self.get_choices()).get(value, '')
         else:
-            return self.to_str()
+            return self.to_str(value)
 
     def validate(self, value):
         if self.empty(value):
