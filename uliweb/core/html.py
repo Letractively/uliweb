@@ -25,6 +25,8 @@ def _create_kwargs(args, nocreate_if_none=['id', 'for']):
      class="color" checked
     >>> print _create_kwargs({'_class':'color', '_for':None})
      class="color"
+    >>> print _create_kwargs({'action': '', '_class': 'yform', 'method': 'POST'})
+     class="yform" action="" method="POST"
     
     """
     if not args:
@@ -40,6 +42,8 @@ def _create_kwargs(args, nocreate_if_none=['id', 'for']):
             t = cgi.escape(u_str(v))
             if t and t[0] not in "\"'":
                 t = '"%s"' % t
+            else:
+                t = '""'
             s.append('%s=%s' % (k, t))
     return ' '.join(s)
 
