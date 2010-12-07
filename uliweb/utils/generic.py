@@ -500,9 +500,20 @@ class DetailWriter(uaml.Writer):
         name = kwargs.get('name', None)
         if name:
             f = self.get_field(name)
-            return indent * ' ' + '<span class="label">%(label)s</span><span class="value">%(display)s</span>' % f
+            f['display'] = f['display'] or '&nbsp;'
+            return indent * ' ' + '<div class="field"><label>%(label)s:</label><span class="value">%(display)s</span></div>' % f
         else:
             return ''
+        
+    def do_td(self, indent, value, **kwargs):
+        name = kwargs.get('name', None)
+        if name:
+            f = self.get_field(name)
+            f['display'] = f['display'] or '&nbsp;'
+            return '<th align=right width=200>%(label)s</th><td width=200>%(display)s</td>' % f
+        else:
+            return '<th>&nbsp;</th><td>&nbsp;</td>'
+        
         
 class DetailLayout(object):
     def __init__(self, layout_file, get_field, writer=None):
