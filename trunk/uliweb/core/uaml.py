@@ -41,6 +41,7 @@ class Writer(object):
         if hasattr(self, func_name):
             return getattr(self, func_name)(indent, value, **kwargs)
         else:
+            print name, kwargs
             return indent*' ' + begin_tag(name, **kwargs)
     
     def unknown_close(self, indent, v):
@@ -223,7 +224,7 @@ if __name__ == '__main__':
         text = """
 .box
     title | 增加新开发任务
-    .box-body
+    .box-body align="center"
         field name=requirement
 """
 #        text = """
