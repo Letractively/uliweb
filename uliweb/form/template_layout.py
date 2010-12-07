@@ -87,4 +87,8 @@ class TemplateLayout(Layout):
         self.writer = FormWriter(form)
 
     def html(self):
-        return str(uaml.Parser(self.layout, self.writer))
+        from uliweb import application
+        f = file(application.get_file(self.layout, dir='templates'), 'rb')
+        text = f.read()
+        f.close()
+        return str(uaml.Parser(text, self.writer))
