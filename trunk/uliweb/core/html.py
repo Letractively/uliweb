@@ -37,7 +37,10 @@ def _create_kwargs(args, nocreate_if_none=['id', 'for']):
             if k not in nocreate_if_none:
                 s.append(k)
         else:
-            s.append('%s="%s"' % (k, cgi.escape(u_str(v))))
+            t = cgi.escape(u_str(v))
+            if t and t[0] not in "\"'":
+                t = '"%s"' % t
+            s.append('%s=%s' % (k, t))
     return ' '.join(s)
 
 __tags__ = {}
