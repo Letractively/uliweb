@@ -205,6 +205,9 @@ class Parser(object):
                 tags[-1] = (tag_name, value, attr)
                 buf.append((tag_name, value, attr))
             
+        if buf:
+            yield (TAG, indents[-1], buf[-1])
+            
         #process dedent
         while len(tags) > 1:
             tag = tags[len(indents)-2]
@@ -218,27 +221,33 @@ if __name__ == '__main__':
 
     def test():
         text = """
-{{{
-<script>
-var time;
-</script>
-}}}
-form.form#form layout='table_line' color=red Test
-    title | Input Something
-    description | This is description
-    panel
-        .description.note class="good"
-        //This is comment line
-        field name="{{= field1}}" type=static
-        field name=field2
-    line
-        #tag
-        field name=field3
-        field name=field4
+.box
+    title | 增加新开发任务
+    .box-body
+        field name=requirement
 """
+#        text = """
+#{{{
+#<script>
+#var time;
+#</script>
+#}}}
+#form.form#form layout='table_line' color=red Test
+#    title | Input Something
+#    description | This is description
+#    panel
+#        .description.note class="good"
+#        //This is comment line
+#        field name="{{= field1}}" type=static
+#        field name=field2
+#    line
+#        #tag
+#        field name=field3
+#        field name=field4
+#"""
         return Parser(text).run()
         
-    from timeit import Timer
-    t = Timer("test()", "from __main__ import test")
-    print t.timeit(1000)
-    
+#    from timeit import Timer
+#    t = Timer("test()", "from __main__ import test")
+#    print t.timeit(1000)
+    print test()

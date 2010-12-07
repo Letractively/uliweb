@@ -925,6 +925,7 @@ class Form(object):
             if isinstance(field, FileField):
                 args['enctype'] = "multipart/form-data"
                 break
+        print 'xxxxxxxxxxxxxxxxxxx', args, begin_tag('form', **args)
         return begin_tag('form', **args)
     
     @property
