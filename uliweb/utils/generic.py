@@ -489,14 +489,44 @@ class EditView(AddView):
             self.post_created_form(DummyForm, self.model, obj)
             
         return DummyForm(data=data, **self.form_args)
+
+from uliweb.core import uaml
+
+class DetailWriter(uaml.Writer):
+    def __init__(self, get_field):
+        self.get_field = get_field
         
+    def do_field(self, indent, value, **kwargs):
+        name = kwargs.get('name', None)
+        if name:
+            f = self.get_field(name)
+            return indent * ' ' + '<span class="label">%(label)s</span><span class="value">%(display)s</span>' % f
+        else:
+            return ''
+        
+class DetailLayout(object):
+    def __init__(self, layout_file, get_field, writer=None):
+        self.layout_file = layout_file
+        self.writer = writer or DetailWriter(get_field)
+        
+    def get_text(self):
+        from uliweb import application
+        f = file(application.get_file(self.layout_file, dir='templates'), 'rb')
+        text = f.read()
+        f.close()
+        return text
+    
+    def __str__(self):
+        return str(uaml.Parser(self.get_text(), self.writer))
     
 class DetailView(object):
     types_convert_map = {}
     fields_convert_map = {}
     meta = 'DetailView'
     
-    def __init__(self, model, condition=None, obj=None, fields=None, types_convert_map=None, fields_convert_map=None, table_class_attr='table'):
+    def __init__(self, model, condition=None, obj=None, fields=None, 
+        types_convert_map=None, fields_convert_map=None, table_class_attr='table',
+        layout_class=None, layout=None):
         self.model = model
         self.condition = condition
         self.obj = obj
@@ -506,6 +536,8 @@ class DetailView(object):
         if self.fields_convert_map:
             self.fields_convert_map = fields_convert_map or {}
         self.table_class_attr = table_class_attr
+        self.layout_class = layout_class or DetailLayout
+        self.layout = layout
         
     def run(self):
         from uliweb.orm import get_model
@@ -525,6 +557,17 @@ class DetailView(object):
         return self.model.get(self.condition)
     
     def render(self, obj):
+        if self.layout:
+            fields = dict(get_fields(self.model, self.fields, self.meta))
+            def get_field(name):
+                prop = fields[name]
+                return make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
+            
+            return str(self.layout_class(self.layout, get_field))
+        else:
+            return self._render(obj)
+        
+    def _render(self, obj):
         view_text = ['<table class="%s">' % self.table_class_attr]
         for field_name, prop in get_fields(self.model, self.fields, self.meta):
             field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
