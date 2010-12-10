@@ -57,10 +57,15 @@ class FormWriter(uaml.Writer):
         error = field.error
         obj = self.form.fields[field_name]
         help_string = kwargs.get('help_string', None) or field.help_string
-        label = kwargs.get('label', None)
+        if 'label' in kwargs:
+            label = kwargs['label']
+        else:
+            label = obj.label
         if label:
             obj.label = label
-        label = obj.get_label(_class='field')
+            label_text = obj.get_label(_class='field')
+        else:
+            label_text = ''
         
         _class = self.get_class(obj)
         if error:
@@ -75,10 +80,10 @@ class FormWriter(uaml.Writer):
                 div.strong(error, _class="message")
             if self.get_widget_name(obj) == 'Checkbox':
                 div << field
-                div << label
+                div << label_text
                 div << help_string
             else:
-                div << label
+                div << label_text
                 div << help_string
                 div << field
         return indent*' ' + str(div)

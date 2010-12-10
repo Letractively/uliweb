@@ -178,18 +178,18 @@ class Parser(object):
                     pos += t.end()
                     if v[0] and v[1]:
                         name = v[0].strip()[:-1]
+                        if v[1][0] in ('"\''):
+                            _v = v[1][1:-1]
+                        else:
+                            _v = v[1]
                         
                         if name == 'class':
-                            if v[1][0] in ('"\''):
-                                value = v[1][1:-1]
-                            else:
-                                value = v[1]
                             if 'class' in attr:
-                                attr['class'] += ' ' + value
+                                attr['class'] += ' ' + _v
                             else:
-                                attr['class'] = value
+                                attr['class'] = _v
                         else:
-                            attr[name] = v[1]
+                            attr[name] = _v
                     elif v[2]:
                         attr[v[2].strip()] = None
                 else:
@@ -221,30 +221,25 @@ if __name__ == '__main__':
 
     def test():
         text = """
-.box
-    title | 增加新开发任务
-    .box-body align="center"
-        field name=requirement
+{{{
+<script>
+var time;
+</script>
+}}}
+form.form#form layout='table_line' color=red Test
+    title | Input Something
+    description | This is description
+    panel
+        .description.note class="good"
+        //This is comment line
+        field name="{{= field1}}" type=static
+        field name=field2
+    line
+        #tag
+        p class=''
+        field name=field3
+        field name=field4
 """
-#        text = """
-#{{{
-#<script>
-#var time;
-#</script>
-#}}}
-#form.form#form layout='table_line' color=red Test
-#    title | Input Something
-#    description | This is description
-#    panel
-#        .description.note class="good"
-#        //This is comment line
-#        field name="{{= field1}}" type=static
-#        field name=field2
-#    line
-#        #tag
-#        field name=field3
-#        field name=field4
-#"""
         return Parser(text).run()
         
 #    from timeit import Timer
