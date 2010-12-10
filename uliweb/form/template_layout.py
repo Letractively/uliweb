@@ -91,14 +91,19 @@ class FormWriter(uaml.Writer):
     def do_td_field(self, indent, value, **kwargs):
         field_name = kwargs.get('name', None)
         field = getattr(self.form, field_name)
-        label = kwargs.get('label', None)
         obj = self.form.fields[field_name]
+        if 'label' in kwargs:
+            label = kwargs['label']
+        else:
+            label = obj.label
         if label:
             obj.label = label
-        label = obj.get_label(_class='field')
+            label_text = obj.get_label(_class='field')
+        else:
+            label_text = ''
             
         display = field.data or '&nbsp;'
-        return indent * ' ' + '<th align=right width=200>%s</th><td width=200>%s</td>' % (label, u_str(display))
+        return indent * ' ' + '<th align=right width=200>%s</th><td width=200>%s</td>' % (label_text, u_str(display))
         
     def do_static(self, indent, value, **kwargs):
         field_name = kwargs.get('name', None)
