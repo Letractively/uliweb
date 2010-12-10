@@ -2,7 +2,7 @@ from __future__ import with_statement
 
 from layout import Layout
 from uliweb.core import uaml
-from uliweb.core.html import Tag, begin_tag, end_tag
+from uliweb.core.html import Tag, begin_tag, end_tag, u_str
 
 class FormWriter(uaml.Writer):
     field_classes = {
@@ -66,6 +66,9 @@ class FormWriter(uaml.Writer):
         if error:
             _class = _class + ' error'
         
+        if self.is_hidden(obj):
+            return str(field)
+        
         div = Tag('div', _class=_class)
         with div:
             if error:
@@ -79,6 +82,30 @@ class FormWriter(uaml.Writer):
                 div << help_string
                 div << field
         return indent*' ' + str(div)
+    
+    def do_td_field(self, indent, value, **kwargs):
+        field_name = kwargs.get('name', None)
+        field = getattr(self.form, field_name)
+        label = kwargs.get('label', None)
+        obj = self.form.fields[field_name]
+        if label:
+            obj.label = label
+        label = obj.get_label(_class='field')
+            
+        display = field.data or '&nbsp;'
+        return indent * ' ' + '<th align=right width=200>%s</th><td width=200>%s</td>' % (label, u_str(display))
+        
+    def do_static(self, indent, value, **kwargs):
+        field_name = kwargs.get('name', None)
+        field = getattr(self.form, field_name)
+        label = kwargs.get('label', None)
+        obj = self.form.fields[field_name]
+        if label:
+            obj.label = label
+        label = obj.get_label(_class='field')
+            
+        display = field.data or '&nbsp;'
+        return indent * ' ' + '<div class="view"><label>%s:</label><span class="value">%s</span></div>' % (label, u_str(display))
     
 class TemplateLayout(Layout):
     def __init__(self, form, layout=None, writer=None):

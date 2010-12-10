@@ -94,7 +94,9 @@ class BaseField(object):
     default_datatype = None
     creation_counter = 0
 
-    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, datatype=None, multiple=False, idtype=None, **kwargs):
+    def __init__(self, label='', default=None, required=False, validators=None, 
+        name='', html_attrs=None, help_string='', build=None, datatype=None, 
+        multiple=False, idtype=None, static=False, **kwargs):
         self.label = label
         self._default = default
         self.validators = validators or []
@@ -104,6 +106,7 @@ class BaseField(object):
         self.html_attrs = html_attrs or {}
         self.datatype = datatype or self.default_datatype
         self.idtype = idtype
+        self.static = static
         _cls = ''
         if '_class' in self.html_attrs:
             _cls = '_class'
@@ -147,7 +150,10 @@ class BaseField(object):
             value = self.to_html(data)
         else:
             value = data
-        return str(self.build(name=self.name, value=value, id=self.id, **self.html_attrs))
+        if self.static:
+            return str('<span class="value">%s</span>' % value)
+        else:
+            return str(self.build(name=self.name, value=value, id=self.id, **self.html_attrs))
 
     def get_label(self, **kwargs):
         if not self.label:

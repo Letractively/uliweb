@@ -101,10 +101,10 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     if v is not None:
         kwargs['default'] = v
         
-    if field['disabled']:
-        kwargs['html_attrs'] = {'disabled':None}
+    if field['static']:
         field_type = form.StringField
         kwargs['required'] = False
+        kwargs['static'] = True
         
     if field['hidden']:
         field_type = form.HiddenField
@@ -242,7 +242,7 @@ class AddView(object):
     
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
-        disabled_fields=None, hidden_fields=None, pre_save=None, post_save=None,
+        static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None):
 
         self.model = model
@@ -260,7 +260,7 @@ class AddView(object):
         self.fields = fields or []
         self.form_cls = form_cls
         self.form_args = form_args or {}
-        self.disabled_fields = disabled_fields or []
+        self.static_fields = static_fields or []
         self.hidden_fields = hidden_fields or []
         self.pre_save = pre_save
         self.post_save = post_save
@@ -274,7 +274,7 @@ class AddView(object):
         for field_name, prop in get_fields(self.model, self.fields, self.meta):
             d = {'name':field_name, 
                 'prop':prop, 
-                'disabled':field_name in self.disabled_fields,
+                'static':field_name in self.static_fields,
                 'hidden':field_name in self.hidden_fields}
             f.append(d)
             
@@ -353,6 +353,7 @@ class AddView(object):
                 return redirect(self.ok_url)
             else:
                 flash(self.fail_msg, 'error')
+                print self.form.errors
                 return {'form':self.form}
         else:
             return {'form':self.form}
@@ -463,7 +464,7 @@ class EditView(AddView):
         fields_list = self.get_fields()
         fields_name = [x['name'] for x in fields_list]
         if 'id' not in fields_name:
-            d = {'name':'id', 'prop':self.model.id, 'disabled':False, 'hidden':False}
+            d = {'name':'id', 'prop':self.model.id, 'static':False, 'hidden':False}
             fields_list.insert(0, d)
             fields_name.insert(0, 'id')
         
@@ -496,12 +497,12 @@ class DetailWriter(uaml.Writer):
     def __init__(self, get_field):
         self.get_field = get_field
         
-    def do_field(self, indent, value, **kwargs):
+    def do_static(self, indent, value, **kwargs):
         name = kwargs.get('name', None)
         if name:
             f = self.get_field(name)
             f['display'] = f['display'] or '&nbsp;'
-            return indent * ' ' + '<div class="field"><label>%(label)s:</label><span class="value">%(display)s</span></div>' % f
+            return indent * ' ' + '<div class="static"><label>%(label)s:</label><span class="value">%(display)s</span></div>' % f
         else:
             return ''
         
