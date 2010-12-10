@@ -160,14 +160,14 @@ class BaseField(object):
             label = capitalize(self.name)
         else:
             label = self.label
-        if self.required and self.label:
+        if not label:
+            return ''
+        if self.required:
             if REQUIRED_CAPTION_AFTER:
                 label += str(Tag('span', REQUIRED_CAPTION, _class='field_required'))
             else:
                 label = str(Tag('span', REQUIRED_CAPTION, _class='field_required')) + label
-            return str(Tag('label', label, _for=self.id, **kwargs))
-        else:
-            return ''
+        return str(Tag('label', label, _for=self.id, **kwargs))
     
     def get_help_string(self, **kwargs):
         if self.help_string:
@@ -933,7 +933,6 @@ class Form(object):
             if isinstance(field, FileField):
                 args['enctype'] = "multipart/form-data"
                 break
-        print 'xxxxxxxxxxxxxxxxxxx', args, begin_tag('form', **args)
         return begin_tag('form', **args)
     
     @property
