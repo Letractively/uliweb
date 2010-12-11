@@ -880,6 +880,7 @@ class Form(object):
             self.validators.append(func)
 
     def validate(self, *data):
+        old_data = self.data.copy()
         all_data = {}
         for k, v in self.fields.items():
             v.parse_data(data, all_data)
@@ -905,11 +906,9 @@ class Form(object):
 
         if not errors and self.validators:
             #validate global
-            try:
-                for v in self.validators:
-                    v(result)
-            except ValidationError, e:
-                errors['_'] = e.message
+            for v in self.validators:
+                r = v(result)
+                errors.update(r)
 
         if errors:
             self.ok = False
@@ -919,6 +918,10 @@ class Form(object):
             self.ok = True
             self.errors = {}
             self.data = result
+            
+        for k, v in self.fields.iteritems():
+            if v.static and k in old_data:
+                self.data[k] = old_data[k]
         return self.ok
 
     def __str__(self):
