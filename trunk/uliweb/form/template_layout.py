@@ -30,9 +30,6 @@ class FormWriter(uaml.Writer):
     def is_hidden(self, f):
         return self.get_widget_name(f) == 'Hidden'
 
-    def do_title(self, indent, value, **kwargs):
-        return indent * ' ' + '<h2>%s</h2>' % value
-    
     def begin_form(self, indent, value, **kwargs):
         if kwargs.get('class', None):
             self.form.html_attrs['_class'] = kwargs['class']
@@ -49,7 +46,9 @@ class FormWriter(uaml.Writer):
         return indent * ' ' + end_tag('div')
     
     def do_button(self, indent, value, **kwargs):
-        return indent * ' ' + str(Tag('input', None, **{'value':value, 'type':'submit'}))
+        v = {'value':value, 'type':'submit'}
+        v.update(kwargs)
+        return indent * ' ' + str(Tag('input', None, **v))
     
     def do_field(self, indent, value, **kwargs):
         field_name = kwargs['name']

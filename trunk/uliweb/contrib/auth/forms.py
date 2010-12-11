@@ -23,7 +23,7 @@ class RegisterForm(Form):
     
     def form_validate(self, all_data):
         if all_data.password != all_data.password1:
-            raise ValidationError, 'Passwords are not match.'
+            return {'password1' : 'Passwords are not match.'}
     
 class LoginForm(Form):
     form_buttons = Submit(value=_('Login'), _class="button")
@@ -45,7 +45,7 @@ class LoginForm(Form):
     
     def form_validate(self, all_data):
         if not self._user.check_password(all_data['password']):
-            raise ValidationError, 'Password is not right.'
+            return {'password' : 'Password is not right.'}
     
 class ChangePasswordForm(Form):
     form_buttons = Submit(value=_('Save'), _class="button")
@@ -58,7 +58,7 @@ class ChangePasswordForm(Form):
 
     def form_validate(self, all_data):
         if all_data.password != all_data.password1:
-            raise ValidationError, 'Passwords are not match.'
+            return {'password1' : 'Password is not right.'}
 
     def validate_oldpassword(self, data):
         from uliweb import request

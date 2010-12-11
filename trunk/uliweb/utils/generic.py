@@ -629,7 +629,7 @@ class DeleteView(object):
 class SimpleListView(object):
     def __init__(self, fields=None, query_data=None, cache_file=None, total=None, 
         pageno=None, rows_per_page=10, id='listview_table', fields_convert_map=None, 
-            table_class_attr='table'):
+            table_class_attr='table', table_width=False):
         """
         Pass a data structure to fields just like:
             [
@@ -646,6 +646,7 @@ class SimpleListView(object):
         self.fields_convert_map = fields_convert_map
         self.cache_file = cache_file
         self.total = total
+        self.table_width = table_width
         self._query = False
         
     def query(self, pageno=None):
@@ -721,7 +722,12 @@ class SimpleListView(object):
 
         s = []
         if head:
-            s = ['<table class="%s" id=%s width="%dpx">' % (self.table_class_attr, self.id, table['width'])]
+            if self.table_width:
+                width = ' width="%dpx"' % table['width']
+            else:
+                width = ''
+                
+            s = ['<table class="%s" id=%s%s>' % (self.table_class_attr, self.id, width)]
             s.append('<thead>')
             s.extend(self.create_table_head(table))
             s.append('</thead>')
@@ -821,8 +827,8 @@ class SimpleListView(object):
                     kwargs['rowspan'] = field['rowspan']
                 if field['width']:
                     kwargs['width'] = field['width']
-                else:
-                    kwargs['width'] = '100'
+#                else:
+#                    kwargs['width'] = '100'
                 s.append(str(Tag('th', field['name'], **kwargs)))
                 
                 i = j
@@ -841,7 +847,7 @@ class SimpleListView(object):
         for x in self.fields:
             t['fields_name'].append(x['verbose_name'])
             t['fields'].append(x['name'])
-            w += x.get('width', 100)
+            w += x.get('width', 0)
             
         t['width'] = w
         return t
@@ -849,7 +855,7 @@ class SimpleListView(object):
 class ListView(SimpleListView):
     def __init__(self, model, condition=None, query=None, pageno=None, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, 
-        fields_convert_map=None, id='listview_table', table_class_attr='table'):
+        fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -864,6 +870,7 @@ class ListView(SimpleListView):
         self.fields_convert_map = fields_convert_map
         self.id = id
         self._query = query
+        self.table_width = table_width
         self.table_class_attr = table_class_attr
         
     def run(self, head=True, body=True):
@@ -900,7 +907,11 @@ class ListView(SimpleListView):
 
         s = []
         if head:
-            s = ['<table class="%s" id=%s width="%dpx">' % (self.table_class_attr, self.id, table['width'])]
+            if self.table_width:
+                width = ' width="%dpx"' % table['width']
+            else:
+                width = ''
+            s = ['<table class="%s" id=%s%s>' % (self.table_class_attr, self.id, width)]
             s.append('<thead>')
             s.extend(self.create_table_head(table))
             s.append('</thead>')
@@ -954,10 +965,10 @@ class ListView(SimpleListView):
             
             if is_table:
                 t['fields_list'].append(self.model.Table.fields[i])
-                w += self.model.Table.fields[i].get('width', 100)
+                w += self.model.Table.fields[i].get('width', 0)
             else:
                 t['fields_list'].append({'name':x})
-                w += 100
+#                w += 100
         t['width'] = w
         return t
     
