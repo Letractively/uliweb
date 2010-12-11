@@ -937,7 +937,7 @@ class ReverseResult(Result):
     def has(self, *objs):
         ids = get_objs_ids(*objs)
         
-        result = self.model.table.count(self.condition & (self.model.table.c[self.reference_id].in_(ids))).execute()
+        result = self.model.table.count(self.condition & (self.model.table.c[self.table_field].in_(ids))).execute()
         count = 0
         if result:
             r = result.fetchone()

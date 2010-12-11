@@ -908,7 +908,8 @@ class Form(object):
             #validate global
             for v in self.validators:
                 r = v(result)
-                errors.update(r)
+                if r:
+                    errors.update(r)
 
         if errors:
             self.ok = False

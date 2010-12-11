@@ -43,6 +43,8 @@ class ReferenceSelectField(SelectField):
             query = self.query
         else:
             query = model.all()
+        if self.condition is not None:
+            query = query.filter(self.condition)
         r = list(query.values(self.value_field, self.display_field))
         return r
     
@@ -353,7 +355,6 @@ class AddView(object):
                 return redirect(self.ok_url)
             else:
                 flash(self.fail_msg, 'error')
-                print self.form.errors
                 return {'form':self.form}
         else:
             return {'form':self.form}
@@ -585,7 +586,7 @@ class DetailView(object):
             field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
             
             if field:
-                view_text.append('<tr><th align="right" valign="top" width=200>%s</th><td width=200>%s</td></tr>' % (field["label"], field["display"]))
+                view_text.append('<tr><th align="right" width=150>%s</th><td width=150>%s</td></tr>' % (field["label"], field["display"]))
                 
         view_text.append('</table>')
         return view_text
@@ -965,10 +966,10 @@ class ListView(SimpleListView):
             
             if is_table:
                 t['fields_list'].append(self.model.Table.fields[i])
-                w += self.model.Table.fields[i].get('width', 0)
+                w += self.model.Table.fields[i].get('width', 100)
             else:
                 t['fields_list'].append({'name':x})
-#                w += 100
+                w += 100
         t['width'] = w
         return t
     
