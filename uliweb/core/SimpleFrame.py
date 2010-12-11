@@ -401,12 +401,9 @@ class Dispatcher(object):
         """
         if os.path.exists(filename):
             return filename
-        if conf.request:
-            dirs = [conf.request.appname] + self.apps
-        else:
-            dirs = self.apps
+        dirs = self.apps
         fname = os.path.join(dir, filename)
-        for d in dirs:
+        for d in reversed(dirs):
             path = pkg.resource_filename(d, fname)
             if os.path.exists(path):
                 return path
