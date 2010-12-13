@@ -685,7 +685,7 @@ class DateField(StringField):
                 return datetime.date(*time.strptime(data, format)[:3])
             except ValueError:
                 continue
-        raise ValidationError, _("The data is not a valid data format.")
+        raise ValidationError, _("The date is not a valid date format.")
     
     def to_html(self, data):
         if data:
@@ -735,7 +735,7 @@ class TimeField(StringField):
                 return datetime.time(*time.strptime(data, format)[3:6])
             except ValueError:
                 continue
-        raise ValidationError, _("The data is not a valid time format.")
+        raise ValidationError, _("The time is not a valid time format.")
     
     def to_html(self, data):
         if data:
@@ -784,7 +784,7 @@ class DateTimeField(StringField):
                 return datetime.datetime(*time.strptime(data, format)[:6])
             except ValueError:
                 continue
-        raise ValidationError, _("The data is not a valid datetime format.")
+        raise ValidationError, _("The datetime is not a valid datetime format.")
     
     def to_html(self, data):
         if data:

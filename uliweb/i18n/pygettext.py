@@ -18,13 +18,7 @@
 import sys
 sys.path.insert(0, '..')
 
-try:
-    import fintl
-    _ = fintl.gettext
-except ImportError:
-    _ = lambda s: s
-
-__doc__ = _("""pygettext -- Python equivalent of xgettext(1)
+__doc__ = """pygettext -- Python equivalent of xgettext(1)
 
 Many systems (Solaris, Linux, Gnu) provide extensive tools that ease the
 internationalization of C programs. Most of these tools are independent of
@@ -157,7 +151,7 @@ Options:
         conjunction with the -D option above.
 
 If `inputfile' is -, standard input is read.
-""")
+"""
 
 import os
 import imp
@@ -180,7 +174,7 @@ EMPTYSTRING = ''
 
 # The normal pot-file header. msgmerge and Emacs's po-mode work better if it's
 # there.
-pot_header = _('''\
+pot_header = '''\
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR ORGANIZATION
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
@@ -197,7 +191,7 @@ msgstr ""
 "Content-Transfer-Encoding: ENCODING\\n"
 "Generated-By: pygettext.py %(version)s\\n"
 
-''')
+'''
 
 
 def usage(code, msg=''):
@@ -435,7 +429,7 @@ class TokenEater:
         elif ttype not in [tokenize.COMMENT, token.INDENT, token.DEDENT,
                            token.NEWLINE, tokenize.NL]:
             # warn if we see anything else than STRING or whitespace
-            print >> sys.stderr, _(
+            print >> sys.stderr, (
                 '*** %(file)s:%(lineno)s: Seen unexpected token "%(token)s"'
                 ) % {
                 'token': tstring,
@@ -491,7 +485,7 @@ class TokenEater:
                 elif options.locationstyle == options.SOLARIS:
                     for filename, lineno in v:
                         d = {'filename': filename, 'lineno': lineno}
-                        print >>fp, _(
+                        print >>fp, (
                             '# File: %(filename)s, line: %(lineno)d') % d
                 elif options.locationstyle == options.GNU:
                     # fit as many locations on one line, as long as the
@@ -499,7 +493,7 @@ class TokenEater:
                     locline = '#:'
                     for filename, lineno in v:
                         d = {'filename': filename, 'lineno': lineno}
-                        s = _(' %(filename)s:%(lineno)d') % d
+                        s = (' %(filename)s:%(lineno)d') % d
                         if len(locline) + len(s) <= options.width:
                             locline = locline + s
                         else:
@@ -578,7 +572,7 @@ def main():
         elif opt in ('-S', '--style'):
             options.locationstyle = locations.get(arg.lower())
             if options.locationstyle is None:
-                usage(1, _('Invalid value for --style: %s') % arg)
+                usage(1, ('Invalid value for --style: %s') % arg)
         elif opt in ('-o', '--output'):
             options.outfile = arg
         elif opt in ('-p', '--output-dir'):
@@ -586,13 +580,13 @@ def main():
         elif opt in ('-v', '--verbose'):
             options.verbose = 1
         elif opt in ('-V', '--version'):
-            print _('pygettext.py (xgettext for Python) %s') % __version__
+            print ('pygettext.py (xgettext for Python) %s') % __version__
             sys.exit(0)
         elif opt in ('-w', '--width'):
             try:
                 options.width = int(arg)
             except ValueError:
-                usage(1, _('--width argument must be an integer: %s') % arg)
+                usage(1, ('--width argument must be an integer: %s') % arg)
         elif opt in ('-x', '--exclude-file'):
             options.excludefilename = arg
         elif opt in ('-X', '--no-docstrings'):
@@ -621,7 +615,7 @@ def main():
             options.toexclude = fp.readlines()
             fp.close()
         except IOError:
-            print >> sys.stderr, _(
+            print >> sys.stderr, (
                 "Can't read --exclude-file: %s") % options.excludefilename
             sys.exit(1)
     else:
@@ -646,12 +640,12 @@ def main():
     for filename in args:
         if filename == '-':
             if options.verbose:
-                print _('Reading standard input')
+                print ('Reading standard input')
             fp = sys.stdin
             closep = 0
         else:
             if options.verbose:
-                print _('Working on %s') % filename
+                print ('Working on %s') % filename
             if filename.endswith('.html'):
                 from uliweb.core import template
                 from cStringIO import StringIO
@@ -733,7 +727,7 @@ def extrace_files(files, outputfile):
     eater = TokenEater(options)
     for filename in files:
         if options.verbose:
-            print _('Working on %s') % filename
+            print ('Working on %s') % filename
         if not os.path.exists(filename):
             continue
         if filename.endswith('.html'):
@@ -745,7 +739,7 @@ def extrace_files(files, outputfile):
             text = file(filename, 'rb').read()
             text = re_include.sub('', text)
             text = re_extend.sub('', text)
-            text, env = template.render_text(text)
+            text = template.Template(text, skip_error=True).parse()
             fp = StringIO(text)
             closep = 0
         else:
@@ -788,7 +782,7 @@ def extrace_files(files, outputfile):
 if __name__ == '__main__':
     main()
     # some more test strings
-    _(u'a unicode string')
-    # this one creates a warning
-    _('*** Seen unexpected token "%(token)s"') % {'token': 'test'}
-    _('more' 'than' 'one' 'string')
+#    _(u'a unicode string')
+#    # this one creates a warning
+#    _('*** Seen unexpected token "%(token)s"') % {'token': 'test'}
+#    _('more' 'than' 'one' 'string')
