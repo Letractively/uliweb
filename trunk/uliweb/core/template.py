@@ -326,7 +326,8 @@ class Out(object):
         return self.buf.getvalue()
 
 class Template(object):
-    def __init__(self, text='', vars=None, env=None, dirs=None, default_template=None, use_temp=False, compile=None):
+    def __init__(self, text='', vars=None, env=None, dirs=None, 
+        default_template=None, use_temp=False, compile=None, skip_error=False):
         self.text = text
         self.filename = None
         self.vars = vars or {}
@@ -344,6 +345,7 @@ class Template(object):
         self.callbacks = []
         self.exec_env = {}
         self.root = self
+        self.skip_error = skip_error
         
         for k, v in __nodes__.iteritems():
             if hasattr(v, 'init'):
@@ -456,16 +458,32 @@ class Template(object):
         return False
 
     def _parse_text(self, content, var):
-        text = str(eval(var, self.vars, self.env.to_dict()))
-        t = Template(text, self.vars, self.env, self.dirs)
-        t.parse()
-        t.add_root(self)
-        content.merge(t.content)
+        try:
+            text = str(eval(var, self.vars, self.env.to_dict()))
+        except Exception:
+            if self.skip_error:
+                text = ''
+            else:
+                raise
+        if text:
+            t = Template(text, self.vars, self.env, self.dirs)
+            t.parse()
+            t.add_root(self)
+            content.merge(t.content)
     
     def _parse_include(self, content, filename):
         if not filename.strip():
             return
-        filename = eval(filename, self.vars, self.env.to_dict())
+        try:
+            filename = eval(filename, self.vars, self.env.to_dict())
+        except Exception:
+            if self.skip_error:
+                filename = ''
+            else:
+                raise
+        if not filename:
+            return
+        
         fname = get_templatefile(filename, self.dirs)
         if not fname:
             raise Exception, "Can't find the template %s" % filename
@@ -481,7 +499,15 @@ class Template(object):
         content.merge(t.content)
         
     def _parse_extend(self, filename):
-        filename = eval(filename, self.vars, self.env.to_dict())
+        try:
+            filename = eval(filename, self.vars, self.env.to_dict())
+        except Exception:
+            if self.skip_error:
+                filename = ''
+            else:
+                raise
+        if not filename:
+            return
         fname = get_templatefile(filename, self.dirs)
         if not fname:
             raise Exception, "Can't find the template %s" % filename

@@ -6,8 +6,7 @@ def login():
     from forms import LoginForm
     from uliweb.form import Submit, Tag
     
-    LoginForm.form_buttons = [Submit(value=_('Login'), _class="button"), 
-        Tag('a', _('Register'), href=url_for(register))]
+    LoginForm.form_buttons = [Submit(value=_('Login'), _class="button")]
     
     form = LoginForm()
     
