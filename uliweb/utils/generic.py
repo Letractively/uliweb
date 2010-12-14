@@ -736,7 +736,8 @@ class SimpleListView(object):
         
         if body:
             #create table body
-            s.append('<tbody>')
+            if self.pageno != None:
+                s.append('<tbody>')
             for record in query:
                 s.append('<tr>')
                 if not isinstance(record, dict):
@@ -745,7 +746,8 @@ class SimpleListView(object):
                     v = self.make_view_field(x, record, self.fields_convert_map)
                     s.append(str(Tag('td', v['display'])))
                 s.append('</tr>')
-            s.append('</tbody>')
+            if self.pageno != None:
+                s.append('</tbody>')
         
         if head:
             s.append('</tbody>')
