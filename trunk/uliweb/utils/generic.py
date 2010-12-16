@@ -30,6 +30,12 @@ class ReferenceSelectField(SelectField):
         self.query = query
         
     def get_choices(self):
+        if self.choices:
+            if callable(self.choices):
+                return self.choices()
+            else:
+                return self.choices
+            
         from uliweb.orm import get_model
         
         model = get_model(self.model)
@@ -354,6 +360,7 @@ class AddView(object):
                 flash(self.success_msg)
                 return redirect(self.ok_url)
             else:
+                print self.form.errors
                 flash(self.fail_msg, 'error')
                 return {'form':self.form}
         else:
@@ -411,7 +418,7 @@ class EditView(AddView):
                     self.pre_save(obj, data)
                 r = self.save(obj, data)
                 if self.post_save:
-                    r = r or self.post_save(obj, data)
+                    r = self.post_save(obj, data) or r
                 
                 if r:
                     msg = self.success_msg
