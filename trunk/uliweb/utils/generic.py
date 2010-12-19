@@ -360,7 +360,6 @@ class AddView(object):
                 flash(self.success_msg)
                 return redirect(self.ok_url)
             else:
-                print self.form.errors
                 flash(self.fail_msg, 'error')
                 return {'form':self.form}
         else:

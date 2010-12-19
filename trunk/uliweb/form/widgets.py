@@ -59,10 +59,11 @@ class Select(Build):
     def to_html(self):
         s = []
         for v, caption in self.choices:
-            args = {'value': v}
+            v = str(v)
+            args = {'value': str(v)}
             if isinstance(self.value, (tuple, list)) and v in self.value:
                 args['selected'] = None
-            elif v == self.value:
+            elif v == str(self.value):
                 args['selected'] = None
             s.append(str(Tag('option', caption, **args)))
         args = self.kwargs.copy()

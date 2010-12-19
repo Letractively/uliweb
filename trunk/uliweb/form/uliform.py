@@ -583,14 +583,14 @@ class SelectField(BaseField):
             return self.choices
         
     def html(self, data, py=True):
-#        if py:
-#            value = self.to_html(data)
-#        else:
-#            value = data
+        if py:
+            value = self.to_html(data)
+        else:
+            value = data
         choices = self.get_choices()
         if (self.empty is not None) and (not self.multiple) and (not self.default in dict(choices)):
             choices.insert(0, ('', self.empty))
-        return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
+        return str(self.build(choices, value, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
 
 class RadioSelectField(SelectField):
     """
