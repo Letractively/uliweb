@@ -1108,6 +1108,10 @@ class ManyToMany(ReferenceProperty):
 #            ForeignKeyConstraint([a], [a_id]),
 #            ForeignKeyConstraint([b], [b_id]),
         )
+        #add appname to self.table
+        appname = cls.__module__
+        if appname.endswith('.models'):
+            self.table.__appname__ = appname[:-7]
         cls.manytomany.append(self.table)
         return
     
@@ -1476,6 +1480,10 @@ class Model(object):
                 args = getattr(cls, '__table_args__', {})
                 args['mysql_charset'] = 'utf8'
                 cls.table = Table(cls.tablename, cls.metadata, *cols, **args)
+                #add appname to self.table
+                appname = cls.__module__
+                if appname.endswith('.models'):
+                    cls.table.__appname__ = appname[:-7]
                 
                 cls.c = cls.table.c
                 cls.columns = cls.table.c

@@ -8,7 +8,7 @@ def get_engine(apps_dir):
     engine = app.settings.ORM.CONNECTION
     return engine
 
-def get_tables(apps_dir, appname=None, engine=None):
+def get_tables(apps_dir, appname=None, engine=None, import_models=False):
     from uliweb.core.SimpleFrame import get_apps, get_app_dir
     from uliweb import orm
     from sqlalchemy import create_engine
@@ -24,33 +24,38 @@ def get_tables(apps_dir, appname=None, engine=None):
     con = create_engine(_engine, strategy='mock', executor=lambda s, p='': buf.write(str(s) + p))
     db = orm.get_connection(con)
     
-    apps = get_apps(apps_dir)
-    if appname:
-        apps_list = [appname]
+    if import_models:
+        apps = get_apps(apps_dir)
+        if appname:
+            apps_list = [appname]
+        else:
+            apps_list = apps[:]
+        models = []
+        for p in apps_list:
+            if p not in apps:
+                log.error('Error: Appname %s is not a valid app' % p)
+                continue
+            if not is_pyfile_exist(get_app_dir(p), 'models'):
+                continue
+            m = '%s.models' % p
+            try:
+                mod = __import__(m, {}, {}, [''])
+                models.append(mod)
+            except ImportError:
+                log.exception("There are something wrong when importing module [%s]" % m)
+        
     else:
-        apps_list = apps[:]
-    models = []
-    for p in apps_list:
-        if p not in apps:
-            log.error('Error: Appname %s is not a valid app' % p)
-            continue
-        if not is_pyfile_exist(get_app_dir(p), 'models'):
-            continue
-        m = '%s.models' % p
-        try:
-            mod = __import__(m, {}, {}, [''])
-            models.append(mod)
-        except ImportError:
-            log.exception("There are something wrong when importing module [%s]" % m)
-    
+        for tablename, m in orm.__models__.iteritems():
+            orm.get_model(tablename)
+            
     if appname:
         tables = {}
-        for tablename, m in orm.__models__.items():
-            if m['appname'] == appname:
+        for tablename, m in db.metadata.tables.iteritems():
+            if hasattr(m, '__appname__') and m.__appname__ == appname:
                 tables[tablename] = db.metadata.tables[tablename]
     else:
         tables = db.metadata.tables
-        
+                
     return tables
 
 def dump_table(name, table, dir, con, std=None):
