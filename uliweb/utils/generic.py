@@ -161,6 +161,8 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
             #field_type = form.IntField
             kwargs['model'] = prop.reference_class
             field_type = ReferenceSelectField
+        elif cls is orm.FileProperty:
+            field_type = form.FileField
         else:
             raise Exception, "Can't support the Property [%s=%s]" % (field['name'], prop.__class__.__name__)
        
@@ -230,6 +232,9 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
                     display = v.get_url()
                 else:
                     display = unicode(v)
+            elif isinstance(prop, orm.FileProperty):
+                from uliweb.contrib.upload import get_url
+                display = get_url(getattr(obj, prop.property_name))
             if isinstance(prop, orm.Property) and prop.choices is not None:
                 display = prop.get_display_value(value)
             if prop.__class__ is orm.TextProperty:
