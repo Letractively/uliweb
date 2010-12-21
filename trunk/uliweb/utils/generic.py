@@ -185,8 +185,8 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
 
 def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
     import uliweb.orm as orm
-    from uliweb.utils.common import get_choice
     from uliweb.utils.textconvert import text2html
+    from uliweb.core.html import Tag
 
     types_convert_map = types_convert_map or {}
     fields_convert_map = fields_convert_map or {}
@@ -234,7 +234,12 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
                     display = unicode(v)
             elif isinstance(prop, orm.FileProperty):
                 from uliweb.contrib.upload import get_url
-                display = get_url(getattr(obj, prop.property_name))
+                filename = getattr(obj, prop.property_name)
+                url = get_url(filename)
+                if url:
+                    display = str(Tag('a', filename, href=url))
+                else:
+                    display = ''
             if isinstance(prop, orm.Property) and prop.choices is not None:
                 display = prop.get_display_value(value)
             if prop.__class__ is orm.TextProperty:
@@ -256,7 +261,7 @@ class AddView(object):
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
-        post_created_form=None, layout=None):
+        post_created_form=None, layout=None, file_replace=True):
 
         self.model = model
         self.ok_url = ok_url
@@ -278,6 +283,7 @@ class AddView(object):
         self.pre_save = pre_save
         self.post_save = post_save
         self.post_created_form = post_created_form
+        self.file_replace = file_replace
         
         #add layout support
         self.layout = layout
@@ -335,6 +341,22 @@ class AddView(object):
             
         return DummyForm(data=self.data, **self.form_args)
     
+    def process_files(self, data):
+        from uliweb.contrib.upload import save_file
+        import uliweb.orm as orm
+        
+        flag = False
+    
+        fields_list = self.get_fields()
+        for f in fields_list:
+            if isinstance(f['prop'], orm.FileProperty):
+                if f['name'] in data:
+                    fobj = data[f['name']]
+                    data[f['name']] = save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
+                    flag = True
+                    
+        return flag
+    
     def run(self):
         from uliweb import request, function
         from uliweb.orm import get_model
@@ -353,6 +375,8 @@ class AddView(object):
             if flag:
                 d = self.default_data.copy()
                 d.update(self.form.data)
+                
+                r = self.process_file(d)
                 
                 if self.pre_save:
                     self.pre_save(d)
@@ -418,9 +442,11 @@ class EditView(AddView):
             flag = self.form.validate(request.values, request.files)
             if flag:
                 data = self.form.data.copy()
+                #process file field
+                r = self.process_files(data)
                 if self.pre_save:
                     self.pre_save(obj, data)
-                r = self.save(obj, data)
+                r = self.save(obj, data) or r
                 if self.post_save:
                     r = self.post_save(obj, data) or r
                 
