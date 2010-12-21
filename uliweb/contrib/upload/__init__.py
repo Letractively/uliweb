@@ -88,6 +88,9 @@ def get_url(filename):
     import urllib
     from uliweb import application
 
+    if not filename:
+        return ''
+    
     #make sure the filename is utf-8 encoded
     if isinstance(filename, unicode):
         filename = filename.encode('utf-8')

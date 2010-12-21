@@ -330,6 +330,7 @@ class Loader(object):
 class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir='apps', use_urls=None, include_apps=None, start=True, default_settings=None, settings_file='settings.ini'):
+        conf.application = self
         self.debug = False
         self.use_urls = conf.use_urls = use_urls
         self.include_apps = include_apps or []
@@ -402,7 +403,10 @@ class Dispatcher(object):
         if os.path.exists(filename):
             return filename
         dirs = self.apps
-        fname = os.path.join(dir, filename)
+        if dir:
+            fname = os.path.join(dir, filename)
+        else:
+            fname = filename
         for d in reversed(dirs):
             path = pkg.resource_filename(d, fname)
             if os.path.exists(path):

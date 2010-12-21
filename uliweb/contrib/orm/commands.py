@@ -239,7 +239,7 @@ def action_dbinit(apps_dir):
             try:
                 print "Processing %s..." % m
                 con.begin()
-                mod = __import__(m, {'application':app}, {}, [''])
+                mod = __import__(m, {}, {}, [''])
                 con.commit()
             except ImportError:
                 con.rollback()
