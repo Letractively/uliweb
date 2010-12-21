@@ -60,8 +60,8 @@ class Select(Build):
         s = []
         for v, caption in self.choices:
             v = str(v)
-            args = {'value': str(v)}
-            if isinstance(self.value, (tuple, list)) and v in self.value:
+            args = {'value': v}
+            if isinstance(self.value, (tuple, list)) and v in [str(x) for x in self.value]:
                 args['selected'] = None
             elif v == str(self.value):
                 args['selected'] = None
