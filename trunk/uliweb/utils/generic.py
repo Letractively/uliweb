@@ -51,7 +51,7 @@ class ReferenceSelectField(SelectField):
             query = model.all()
         if self.condition is not None:
             query = query.filter(self.condition)
-        r = list(query.values(self.value_field, self.display_field))
+        r = [(getattr(x, self.value_field), unicode(x)) for x in query]
         return r
     
     def to_python(self, data):
@@ -670,9 +670,9 @@ class DeleteView(object):
             getattr(obj, k).clear()
         
 class SimpleListView(object):
-    def __init__(self, fields=None, query_data=None, cache_file=None, total=None, 
-        pageno=None, rows_per_page=10, id='listview_table', fields_convert_map=None, 
-            table_class_attr='table', table_width=False):
+    def __init__(self, fields=None, query=None, cache_file=None,  
+        pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
+        table_class_attr='table', table_width=False, pagination=True):
         """
         Pass a data structure to fields just like:
             [
@@ -681,30 +681,64 @@ class SimpleListView(object):
             ]
         """
         self.fields = fields
-        self.query_data = query_data
+        self._query = query
         self.pageno = pageno
         self.rows_per_page = rows_per_page
         self.id = id
         self.table_class_attr = table_class_attr
         self.fields_convert_map = fields_convert_map
         self.cache_file = cache_file
-        self.total = total
+        self.total = 0
         self.table_width = table_width
-        self._query = False
+        self.pagination = pagination
         
-    def query(self, pageno=None):
-        if not self._query:
-            if callable(self.query_data):
-                self.query_result = self.query_data()
-            else:
-                self.query_result = self.query_data
-            self._query = True
-            
-        #process pageno
-        if pageno is None:
-            return self.query_result
+    def query(self, pageno=0, pagination=True):
+        if callable(self._query):
+            query_result = self._query()
         else:
-            return self.query_result[pageno*self.rows_per_page : (pageno+1)*self.rows_per_page]
+            query_result = self._query
+            
+        def repeat(data, begin, n):
+            result = []
+            no_data_flag = False
+            i = 0
+            while (begin > 0 and i < begin) or (begin == -1):
+                try:
+                    result.append(data.next())
+                    i += 1
+                    n += 1
+                except StopIteration:
+                    no_data_flag = True
+                    break
+            return no_data_flag, n, result
+        
+        self.total = 0
+        if pagination:
+            if isinstance(query_result, (list, tuple)):
+                self.total = len(query_result)
+                return query_result[pageno*self.rows_per_page : (pageno+1)*self.rows_per_page]
+            else:
+                #first step, skip records before pageno*self.rows_per_page
+                flag, self.total, result = repeat(query_result, pageno*self.rows_per_page, self.total)
+                if flag:
+                    return []
+                
+                #second step, get the records
+                flag, self.total, result = repeat(query_result, self.rows_per_page, self.total)
+                if flag:
+                    return result
+                
+                #third step, skip the rest records, and get the really total
+                flag, self.total, r = repeat(query_result, -1, self.total)
+                return result
+        else:
+            if isinstance(query_result, (list, tuple)):
+                self.total = len(query_result)
+                return query_result
+            else:
+                flag, self.total, result = repeat(query_result, -1, self.total)
+                return result
+                
         
     def download(self, filename, timeout=3600, inline=False, download=False):
         from uliweb.utils.filedown import filedown
@@ -717,7 +751,7 @@ class SimpleListView(object):
                 return filedown(request.environ, filename, inline=inline, download=download)
             
         table = self.table_info()
-        query = self.query()
+        query = self.query(pagination=False)
         
         path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
         encoding = settings.get_var('GENERIC/ENCODING', sys.getfilesystemencoding() or 'utf-8')
@@ -744,13 +778,9 @@ class SimpleListView(object):
         #create table header
         table = self.table_info()
             
-        query = self.query(self.pageno)
-        if self.total is None:
-            total = len(query)
-        else:
-            total = self.total
+        query = self.query(self.pageno, self.pagination)
         if head:
-            return {'table':self.render(table, head=head, body=body, query=query), 'info':{'total':total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
+            return {'table':self.render(table, head=head, body=body, query=query), 'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
         else:
             return {'table':self.render(table, head=head, body=body, query=query)}
 
@@ -894,8 +924,8 @@ class SimpleListView(object):
         return t
     
 class ListView(SimpleListView):
-    def __init__(self, model, condition=None, query=None, pageno=None, order_by=None, 
-        fields=None, rows_per_page=10, types_convert_map=None, 
+    def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
+        fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True):
         """
         If pageno is None, then the ListView will not paginate 
@@ -913,6 +943,8 @@ class ListView(SimpleListView):
         self._query = query
         self.table_width = table_width
         self.table_class_attr = table_class_attr
+        self.total = 0
+        self.pagination = pagination
         
     def run(self, head=True, body=True):
         import uliweb.orm as orm
@@ -925,21 +957,16 @@ class ListView(SimpleListView):
         
         #create table header
         table = self.table_info()
-        if self.pageno is None:
-            offset = None
-            limit = None
-        else:
+            
+        if not self._query or isinstance(self._query, orm.Result): #query result
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
-        if not self._query or isinstance(self._query, orm.Result):
-            query = self.query(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
+            query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
+            self.total = query.count()
         else:
-            if callable(self._query):
-                query = self._query()
-            else:
-                query = self._query
+            query = self.query(self.pageno, self.pagination)
         if head:
-            return {'table':self.render(table, query, head=head, body=body), 'info':{'total':query.count(), 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
+            return {'table':self.render(table, query, head=head, body=body), 'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
         else:
             return {'table':self.render(table, query, head=head, body=body)}
 
@@ -969,7 +996,11 @@ class ListView(SimpleListView):
             for record in query:
                 s.append('<tr>')
                 for i, x in enumerate(table['fields_list']):
-                    v = make_view_field(getattr(self.model, x['name']), record, self.types_convert_map, self.fields_convert_map)
+                    if hasattr(self.model, x['name']):
+                        field = getattr(self.model, x['name'])
+                    else:
+                        field = x
+                    v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
                     s.append(str(Tag('td', v['display'])))
                 s.append('</tr>')
         
@@ -979,7 +1010,7 @@ class ListView(SimpleListView):
         
         return '\n'.join(s)
     
-    def query(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
+    def query_model(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
         if self._query:
             query = self._query.filter(condition)
         else:
@@ -997,7 +1028,19 @@ class ListView(SimpleListView):
         is_table = False
     
         if self.fields:
-            fields_list = [(x, getattr(self.model, x)) for x in self.fields]
+            fields_list = []
+            for x in self.fields:
+                if isinstance(x, (str, unicode)):
+                    if hasattr(self.model, x):
+                        fields_list.append((x, getattr(self.model, x)))
+                    else:
+                        raise Exception, "Can't find the field [%s] in Model(%s)" % (x, self.model.tablename)
+                elif isinstance(x, dict):
+                    if 'label' not in x:
+                        x['label'] = x.get('verbose_name', '')
+                    fields_list.append((x['name'], x))
+                else:
+                    raise Exception, "Can't support the field [%r]" % x
         elif hasattr(self.model, 'Table'):
             fields_list = [(x['name'], getattr(self.model, x['name'])) for x in self.model.Table.fields]
             is_table = True
@@ -1006,7 +1049,10 @@ class ListView(SimpleListView):
         
         w = 0
         for i, (x, y) in enumerate(fields_list):
-            t['fields_name'].append(str(y.verbose_name or x))
+            if isinstance(y, dict):
+                t['fields_name'].append(str(y['verbose_name'] or x))
+            else:
+                t['fields_name'].append(str(y.verbose_name or x))
             
             if is_table:
                 t['fields_list'].append(self.model.Table.fields[i])
