@@ -352,8 +352,9 @@ class AddView(object):
             if isinstance(f['prop'], orm.FileProperty):
                 if f['name'] in data:
                     fobj = data[f['name']]
-                    data[f['name']] = save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
-                    flag = True
+                    if fobj:
+                        data[f['name']] = save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
+                        flag = True
                     
         return flag
     
@@ -376,11 +377,11 @@ class AddView(object):
                 d = self.default_data.copy()
                 d.update(self.form.data)
                 
-                r = self.process_file(d)
-                
                 if self.pre_save:
                     self.pre_save(d)
                     
+                r = self.process_files(d)
+                
                 obj = self.save(d)
                 
                 if self.post_save:
@@ -442,10 +443,10 @@ class EditView(AddView):
             flag = self.form.validate(request.values, request.files)
             if flag:
                 data = self.form.data.copy()
-                #process file field
-                r = self.process_files(data)
                 if self.pre_save:
                     self.pre_save(obj, data)
+                #process file field
+                r = self.process_files(data)
                 r = self.save(obj, data) or r
                 if self.post_save:
                     r = self.post_save(obj, data) or r
@@ -530,6 +531,7 @@ class EditView(AddView):
         return DummyForm(data=data, **self.form_args)
 
 from uliweb.core import uaml
+from uliweb.core.html import begin_tag, end_tag, u_str
 
 class DetailWriter(uaml.Writer):
     def __init__(self, get_field):
@@ -544,12 +546,15 @@ class DetailWriter(uaml.Writer):
         else:
             return ''
         
-    def do_td(self, indent, value, **kwargs):
-        name = kwargs.get('name', None)
+    def do_td_field(self, indent, value, **kwargs):
+        name = kwargs.pop('name', None)
         if name:
             f = self.get_field(name)
             f['display'] = f['display'] or '&nbsp;'
-            return '<th align=right width=200>%(label)s</th><td width=200>%(display)s</td>' % f
+            if 'width' not in kwargs:
+                kwargs['width'] = 200
+            td = begin_tag('td', **kwargs) + u_str(f['display']) + end_tag('td')
+            return '<th align=right width=200>%(label)s</th>' % f + td
         else:
             return '<th>&nbsp;</th><td>&nbsp;</td>'
         

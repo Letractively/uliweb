@@ -88,11 +88,11 @@ class FormWriter(uaml.Writer):
         return indent*' ' + str(div)
     
     def do_td_field(self, indent, value, **kwargs):
-        field_name = kwargs.get('name', None)
+        field_name = kwargs.pop('name', None)
         field = getattr(self.form, field_name)
         obj = self.form.fields[field_name]
         if 'label' in kwargs:
-            label = kwargs['label']
+            label = kwargs.pop('label')
         else:
             label = obj.label
         if label:
@@ -102,7 +102,10 @@ class FormWriter(uaml.Writer):
             label_text = ''
             
         display = field.data or '&nbsp;'
-        return indent * ' ' + '<th align=right width=200>%s</th><td width=200>%s</td>' % (label_text, u_str(display))
+        if 'width' not in kwargs:
+            kwargs['width'] = 200
+        td = begin_tag('td', **kwargs) + u_str(display) + end_tag('td')
+        return indent * ' ' + '<th align=right width=200>%s</th>%s' % (label_text, td)
         
     def do_static(self, indent, value, **kwargs):
         field_name = kwargs.get('name', None)
