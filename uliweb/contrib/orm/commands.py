@@ -144,6 +144,7 @@ def action_reset(apps_dir):
             con.echo = True
         
         for name, t in get_tables(apps_dir, appname).items():
+            print 'Resetting %s...' % name
             t.drop(con)
             t.create(con)
         
@@ -178,6 +179,7 @@ def action_dump(apps_dir):
         con = create_engine(engine)
 
         for name, t in get_tables(apps_dir, appname, engine=engine).items():
+            print 'Dumpping %s...' % name
             dump_table(name, t, output_dir, con, std=verbose)
         
     return action
@@ -204,6 +206,7 @@ are you sure to load data[Y/n]""")
         con = orm.get_connection(engine)
 
         for name, t in get_tables(apps_dir, appname, engine=engine).items():
+            print 'Loading %s...' % name
             try:
                 con.begin()
                 load_table(name, t, output_dir, con)
