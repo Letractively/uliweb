@@ -1,4 +1,4 @@
-from uliweb.core.html import Tag
+from uliweb.core.html import Tag, begin_tag, end_tag
 
 class Build(object):
     def __init__(self, **kwargs):
@@ -57,15 +57,33 @@ class Select(Build):
         super(Select, self).__init__(**kwargs)
 
     def to_html(self):
-        s = []
-        for v, caption in self.choices:
+        from itertools import groupby
+        
+        def _make(v, caption):
             v = str(v)
             args = {'value': v}
             if isinstance(self.value, (tuple, list)) and v in [str(x) for x in self.value]:
                 args['selected'] = None
             elif v == str(self.value):
                 args['selected'] = None
-            s.append(str(Tag('option', caption, **args)))
+            return str(Tag('option', caption, **args))
+            
+        s = []
+        #if the choices is 3-elements, then will do the group process
+        group = False
+        if self.choices:
+            group = len(self.choices[0]) > 2
+        if group:
+            for k, g in groupby(self.choices, lambda x:x[0]):
+                s.append(begin_tag('optgroup', label=k))
+                for x in g:
+                    s.append(_make(x[1], x[2]))
+                s.append(end_tag('optgroup'))
+                
+        else:
+            for v, caption in self.choices:
+                s.append(_make(v, caption))
+                
         args = self.kwargs.copy()
         if self.multiple:
             args['multiple'] = None
