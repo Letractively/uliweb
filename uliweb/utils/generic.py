@@ -915,10 +915,10 @@ class ListView(SimpleListView):
         self.table_class_attr = table_class_attr
         
     def run(self, head=True, body=True):
-        from uliweb.orm import get_model
+        import uliweb.orm as orm
         
         if isinstance(self.model, str):
-            self.model = get_model(self.model)
+            self.model = orm.get_model(self.model)
             
         if not self.id:
             self.id = self.model.tablename
@@ -931,7 +931,13 @@ class ListView(SimpleListView):
         else:
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
-        query = self.query(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
+        if not self._query or isinstance(self._query, orm.Result):
+            query = self.query(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
+        else:
+            if callable(self._query):
+                query = self._query()
+            else:
+                query = self._query
         if head:
             return {'table':self.render(table, query, head=head, body=body), 'info':{'total':query.count(), 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
         else:

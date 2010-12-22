@@ -813,9 +813,11 @@ def get_objs_ids(*objs):
     for o in objs:
         assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
         if isinstance(o, (int, long)):
-            ids.append(o)
+            _id = o
         else:
-            ids.append(o.id)
+            _id = o.id
+        if _id not in ids:
+            ids.append(_id)
     return ids
 
 class Result(object):
