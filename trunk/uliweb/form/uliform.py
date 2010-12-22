@@ -567,7 +567,7 @@ class SelectField(BaseField):
     """
     default_build = Select
 
-    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', size=5, **kwargs):
+    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', size=10, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.choices = choices or []
         self.empty = empty
@@ -588,8 +588,19 @@ class SelectField(BaseField):
 #        else:
 #            value = data
         choices = self.get_choices()
-        if (self.empty is not None) and (not self.multiple) and (not self.default in dict(choices)):
-            choices.insert(0, ('', self.empty))
+        if (self.empty is not None) and (not self.multiple):
+            group = False
+            if choices:
+                if len(choices[0]) > 2:
+                    group = True
+                    c = [(x[1], x[2]) for x in choices]
+                else:
+                    c = choices
+                if (not self.default in dict(c)):
+                    if group:
+                        choices.insert(0, (choices[0][0], '', self.empty))
+                    else:
+                        choices.insert(0, ('', self.empty))
         return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
 
 class RadioSelectField(SelectField):

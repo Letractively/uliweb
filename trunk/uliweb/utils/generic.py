@@ -21,10 +21,10 @@ def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
     return __default_fields_builds__
 
 class ReferenceSelectField(SelectField):
-    def __init__(self, model, display_field=None, value_field='id', condition=None, query=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
+    def __init__(self, model, group_field=None, value_field='id', condition=None, query=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
         super(ReferenceSelectField, self).__init__(label=label, default=default, choices=[], required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
         self.model = model
-        self.display_field = display_field
+        self.group_field = group_field
         self.value_field = value_field
         self.condition = condition
         self.query = query
@@ -39,11 +39,11 @@ class ReferenceSelectField(SelectField):
         from uliweb.orm import get_model
         
         model = get_model(self.model)
-        if not self.display_field:
+        if not self.group_field:
             if hasattr(model, 'Meta'):
-                self.display_field = getattr(model.Meta, 'display_field', 'id')
+                self.group_field = getattr(model.Meta, 'group_field', None)
             else:
-                self.display_field = 'id'
+                self.group_field = None
            
         if self.query:
             query = self.query
@@ -51,18 +51,23 @@ class ReferenceSelectField(SelectField):
             query = model.all()
         if self.condition is not None:
             query = query.filter(self.condition)
-        r = [(getattr(x, self.value_field), unicode(x)) for x in query]
+        if self.group_field:
+            query = query.order_by(model.c[self.group_field].asc())
+        if self.group_field:
+            r = [(x.get_display_value(self.group_field), getattr(x, self.value_field), unicode(x)) for x in query]
+        else:
+            r = [(getattr(x, self.value_field), unicode(x)) for x in query]
         return r
     
     def to_python(self, data):
         return int(data)
 
 class ManyToManySelectField(ReferenceSelectField):
-    def __init__(self, model, display_field=None, value_field='id', 
+    def __init__(self, model, group_field=None, value_field='id', 
             condition=None, query=None, label='', default=[], 
             required=False, validators=None, name='', html_attrs=None, 
             help_string='', build=None, **kwargs):
-        super(ManyToManySelectField, self).__init__(model=model, display_field=display_field, 
+        super(ManyToManySelectField, self).__init__(model=model, group_field=group_field, 
             value_field=value_field, condition=condition, query=query, label=label, 
             default=default, required=required, validators=validators, name=name, 
             html_attrs=html_attrs, help_string=help_string, build=build, 
