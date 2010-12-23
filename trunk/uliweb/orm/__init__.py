@@ -29,6 +29,10 @@ from uliweb.utils import date
 from sqlalchemy import *
 from sqlalchemy.sql import select
 from uliweb.core import dispatch
+import threading
+
+Local = threading.local()
+Local.dispatch_send = True
 
 now = date.now
 
@@ -57,6 +61,16 @@ def set_debug_query(flag):
 def set_encoding(encoding):
     global __default_encoding__
     __default_encoding__ = encoding
+    
+def set_dispatch_send(flag):
+    global Local
+    Local.dispatch_send = flag
+    
+def get_dispatch_send(default=True):
+    global Local
+    if not hasattr(Local, 'dispatch_send'):
+        Local.dispatch_send = default
+    return Local.dispatch_send
 
 def get_connection(connection='', metadata=_default_metadata, default=True, debug=None, **args):
     """
@@ -1006,7 +1020,8 @@ class ManyResult(Result):
         old_ids = ids[:]
         new_ids = get_objs_ids(*objs)
 
-        dispatch.call(self.__class__, 'pre_update', instance=self, data=new_ids, old_data=ids)
+        if get_dispatch_send():
+            dispatch.call(self.__class__, 'pre_update', instance=self, data=new_ids, old_data=ids)
         
         modified = False
         for v in new_ids:
@@ -1022,7 +1037,8 @@ class ManyResult(Result):
             modified = True
             
         if modified:
-            dispatch.call(self.__class__, 'post_update', instance=self, data=new_ids, old_data=old_ids)
+            if get_dispatch_send():
+                dispatch.call(self.__class__, 'post_update', instance=self, data=new_ids, old_data=old_ids)
 
         return modified
             
@@ -1388,7 +1404,8 @@ class Model(object):
                 created = True
                 old = d.copy()
                 
-                dispatch.call(self.__class__, 'pre_save', instance=self, created=True, data=d, old_data=self._old_values)
+                if get_dispatch_send():
+                    dispatch.call(self.__class__, 'pre_save', instance=self, created=True, data=d, old_data=self._old_values)
                 
                 #process auto_now_add
                 for k, v in self.properties.items():
@@ -1403,7 +1420,8 @@ class Model(object):
                 if d:
                     old = d.copy()
                     
-                    dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d, old_data=self._old_values)
+                    if get_dispatch_send():
+                        dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d, old_data=self._old_values)
 
                     #process auto_now
                     for k, v in self.properties.items():
@@ -1416,7 +1434,8 @@ class Model(object):
                     x = self.properties[k].get_value_for_datastore(self)
                     if self.field_str(x) != self.field_str(v):
                         setattr(self, k, v)
-                dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old, old_data=self._old_values)
+                if get_dispatch_send():
+                    dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old, old_data=self._old_values)
                 self.set_saved()
                 
         return saved
@@ -1424,9 +1443,11 @@ class Model(object):
     save = put
     
     def delete(self):
-        dispatch.call(self.__class__, 'pre_delete', instance=self)
+        if get_dispatch_send():
+            dispatch.call(self.__class__, 'pre_delete', instance=self)
         self.table.delete(self.table.c.id==self.id).execute()
-        dispatch.call(self.__class__, 'post_delete', instance=self)
+        if get_dispatch_send():
+            dispatch.call(self.__class__, 'post_delete', instance=self)
         self.id = None
         self._old_values = {}
             
