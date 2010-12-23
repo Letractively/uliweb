@@ -469,7 +469,7 @@ class EditView(AddView):
             return {'form':self.form, 'object':obj}
         
     def save(self, obj, data):
-        obj.update(data)
+        obj.update(**data)
         r = obj.save()
         
         r1 = self.save_manytomany(obj, data)
@@ -483,7 +483,7 @@ class EditView(AddView):
                 field = getattr(obj, k)
                 value = data[k]
                 if value:
-                    r = r or getattr(obj, k).update(value)
+                    r = r or getattr(obj, k).update(*value)
         return r
         
     def query(self):
