@@ -438,8 +438,8 @@ class Dispatcher(object):
         
         return template.template(text, vars, env, dirs, default_template)
     
-    def render(self, templatefile, vars, env=None, dirs=None, default_template=None, content_type='text/html'):
-        return Response(self.template(templatefile, vars, env, dirs, default_template=default_template), content_type=content_type)
+    def render(self, templatefile, vars, env=None, dirs=None, default_template=None, content_type='text/html', status=200):
+        return Response(self.template(templatefile, vars, env, dirs, default_template=default_template), status=status, content_type=content_type)
     
     def _page_not_found(self, description=None, **kwargs):
         description = 'The requested URL "{{=url}}" was not found on the server.'
@@ -468,8 +468,7 @@ class Dispatcher(object):
             return self._page_not_found(url=local.request.path, urls=urls)
         tmp_file = template.get_templatefile('404'+conf.settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
-            response = self.render(tmp_file, {'url':local.request.path})
-            response.status = 404
+            response = self.render(tmp_file, {'url':local.request.path}, status=404)
         else:
             response = e
         return response
@@ -477,8 +476,7 @@ class Dispatcher(object):
     def internal_error(self, e):
         tmp_file = template.get_templatefile('500'+conf.settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
-            response = self.render(tmp_file, {'url':local.request.path})
-            response.status = 500
+            response = self.render(tmp_file, {'url':local.request.path}, status=500)
         else:
             response = e
         return response
