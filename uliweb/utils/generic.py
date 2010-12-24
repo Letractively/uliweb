@@ -75,27 +75,20 @@ class ManyToManySelectField(ReferenceSelectField):
             
 def get_fields(model, fields, meta):
     if fields:
-        fields_list = []
-        for x in fields:
-            if isinstance(x, str):  #so x is field_name
-                fields_list.append((x, getattr(model, x)))
-            elif isinstance(x, tuple):
-                fields_list.append(x)   #x should be a tuple, just like (field_name, form_field_obj)
-            else:
-                raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
+        f = fields
     elif hasattr(model, meta):
-        fields_list = []
-        for x in getattr(model, meta).fields:
-            if isinstance(x, str):  #so x is field_name
-                fields_list.append((x, getattr(model, x)))
-            elif isinstance(x, tuple):
-                fields_list.append(x)   #x should be a tuple, just like (field_name, form_field_obj)
-            else:
-                raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
-            
+        f = getattr(model, meta).fields
     else:
-        fields_list = [(x, y) for x, y in model._fields_list]
-    
+        f = model._fields_list
+        
+    fields_list = []
+    for x in f:
+        if isinstance(x, str):  #so x is field_name
+            fields_list.append((x, getattr(model, x)))
+        elif isinstance(x, tuple):
+            fields_list.append(x)   #x should be a tuple, just like (field_name, form_field_obj)
+        else:
+            raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
     return fields_list
 
 def make_form_field(field, model, field_cls=None, builds_args_map=None):
@@ -1030,41 +1023,32 @@ class ListView(SimpleListView):
         
     def table_info(self):
         t = {'fields_name':[], 'fields_list':[]}
-        is_table = False
     
         if self.fields:
-            fields_list = []
-            for x in self.fields:
-                if isinstance(x, (str, unicode)):
-                    if hasattr(self.model, x):
-                        fields_list.append((x, getattr(self.model, x)))
-                    else:
-                        raise Exception, "Can't find the field [%s] in Model(%s)" % (x, self.model.tablename)
-                elif isinstance(x, dict):
-                    if 'label' not in x:
-                        x['label'] = x.get('verbose_name', '')
-                    fields_list.append((x['name'], x))
-                else:
-                    raise Exception, "Can't support the field [%r]" % x
+            fields = self.fields
         elif hasattr(self.model, 'Table'):
-            fields_list = [(x['name'], getattr(self.model, x['name'])) for x in self.model.Table.fields]
-            is_table = True
+            fields = self.model.Table.fields
         else:
-            fields_list = [(x, y) for x, y in self.model._fields_list]
-        
-        w = 0
-        for i, (x, y) in enumerate(fields_list):
-            if isinstance(y, dict):
-                t['fields_name'].append(str(y['verbose_name'] or x))
-            else:
-                t['fields_name'].append(str(y.verbose_name or x))
+            fields = [x for x, y in self.model._fields_list]
             
-            if is_table:
-                t['fields_list'].append(self.model.Table.fields[i])
-                w += self.model.Table.fields[i].get('width', 100)
-            else:
-                t['fields_list'].append({'name':x})
-                w += 100
+        w = 0
+        fields_list = []
+        for x in fields:
+            if isinstance(x, (str, unicode)):
+                name = x
+                d = {'name':x}
+            elif isinstance(x, dict):
+                name = x['name']
+                d = x
+            if 'verbose_name' not in d:
+                if hasattr(self.model, name):
+                    d['verbose_name'] = getattr(self.model, name).verbose_name or name
+                else:
+                    d['verbose_name'] = name
+            t['fields_list'].append(d)
+            t['fields_name'].append(d['verbose_name'])
+            w += d.get('width', 100)
+            
         t['width'] = w
         return t
     
