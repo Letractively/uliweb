@@ -265,6 +265,9 @@ def test_7():
     <User {'username':u'user','id':2}>
     >>> list(g1.users.filter(User.c.id==3).all())
     [<User {'username':u'abc','id':3}>]
+    >>> g2.users.add(c)
+    >>> list(Group.filter(Group.users.in_(3)))
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
     """
 
 #test SelfReference

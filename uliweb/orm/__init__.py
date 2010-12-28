@@ -1176,6 +1176,13 @@ class ManyToMany(ReferenceProperty):
         """Get key of reference rather than reference itself."""
         return getattr(model_instance, self._id_attr_name())
     
+    def in_(self, *objs):
+        """
+        Create a condition
+        """
+        ids = get_objs_ids(*objs)
+        return (self.model_class.c.id == self.table.c[self.fielda]) & (self.table.c[self.fieldb].in_(ids))
+    
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
     """
