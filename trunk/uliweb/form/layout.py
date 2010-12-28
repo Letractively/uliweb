@@ -108,6 +108,37 @@ class CSSLayout(Layout):
         buf << self.form.form_end
         return str(buf)
 
+class QueryLayout(Layout):
+    def line(self, obj, label, input, help_string='', error=None):
+        buf = Buf()
+        with buf.td:
+            buf << label
+        
+        if error:
+            with buf.td(_class='error'):
+                buf << input
+        else:
+            with buf.td:
+                buf << input
+        return buf
+
+    def html(self):
+        buf = Buf()
+        buf << self.form.form_begin
+        with buf.table(_class='query'):
+            with buf.tr:
+                for name, obj in self.form.fields_list:
+                    f = getattr(self.form, name)
+                    if self.is_hidden(obj):
+                        buf << f
+                    else:
+                        buf << self.line(obj, f.label, f, f.help_string, f.error)
+                
+                with buf.td:
+                    buf << self.form.get_buttons()
+        buf << self.form.form_end
+        return str(buf)
+
 from widgets import RadioSelect, Radio
 
 class YamlRadioSelect(RadioSelect):
