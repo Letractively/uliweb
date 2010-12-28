@@ -115,6 +115,9 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     if field['hidden']:
         field_type = form.HiddenField
         
+    if 'required' in field:
+        kwargs['required'] = field['required']
+        
     if field_cls:
         field_type = field_cls
     elif not field_type:
@@ -1052,3 +1055,116 @@ class ListView(SimpleListView):
         t['width'] = w
         return t
     
+class QueryView(object):
+    success_msg = _('The information has been saved successfully!')
+    fail_msg = _('There are somethings wrong.')
+    builds_args_map = {}
+    meta = 'QueryForm'
+    
+    def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
+        data=None, default_data=None, fields=None, form_cls=None, form_args=None,
+        static_fields=None, hidden_fields=None, post_created_form=None, layout=None):
+
+        self.model = model
+        self.ok_url = ok_url
+        self.form = form
+        if success_msg:
+            self.success_msg = success_msg
+        if fail_msg:
+            self.fail_msg = fail_msg
+        self.data = data or {}
+        
+        #default_data used for create object
+        self.default_data = default_data or {}
+        
+        self.fields = fields or []
+        self.form_cls = form_cls
+        self.form_args = form_args or {}
+        self.static_fields = static_fields or []
+        self.hidden_fields = hidden_fields or []
+        self.post_created_form = post_created_form
+        
+        #add layout support
+        self.layout = layout
+        
+    def get_fields(self):
+        f = []
+        for field_name, prop in get_fields(self.model, self.fields, self.meta):
+            d = {'name':field_name, 
+                'prop':prop, 
+                'static':field_name in self.static_fields,
+                'hidden':field_name in self.hidden_fields,
+                'required':False}
+            f.append(d)
+            
+        return f
+    
+    def get_layout(self):
+        if self.layout:
+            return self.layout
+        if hasattr(self.model, self.meta):
+            m = getattr(self.model, self.meta)
+            if hasattr(m, 'layout'):
+                return getattr(m, 'layout')
+    
+    def make_form(self):
+        import uliweb.orm as orm
+        import uliweb.form as form
+        from uliweb.form.layout import QueryLayout
+        
+        if self.form:
+            return self.form
+        
+        if isinstance(self.model, str):
+            self.model = orm.get_model(self.model)
+            
+        if self.form_cls:
+            class DummyForm(self.form_cls):pass
+            if not hasattr(DummyForm, 'form_buttons'):
+                DummyForm.form_buttons = form.Submit(value=_('Query'), _class=".submit")
+            if not hasattr(DummyForm, 'layout_class'):
+                DummyForm.layout_class = QueryLayout
+            if not hasattr(DummyForm, 'form_method'):
+                DummyForm.form_method = 'GET'
+        else:
+            class DummyForm(form.Form):
+                layout_class = QueryLayout
+                form_method = 'GET'
+                form_buttons = form.Submit(value=_('Query'), _class=".submit")
+            
+        #add layout support
+        layout = self.get_layout()
+        DummyForm.layout = layout
+        
+        for f in self.get_fields():
+            field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
+            
+            if field:
+                DummyForm.add_field(f['name'], field, True)
+        
+        if self.post_created_form:
+            self.post_created_form(DummyForm, self.model)
+            
+        return DummyForm(data=self.data, **self.form_args)
+    
+    def run(self):
+        from uliweb import request, function
+        from uliweb.orm import get_model
+        from uliweb import redirect
+        
+        if isinstance(self.model, str):
+            self.model = get_model(self.model)
+            
+        flash = function('flash')
+        
+        if not self.form:
+            self.form = self.make_form()
+        
+        flag = self.form.validate(request.values)
+        if flag:
+            d = self.default_data.copy()
+            d.update(self.form.data)
+            return d
+        else:
+            return {}
+        

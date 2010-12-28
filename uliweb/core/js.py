@@ -29,6 +29,26 @@ class ComplexEncoder(JSON.JSONEncoder):
 def json_dumps(obj, ensure_ascii=False, **kwargs):
     return JSON.dumps(obj, cls=ComplexEncoder, ensure_ascii=ensure_ascii, **kwargs)
     
+def urlencode(data):
+    from uliweb.utils.common import simple_value
+    import urllib
+    
+    s = []
+    if isinstance(data, dict):
+        items = data.iteritems()
+    elif isinstance(data, (tuple, list)):
+        items = data
+    else:
+        raise Exception, "Can't support this data type %r" % data
+    
+        for k, v in items:
+            if isinstance(v, (tuple, list)):
+                for x in v:
+                    s.append((k, simple_value(x)))
+            else:
+                s.append((k, simple_value(v)))
+    return urllib.urlencode(s)
+
 #def dumps(obj):
 #    return JSON.dumps(obj, cls=ComplexEncoder)
 #
