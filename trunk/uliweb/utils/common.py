@@ -250,7 +250,7 @@ def get_choice(choices, value):
         choices = choices()
     return dict(choices).get(value, '')
 
-def simple_value(v, none=False, encoding='utf-8'):
+def simple_value(v, encoding='utf-8', none=False):
     import datetime
     import decimal
     
@@ -269,12 +269,12 @@ def simple_value(v, none=False, encoding='utf-8'):
     elif isinstance(v, (tuple, list)):
         s = []
         for x in v:
-            s.append(simple_value(x, encoding))
+            s.append(simple_value(x, encoding, none))
         return s
     elif isinstance(v, dict):
         d = {}
         for k, v in v.iteritems():
-            d[simple_value(k)] = simple_value(v)
+            d[simple_value(k)] = simple_value(v, encoding, none)
         return d
     elif v is None:
         if none:

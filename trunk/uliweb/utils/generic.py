@@ -755,7 +755,7 @@ class SimpleListView(object):
         query = self.query(pagination=False)
         
         path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
-        encoding = settings.get_var('GENERIC/ENCODING', sys.getfilesystemencoding() or 'utf-8')
+        encoding = settings.get_var('GENERIC/CSV_ENCODING', sys.getfilesystemencoding() or 'utf-8')
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
         filename = os.path.join(path, filename)
         dirname = os.path.dirname(filename)
