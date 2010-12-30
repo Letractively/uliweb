@@ -1186,6 +1186,19 @@ class ManyToMany(ReferenceProperty):
             ids = get_objs_ids(*objs)
             return (self.model_class.c.id == self.table.c[self.fielda]) & (self.table.c[self.fieldb].in_(ids))
     
+    def select_in(self, *objs):
+        """
+        Create a condition
+        """
+        if not objs:
+            return '1!=1'
+        else:
+            ids = get_objs_ids(*objs)
+            sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c.id) & (self.table.c[self.fieldb].in_(ids)))
+            query = self.model_class.c.id.in_(sub_query)
+            return query
+            
+    
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
     """
