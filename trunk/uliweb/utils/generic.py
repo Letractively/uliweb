@@ -188,6 +188,7 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
     import uliweb.orm as orm
     from uliweb.utils.textconvert import text2html
     from uliweb.core.html import Tag
+    from uliweb import settings
 
     types_convert_map = types_convert_map or {}
     fields_convert_map = fields_convert_map or {}
@@ -225,14 +226,26 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
                     if hasattr(x, 'get_url'):
                         s.append(x.get_url())
                     else:
-                        s.append(unicode(x))
+                        url_prefix = settings.get_var('MODEL_URL/'+x.tablename)
+                        if url_prefix:
+                            if url_prefix.endswith('/'):
+                                url_prefix = url_prefix[:-1]
+                            s.append(str(Tag('a', unicode(x), href=url_prefix+'/'+str(x.id))))
+                        else:
+                            s.append(unicode(x))
                 display = ' '.join(s)
             elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOne):
                 v = getattr(obj, prop.property_name)
                 if hasattr(v, 'get_url'):
                     display = v.get_url()
                 else:
-                    display = unicode(v)
+                    url_prefix = settings.get_var('MODEL_URL/'+v.tablename)
+                    if url_prefix:
+                        if url_prefix.endswith('/'):
+                            url_prefix = url_prefix[:-1]
+                        display = str(Tag('a', unicode(v), href=url_prefix+'/'+str(v.id)))
+                    else:
+                        display = unicode(v)
             elif isinstance(prop, orm.FileProperty):
                 from uliweb.contrib.upload import get_url
                 filename = getattr(obj, prop.property_name)
