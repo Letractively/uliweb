@@ -45,8 +45,13 @@ def get_tables(apps_dir, appname=None, engine=None, import_models=False):
                 log.exception("There are something wrong when importing module [%s]" % m)
         
     else:
-        for tablename, m in orm.__models__.iteritems():
-            orm.get_model(tablename)
+        old_models = orm.__models__.keys()
+        try:
+            for tablename, m in orm.__models__.iteritems():
+                orm.get_model(tablename)
+        except:
+            print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
+            raise
             
     if appname:
         tables = {}
