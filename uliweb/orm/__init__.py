@@ -1564,7 +1564,9 @@ class Model(object):
             cls._c_lock.release()
             
     @classmethod
-    def get(cls, condition=None, **kwargs):
+    def get(cls, condition=None):
+        if condition is None:
+            return None
         if isinstance(condition, (int, long)):
             return cls.filter(cls.c.id==condition).one()
         else:
