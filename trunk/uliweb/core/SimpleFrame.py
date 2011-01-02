@@ -479,6 +479,7 @@ class Dispatcher(object):
             response = self.render(tmp_file, {'url':local.request.path}, status=500)
         else:
             response = e
+        log.exception(e)
         return response
     
     def get_env(self, env=None):
@@ -768,8 +769,7 @@ class Dispatcher(object):
                                 response = ins.process_exception(req, e)
                                 if response:
                                     break
-                        else:
-                            raise
+                        raise
                         
                 else:
                     response = res
@@ -788,9 +788,13 @@ class Dispatcher(object):
             response = self.render(e.errorpage, Storage(e.errors))
         except NotFound, e:
             response = self.not_found(e)
-        except InternalServerError, e:
-            response = self.internal_error(e)
         except HTTPException, e:
             response = e
+        except Exception, e:
+            if not self.settings.get_var('GLOBAL/DEBUG'):
+                response = self.internal_error(e)
+            else:
+#                log.exception(e)
+                raise
         return ClosingIterator(response(environ, start_response),
                                [local_manager.cleanup])

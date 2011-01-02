@@ -55,7 +55,7 @@ class Writer(object):
         return indent*' ' + '<!-- %s -->' % line[2:]
 
     def verbatim(self, indent, value):
-        return value
+        return indent*' ' + value
     
 handler_map = {
     COMMENT:'comment',
@@ -126,6 +126,11 @@ class Parser(object):
                 continued = True
                 continue
               
+            #| iteral line
+            if line[pos:].startswith('|'):
+                yield (VERBATIM, indents[-1], line[pos+1:])
+                continue
+            
             #process indent
             if column > indents[-1]:           # count indents or dedents
                 indents.append(column)
@@ -234,6 +239,7 @@ form.form#form layout='table_line' color=red Test
         //This is comment line
         field name="{{= field1}}" type=static
         field name=field2
+        | {{Test}}
     line
         #tag
         p class=''

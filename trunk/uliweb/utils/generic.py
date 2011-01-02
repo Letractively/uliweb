@@ -374,7 +374,7 @@ class AddView(object):
     
     def run(self):
         from uliweb import request, function
-        from uliweb.orm import get_model
+        from uliweb.orm import get_model, get_connection
         from uliweb import redirect
         
         if isinstance(self.model, str):
@@ -397,7 +397,7 @@ class AddView(object):
                 r = self.process_files(d)
                 
                 obj = self.save(d)
-                
+
                 if self.post_save:
                     self.post_save(obj, d)
                         
