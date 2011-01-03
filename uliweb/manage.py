@@ -58,11 +58,11 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
     #set logger level
     set_log(app)
     
-    if app.settings.GLOBAL.WSGI_MIDDLEWARES:
-        s = sort_list(app.settings.GLOBAL.WSGI_MIDDLEWARES, default=500)
+    if conf.settings.GLOBAL.WSGI_MIDDLEWARES:
+        s = sort_list(conf.settings.GLOBAL.WSGI_MIDDLEWARES, default=500)
         for w in reversed(s):
-            if w in app.settings:
-                args = app.settings[w].dict()
+            if w in conf.settings:
+                args = conf.settings[w].dict()
             else:
                 args = None
             if args:
@@ -78,7 +78,7 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
                 except Exception, e:
                     log.exception(e)
                 
-    debug_flag = application.settings.GLOBAL.DEBUG
+    debug_flag = conf.settings.GLOBAL.DEBUG
     if debug or (debug is None and debug_flag):
         log.setLevel(logging.DEBUG)
         log.info(' * Loading DebuggedApplication...')
