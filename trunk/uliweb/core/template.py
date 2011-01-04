@@ -566,6 +566,14 @@ class Template(object):
         return self._run(code, filename or 'template')
         
     def _run(self, code, filename):
+        def f(_vars, _env):
+            def defined(v):
+                try:
+                    return v in _vars or v in _env
+                except:
+                    return False
+            return defined
+
         e = {}
         if isinstance(self.env, Context):
             new_e = self.env.to_dict()
@@ -578,6 +586,7 @@ class Template(object):
         e['Out'] = Out
         e['xml'] = out.xml
         e['_vars'] = self.vars
+        e['defined'] = f(vars, new_e)
         e['_env'] = e
         
         e.update(self.exec_env)
