@@ -594,7 +594,7 @@ class DetailView(object):
     meta = 'DetailView'
     
     def __init__(self, model, condition=None, obj=None, fields=None, 
-        types_convert_map=None, fields_convert_map=None, table_class_attr='table',
+        types_convert_map=None, fields_convert_map=None, table_class_attr='table width100',
         layout_class=None, layout=None):
         self.model = model
         self.condition = condition
@@ -642,7 +642,7 @@ class DetailView(object):
             field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
             
             if field:
-                view_text.append('<tr><th align="right" width=150>%s</th><td width=150>%s</td></tr>' % (field["label"], field["display"]))
+                view_text.append('<tr><th align="right" width=150>%s</th><td>%s</td></tr>' % (field["label"], field["display"]))
                 
         view_text.append('</table>')
         return view_text
@@ -1034,7 +1034,11 @@ class ListView(SimpleListView):
         if limit is not None:
             query.limit(int(limit))
         if order_by is not None:
-            query.order_by(order_by)
+            if isinstance(order_by, (tuple, list)):
+                for order in order_by:
+                    query.order_by(order)
+            else:
+                query.order_by(order_by)
         return query
         
     def table_info(self):
