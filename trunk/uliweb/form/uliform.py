@@ -849,7 +849,7 @@ class Form(object):
 
     def __init__(self, action=None, method=None, buttons=None, 
             validators=None, html_attrs=None, data={}, errors={}, 
-            idtype='name', title='', vars=None, **kwargs):
+            idtype='name', title='', vars=None, layout=None, **kwargs):
         self.form_action = action or self.form_action
         self.form_method = method or self.form_method
         self.form_title = title or self.form_title
@@ -858,6 +858,7 @@ class Form(object):
         self.validators = validators or []
         self.html_attrs = html_attrs or {}
         self.idtype = idtype
+        self.layout = layout or self.layout
         self.vars = vars
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
