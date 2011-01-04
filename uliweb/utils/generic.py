@@ -208,6 +208,7 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
         name = prop.property_name
         label = prop.verbose_name or prop.property_name
         
+    print '------------------', name, value, prop
     if name in fields_convert_map:
         convert = fields_convert_map.get(name, None)
     else:
@@ -235,6 +236,7 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
                             s.append(unicode(x))
                 display = ' '.join(s)
             elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOne):
+                print 'xxxxxxxxxxxxxxxxxxxx', prop, name
                 v = getattr(obj, prop.property_name)
                 if hasattr(v, 'get_url'):
                     display = v.get_url()
