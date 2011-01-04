@@ -1181,7 +1181,7 @@ class ManyToMany(ReferenceProperty):
         Create a condition
         """
         if not objs:
-            return '1!=1'
+            return (self.table.c[self.fielda]!=self.table.c[self.fielda])
         else:
             ids = get_objs_ids(*objs)
             return (self.model_class.c.id == self.table.c[self.fielda]) & (self.table.c[self.fieldb].in_(ids))
@@ -1191,7 +1191,7 @@ class ManyToMany(ReferenceProperty):
         Create a condition
         """
         if not objs:
-            return '1!=1'
+            return self.table.c[self.fielda]!=self.table.c[self.fielda]
         else:
             ids = get_objs_ids(*objs)
             sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c.id) & (self.table.c[self.fieldb].in_(ids)))
