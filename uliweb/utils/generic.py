@@ -516,10 +516,10 @@ class EditView(AddView):
             
         fields_list = self.get_fields()
         fields_name = [x['name'] for x in fields_list]
-        if 'id' not in fields_name:
-            d = {'name':'id', 'prop':self.model.id, 'static':False, 'hidden':False}
-            fields_list.insert(0, d)
-            fields_name.insert(0, 'id')
+#        if 'id' not in fields_name:
+#            d = {'name':'id', 'prop':self.model.id, 'static':False, 'hidden':False}
+#            fields_list.insert(0, d)
+#            fields_name.insert(0, 'id')
         
         data = obj.to_dict(fields_name, convert=False).copy()
         data.update(self.data)
