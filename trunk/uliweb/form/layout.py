@@ -117,6 +117,7 @@ class QueryLayout(Layout):
         if error:
             with buf.td(_class='error'):
                 buf << input
+                buf << error
         else:
             with buf.td:
                 buf << input
