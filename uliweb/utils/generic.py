@@ -686,7 +686,7 @@ class DeleteView(object):
 class SimpleListView(object):
     def __init__(self, fields=None, query=None, cache_file=None,  
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
-        table_class_attr='table', table_width=False, pagination=True):
+        table_class_attr='table', table_width=False, pagination=True, total_fields=None):
         """
         Pass a data structure to fields just like:
             [
@@ -705,6 +705,52 @@ class SimpleListView(object):
         self.total = 0
         self.table_width = table_width
         self.pagination = pagination
+        self.create_total_infos(total_fields)
+        
+    def create_total_infos(self, total_fields):
+        if total_fields:
+            self.total_fields = total_fields['fields']
+            self.total_field_name = total_fields.get('total_field_name', _('Total'))
+        else:
+            self.total_fields = []
+            self.total_field_name = None
+        self.total_sums = {}
+            
+    def cal_total(self, table, record):
+        if self.total_fields:
+            for f in self.total_fields:
+                if isinstance(record, (tuple, list)):
+                    i = table['fields'].index(f)
+                    v = record[i]
+                elif isinstance(record, dict):
+                    v = record.get(f)
+                else:
+                    v = getattr(record, f)
+                self.total_sums[f] = self.total_sums.setdefault(f, 0) + v
+                
+    def get_total(self, table):
+        s = []
+        if self.total_fields:
+            for i, f in enumerate(table['fields']):
+                if i == 0:
+                    v = self.total_field_name
+                else:
+                    if f in self.total_fields:
+                        v = self.total_sums.get(f, 0)
+                    else:
+                        v = ''
+                s.append(v)
+        return s
+
+    def render_total(self, table):
+        s = []
+        if self.total_fields:
+            s.append('<tr class="sum">')
+            for v in self.get_total(table):
+                v = str(v) or '&nbsp;'
+                s.append('<td>%s</td>' % v)
+            s.append('</tr>')
+        return s
         
     def query(self, pageno=0, pagination=True):
         if callable(self._query):
@@ -785,6 +831,16 @@ class SimpleListView(object):
                         row.append(record[x]) 
                 else:
                     row = record
+                self.cal_total(table, record)
+                w.writerow(simple_value(row, encoding))
+            total = self.get_total(table)
+            if total:
+                row = []
+                for x in total:
+                    v = x
+                    if isinstance(x, str):
+                        v = safe_unicode(x, default_encoding)
+                    row.append(v)
                 w.writerow(simple_value(row, encoding))
         return filedown(request.environ, filename, inline=inline, download=download)
         
@@ -830,6 +886,8 @@ class SimpleListView(object):
                     v = self.make_view_field(x, record, self.fields_convert_map)
                     s.append(str(Tag('td', v['display'])))
                 s.append('</tr>')
+                self.cal_total(table, record)
+            s.extend(self.render_total(table))
         
         if head:
             s.append('</tbody>')
@@ -940,7 +998,8 @@ class SimpleListView(object):
 class ListView(SimpleListView):
     def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
-        fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True):
+        fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
+        total_fields=None):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -959,6 +1018,7 @@ class ListView(SimpleListView):
         self.table_class_attr = table_class_attr
         self.total = 0
         self.pagination = pagination
+        self.create_total_infos(total_fields)
         
     def run(self, head=True, body=True):
         import uliweb.orm as orm
@@ -1017,7 +1077,9 @@ class ListView(SimpleListView):
                     v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
                     s.append(str(Tag('td', v['display'])))
                 s.append('</tr>')
-        
+                self.cal_total(table, record)
+            s.extend(self.render_total(table))
+                
         if head:
             s.append('</tbody>')
             s.append('</table>')
@@ -1042,7 +1104,7 @@ class ListView(SimpleListView):
         return query
         
     def table_info(self):
-        t = {'fields_name':[], 'fields_list':[]}
+        t = {'fields_name':[], 'fields_list':[], 'fields':[]}
     
         if self.fields:
             fields = self.fields
@@ -1067,6 +1129,7 @@ class ListView(SimpleListView):
                     d['verbose_name'] = name
             t['fields_list'].append(d)
             t['fields_name'].append(d['verbose_name'])
+            t['fields'].append(name)
             w += d.get('width', 100)
             
         t['width'] = w
