@@ -975,21 +975,25 @@ class Form(object):
 #            setattr(self, name, f)
 #            self.f[name] = f
 
-    def __template__(self, name):
-        result = []
-        if hasattr(self, 'pre_html'):
-            result.append(self.pre_html())
-        result.append('{{<< %s}}' % name)
-        if hasattr(self, 'post_html'):
-            result.append(self.post_html())
-        
-        return ''.join(result)
+#    def __template__(self, name):
+#        result = []
+#        if hasattr(self, 'pre_html'):
+#            result.append(self.pre_html())
+#        result.append('{{<< %s}}' % name)
+#        if hasattr(self, 'post_html'):
+#            result.append(self.post_html())
+#        
+#        return ''.join(result)
     
     def html(self):
         result = []
+        if hasattr(self, 'pre_html'):
+            result.append(self.pre_html())
         cls = self.layout_class
         layout = cls(self, self.layout)
         result.append(str(layout))
+        if hasattr(self, 'post_html'):
+            result.append(self.post_html())
         return ''.join(result)
 
 def test():

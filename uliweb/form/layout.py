@@ -126,19 +126,57 @@ class QueryLayout(Layout):
     def html(self):
         buf = Buf()
         buf << self.form.form_begin
-        with buf.table(_class='query'):
-            with buf.tr:
-                for name, obj in self.form.fields_list:
-                    f = getattr(self.form, name)
-                    if self.is_hidden(obj):
-                        buf << f
-                    else:
-                        buf << self.line(obj, f.label, f, f.help_string, f.error)
-                
-                with buf.td:
-                    buf << self.form.get_buttons()
+        self.process_layout(buf)
         buf << self.form.form_end
         return str(buf)
+    
+    def process_layout(self, buf):
+            
+        def output(buf, line, first=False, more=False):
+            if isinstance(line, (tuple, list)):
+                with buf.table(_class='query'):
+                    with buf.tr:
+                        for x in line:
+                            f = getattr(self.form, x)
+                            obj = self.form.fields[x]
+                            if self.is_hidden(obj):
+                                buf << f
+                            else:
+                                buf << self.line(obj, f.label, f, f.help_string, f.error)
+                        if first:
+                            with buf.td:
+                                buf << self.form.get_buttons()
+                                if more:
+                                    buf << '<a href="#" id="more_query">more</a>'
+                            
+            else:
+                f = getattr(self.form, line)
+                obj = self.form.fields[line]
+                if self.is_hidden(obj):
+                    buf << f
+                else:
+                    with buf.table(_class='query'):
+                        with buf.tr:
+                            buf << self.line(obj, f.label, f, f.help_string, f.error)
+                            
+                            if first:
+                                with buf.td:
+                                    buf << self.form.get_buttons()
+                                    if more:
+                                        buf << '<a href="#" id="more_query">more</a>'
+                                    
+        if not self.layout:
+            self.layout = [[name for name, obj in self.form.fields_list]]
+        if self.layout:
+            line = self.layout[0]
+            first = True
+            layout = self.layout[1:]
+            more = bool(layout)
+            output(buf, line, first=first, more=more)
+            if more:
+                with buf.div(id='query_div'):
+                    for line in layout:
+                        output(buf, line)
 
 from widgets import RadioSelect, Radio
 
