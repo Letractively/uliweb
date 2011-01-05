@@ -139,7 +139,7 @@ if __name__ == '__main__':
     with b.html(name='xml'):
         b.head('Hello')
     print str(b)
-    div = Tag('div', _class="demo")
+    div = Tag('div', _class="demo", style="display:none")
     with div:
         with div.span:
             div.a('Test', href='#')
