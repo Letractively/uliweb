@@ -22,7 +22,7 @@ def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
 
 class ReferenceSelectField(SelectField):
     def __init__(self, model, group_field=None, value_field='id', condition=None, query=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
-        super(ReferenceSelectField, self).__init__(label=label, default=default, choices=[], required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
+        super(ReferenceSelectField, self).__init__(label=label, default=default, choices=None, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
         self.model = model
         self.group_field = group_field
         self.value_field = value_field
@@ -104,8 +104,8 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         name=prop.property_name, required=prop.required, help_string=prop.hint)
     
     v = prop.default_value()
-    if v is not None:
-        kwargs['default'] = v
+#    if v is not None:
+    kwargs['default'] = v
         
     if field['static']:
         field_type = form.StringField
@@ -652,11 +652,13 @@ class DetailView(object):
 class DeleteView(object):
     success_msg = _('The object has been deleted successfully!')
 
-    def __init__(self, model, ok_url, condition=None, obj=None):
+    def __init__(self, model, ok_url, condition=None, obj=None, pre_delete=None, post_delete=None):
         self.model = model
         self.condition = condition
         self.obj = obj
         self.ok_url = ok_url
+        self.pre_delete = pre_delete
+        self.post_delete = post_delete
         
     def run(self):
         from uliweb.orm import get_model
@@ -665,18 +667,22 @@ class DeleteView(object):
         if isinstance(self.model, str):
             self.model = get_model(self.model)
         
-        self.delete()
-        
-        flash = function('flash')
-        flash(self.success_msg)
-        return redirect(self.ok_url)
-    
-    def delete(self):
         if not self.obj:
             obj = self.model.get(self.condition)
         else:
             obj = self.obj
             
+        if self.pre_delete:
+            self.pre_delete(obj)
+        self.delete(obj)
+        if self.post_delete:
+            self.post_delete()
+        
+        flash = function('flash')
+        flash(self.success_msg)
+        return redirect(self.ok_url)
+    
+    def delete(self, obj):
         if obj:
             self.delete_manytomany(obj)
             obj.delete()

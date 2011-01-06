@@ -330,7 +330,7 @@ class Property(object):
             choices = self.choices()
         else:
             choices = self.choices
-        return choices or {}
+        return choices or []
         
     def get_display_value(self, value):
         if self.choices:

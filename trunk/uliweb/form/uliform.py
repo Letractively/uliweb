@@ -572,6 +572,11 @@ class SelectField(BaseField):
         self.choices = choices or []
         self.empty = empty
         self.size = size
+        if self.multiple:
+            self._default = default or []
+        else:
+            self._default = default or None
+            
 #        if self.choices:
 #            self._default = default or self.choices[0][0]
 #        self.validators.append(IS_IN_SET(lambda :self.get_choices()))
@@ -587,7 +592,7 @@ class SelectField(BaseField):
 #            value = self.to_html(data)
 #        else:
 #            value = data
-        choices = self.get_choices()
+        choices = self.get_choices()[:]
         if (self.empty is not None) and (not self.multiple):
             group = False
             if choices:
