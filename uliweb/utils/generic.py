@@ -493,6 +493,8 @@ class EditView(AddView):
                 value = data[k]
                 if value:
                     r = r or getattr(obj, k).update(*value)
+                else:
+                    getattr(obj, k).clear()
         return r
         
     def query(self):
