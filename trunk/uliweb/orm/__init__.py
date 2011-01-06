@@ -1400,7 +1400,8 @@ class Model(object):
 #                    if isinstance(v, DateTimeProperty) and v.auto_now:
 #                        d[k] = v.now()
 #                    elif (x is not None) and (t != self.field_str(x)):
-                    if (x is not None) and (t != self.field_str(x)):
+#                    if (x is not None) and (t != self.field_str(x)):
+                    if t != self.field_str(x):
                         d[k] = x
         
         return d
