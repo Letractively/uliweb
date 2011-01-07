@@ -759,7 +759,10 @@ class SimpleListView(object):
                 s.append('<td>%s</td>' % v)
             s.append('</tr>')
         return s
-        
+    
+    def query_all(self):
+        return self.query(pagination)
+    
     def query(self, pageno=0, pagination=True):
         if callable(self._query):
             query_result = self._query()
@@ -808,27 +811,31 @@ class SimpleListView(object):
                 return result
                 
         
-    def download(self, filename, timeout=3600, inline=False, download=False):
+    def download(self, filename, timeout=3600, inline=False, download=False, query=None):
         from uliweb.utils.filedown import filedown
         from uliweb import request, settings
         from uliweb.utils.common import simple_value, safe_unicode
+        from uliweb.orm import Model
+        import tempfile
         import csv
         
         if os.path.exists(filename):
-            if not timeout or os.path.getmtime(filename) + timeout < time.time():
+            if timeout and os.path.getmtime(filename) + timeout > time.time():
                 return filedown(request.environ, filename, inline=inline, download=download)
             
         table = self.table_info()
-        query = self.query(pagination=False)
-        
+        if not query:
+            query = self.query_all()
         path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
         encoding = settings.get_var('GENERIC/CSV_ENCODING', sys.getfilesystemencoding() or 'utf-8')
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
-        filename = os.path.join(path, filename)
-        dirname = os.path.dirname(filename)
+        t_filename = os.path.join(path, filename)
+        r_filename = os.path.basename(filename)
+        dirname = os.path.dirname(t_filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        with open(filename, 'wb') as f:
+        with tempfile.NamedTemporaryFile(suffix = ".tmp", prefix = "workload", delete = False) as f:
+            t_filename = f.name
             w = csv.writer(f)
             row = [safe_unicode(x, default_encoding) for x in table['fields_name']]
             w.writerow(simple_value(row, encoding))
@@ -837,6 +844,10 @@ class SimpleListView(object):
                 if isinstance(record, dict):
                     for x in table['fields']:
                         row.append(record[x]) 
+                elif isinstance(record, Model):
+                    row = [safe_unicode(record.get_display_value(x), default_encoding) for x in table['fields']]
+                elif not isinstance(record, (tuple, list)):
+                    row = list(record)
                 else:
                     row = record
                 self.cal_total(table, record)
@@ -850,7 +861,7 @@ class SimpleListView(object):
                         v = safe_unicode(x, default_encoding)
                     row.append(v)
                 w.writerow(simple_value(row, encoding))
-        return filedown(request.environ, filename, inline=inline, download=download)
+        return filedown(request.environ, r_filename, real_filename=t_filename, inline=inline, download=download)
         
     def run(self, head=True, body=True):
         #create table header
@@ -1093,6 +1104,9 @@ class ListView(SimpleListView):
             s.append('</table>')
         
         return '\n'.join(s)
+    
+    def query_all(self):
+        return self.query_model(self.model, self.condition, order_by=self.order_by)
     
     def query_model(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
         if self._query:
