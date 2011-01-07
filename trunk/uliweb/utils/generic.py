@@ -811,13 +811,14 @@ class SimpleListView(object):
                 return result
                 
         
-    def download(self, filename, timeout=3600, inline=False, download=False, query=None):
+    def download(self, filename, timeout=3600, inline=False, download=False, query=None, fields_convert_map=None):
         from uliweb.utils.filedown import filedown
         from uliweb import request, settings
         from uliweb.utils.common import simple_value, safe_unicode
         from uliweb.orm import Model
         import tempfile
         import csv
+        fields_convert_map = fields_convert_map or {}
         
         if os.path.exists(filename):
             if timeout and os.path.getmtime(filename) + timeout > time.time():
@@ -834,12 +835,13 @@ class SimpleListView(object):
         dirname = os.path.dirname(t_filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        with tempfile.NamedTemporaryFile(suffix = ".tmp", prefix = "workload", delete = False) as f:
+        with tempfile.NamedTemporaryFile(suffix = ".tmp", prefix = "workload_", dir=dirname, delete = False) as f:
             t_filename = f.name
             w = csv.writer(f)
             row = [safe_unicode(x, default_encoding) for x in table['fields_name']]
             w.writerow(simple_value(row, encoding))
             for record in query:
+                self.cal_total(table, record)
                 row = []
                 if isinstance(record, dict):
                     for x in table['fields']:
@@ -850,7 +852,11 @@ class SimpleListView(object):
                     row = list(record)
                 else:
                     row = record
-                self.cal_total(table, record)
+                if fields_convert_map:
+                    for i, x in enumerate(table['fields']):
+                        convert = fields_convert_map.get(x)
+                        if convert:
+                            row[i] = convert(row[i], record)
                 w.writerow(simple_value(row, encoding))
             total = self.get_total(table)
             if total:
