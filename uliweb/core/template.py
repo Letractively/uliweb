@@ -586,7 +586,7 @@ class Template(object):
         e['Out'] = Out
         e['xml'] = out.xml
         e['_vars'] = self.vars
-        e['defined'] = f(vars, new_e)
+        e['defined'] = f(self.vars, new_e)
         e['_env'] = e
         
         e.update(self.exec_env)
