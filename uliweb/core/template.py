@@ -410,6 +410,12 @@ class Template(object):
                     elif name == '=':
                         buf = "%s(%s)\n" % (self.writer, value)
                         top.add(buf)
+                    elif name == 'BEGIN_TAG':
+                        buf = "%s('{{')\n" % self.writer
+                        top.add(buf)
+                    elif name == 'END_TAG':
+                        buf = "%s('}}')\n" % self.writer
+                        top.add(buf)
                     elif name == '<<':
                         buf = "%s(%s, escape=False)\n" % (self.writer, value)
                         top.add(buf)
