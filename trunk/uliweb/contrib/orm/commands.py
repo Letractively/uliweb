@@ -77,7 +77,6 @@ def dump_table(name, table, dir, con, std=None):
         print >>std, r
         
 def load_table(name, table, dir, con):
-    import datetime
     con.execute(table.delete())
     filename = os.path.join(dir, name+'.txt')
     
@@ -108,26 +107,20 @@ def load_table(name, table, dir, con):
 def action_syncdb(apps_dir):
     def action():
         """create all models according all available apps"""
+        from sqlalchemy import create_engine
+
         check_apps_dir(apps_dir)
 
-        from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
-        from uliweb import orm
-        app = Dispatcher(apps_dir=apps_dir, start=False)
-        orm.set_auto_create(False)
-        db = orm.get_connection(app.settings.ORM.CONNECTION)
+        engine = get_engine(apps_dir)
+        con = create_engine(engine)
         
-        models = []
-        for p in get_apps(apps_dir):
-            if not is_pyfile_exist(get_app_dir(p), 'models'):
-                continue
-            m = '%s.models' % p
-            try:
-                mod = __import__(m, {}, {}, [''])
-                models.append(mod)
-            except ImportError:
-                log.exception("There are something wrong when importing module [%s]" % m)
-        
-        db.metadata.create_all()
+        for name, t in get_tables(apps_dir).items():
+            print 'Creating %s...' % name,
+            if not t.exists(con):
+                t.create(con)
+                print 'OK'
+            else:
+                print 'Existed'
             
     return action
 
