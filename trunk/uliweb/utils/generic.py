@@ -91,6 +91,12 @@ def get_fields(model, fields, meta):
             raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
     return fields_list
 
+def get_url(ok_url, *args):
+    if callable(ok_url):
+        return ok_url(*args)
+    else:
+        return ok_url
+    
 def make_form_field(field, model, field_cls=None, builds_args_map=None):
     import uliweb.orm as orm
     import uliweb.form as form
@@ -374,7 +380,7 @@ class AddView(object):
     
     def run(self):
         from uliweb import request, function
-        from uliweb.orm import get_model, get_connection
+        from uliweb.orm import get_model
         from uliweb import redirect
         
         if isinstance(self.model, str):
@@ -402,7 +408,7 @@ class AddView(object):
                     self.post_save(obj, d)
                         
                 flash(self.success_msg)
-                return redirect(self.ok_url)
+                return redirect(get_url(self.ok_url, obj.id))
             else:
                 flash(self.fail_msg, 'error')
                 return {'form':self.form}
@@ -470,7 +476,7 @@ class EditView(AddView):
                 else:
                     msg = _("The object has not been changed.")
                 flash(msg)
-                return redirect(self.ok_url)
+                return redirect(get_url(self.ok_url, obj.id))
             else:
                 flash(self.fail_msg, 'error')
                 return {'form':self.form, 'object':obj}
@@ -761,7 +767,7 @@ class SimpleListView(object):
         return s
     
     def query_all(self):
-        return self.query(pagination)
+        return self.query(pagination=False)
     
     def query(self, pageno=0, pagination=True):
         if callable(self._query):
@@ -1258,7 +1264,6 @@ class QueryView(object):
     def run(self):
         from uliweb import request, function
         from uliweb.orm import get_model
-        from uliweb import redirect
         
         if isinstance(self.model, str):
             self.model = get_model(self.model)
