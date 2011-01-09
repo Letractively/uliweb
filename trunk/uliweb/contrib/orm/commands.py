@@ -55,8 +55,10 @@ def get_tables(apps_dir, appname=None, engine=None, import_models=False):
             
     if appname:
         tables = {}
+        if not isinstance(appname, (tuple, list)):
+            appname = [appname]
         for tablename, m in db.metadata.tables.iteritems():
-            if hasattr(m, '__appname__') and m.__appname__ == appname:
+            if hasattr(m, '__appname__') and m.__appname__ in appname:
                 tables[tablename] = db.metadata.tables[tablename]
     else:
         tables = db.metadata.tables
@@ -247,3 +249,26 @@ def action_dbinit(apps_dir):
                 log.exception("There are something wrong when importing module [%s]" % m)
         
     return action
+
+def action_sqldot(apps_dir):
+    def action(applist=('a', '')):
+        """Initialize database, it'll run the code in dbinit.py of each app"""
+        from sqlalchemy import create_engine
+        from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
+        from graph import generate_dot
+
+        check_apps_dir(apps_dir)
+
+        app = Dispatcher(apps_dir=apps_dir, start=False)
+        if applist:
+            apps = [applist]
+        else:
+            apps = get_apps(apps_dir)
+        
+        engine = get_engine(apps_dir)
+        
+        tables = get_tables(apps_dir, None, engine=engine)
+        print generate_dot(tables, apps)
+        
+    return action
+
