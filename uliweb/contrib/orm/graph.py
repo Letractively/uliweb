@@ -93,7 +93,7 @@ def generate_dot(tables, apps, **kwargs):
         graph = {
             'name': '"%s"' % app,
             'app_name': "%s" % app,
-            'cluster_app_name': "cluster_%s" % app,
+            'cluster_app_name': "cluster_%s" % app.replace('.', '_'),
 #            'disable_fields': disable_fields,
             'use_subgraph': True,
             'models': []
@@ -103,7 +103,7 @@ def generate_dot(tables, apps, **kwargs):
         if not t: continue
         for tablename in t:
             model = {
-                'app_name': app,
+                'app_name': app.replace('.', '_'),
                 'name': tablename,
 #                'abstracts': abstracts,
                 'fields': [],
@@ -159,7 +159,7 @@ def generate_dot(tables, apps, **kwargs):
                 label = "%s(%s)" % (field.property_name, rel)
                     
                 _rel = {
-                    'target_app': field.reference_class.table.__appname__,
+                    'target_app': field.reference_class.table.__appname__.replace('.', '_'),
                     'target': field.reference_class.tablename,
                     'type': type(field).__name__,
                     'name': field.property_name,
