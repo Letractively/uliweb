@@ -241,17 +241,22 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
                             s.append(unicode(x))
                 display = ' '.join(s)
             elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOne):
-                v = getattr(obj, prop.property_name)
-                if hasattr(v, 'get_url'):
-                    display = v.get_url()
-                else:
-                    url_prefix = settings.get_var('MODEL_URL/'+v.tablename)
-                    if url_prefix:
-                        if url_prefix.endswith('/'):
-                            url_prefix = url_prefix[:-1]
-                        display = str(Tag('a', unicode(v), href=url_prefix+'/'+str(v.id)))
+                try:
+                    v = getattr(obj, prop.property_name)
+                except orm.Error:
+                    display = obj.get_datastore_value(prop.property_name)
+                    v = None
+                if v:
+                    if hasattr(v, 'get_url'):
+                        display = v.get_url()
                     else:
-                        display = unicode(v)
+                        url_prefix = settings.get_var('MODEL_URL/'+v.tablename)
+                        if url_prefix:
+                            if url_prefix.endswith('/'):
+                                url_prefix = url_prefix[:-1]
+                            display = str(Tag('a', unicode(v), href=url_prefix+'/'+str(v.id)))
+                        else:
+                            display = unicode(v)
             elif isinstance(prop, orm.FileProperty):
                 from uliweb.contrib.upload import get_url
                 filename = getattr(obj, prop.property_name)
