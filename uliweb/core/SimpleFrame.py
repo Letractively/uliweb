@@ -424,7 +424,6 @@ class Dispatcher(object):
                 try:
                     return compile(code, filename, 'exec')
                 except:
-                    file('out.html', 'wb').write(code)
                     raise
             
             return template.template_file(filename, vars, env, dirs, default_template, compile=_compile)
