@@ -333,6 +333,8 @@ class Property(object):
         return choices or []
         
     def get_display_value(self, value):
+        if value is None:
+            return ''
         if self.choices:
             return dict(self.get_choices()).get(value, '')
         else:
