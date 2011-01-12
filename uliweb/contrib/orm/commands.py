@@ -118,12 +118,7 @@ def action_syncdb(apps_dir):
         con = create_engine(engine)
         
         for name, t in get_tables(apps_dir).items():
-            print 'Creating %s...' % name,
-            if not t.exists(con):
-                t.create(con)
-                print 'OK'
-            else:
-                print 'Existed'
+            print 'Creating %s...' % name
             
     return action
 

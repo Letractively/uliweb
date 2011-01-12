@@ -1178,6 +1178,12 @@ class ManyToMany(ReferenceProperty):
         """Get key of reference rather than reference itself."""
         return getattr(model_instance, self._id_attr_name())
     
+    def get_display_value(self, value):
+        s = []
+        for x in value:
+            s.append(unicode(x))
+        return ' '.join(s)
+    
     def in_(self, *objs):
         """
         Create a condition
