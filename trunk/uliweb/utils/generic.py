@@ -858,7 +858,12 @@ class SimpleListView(object):
                     for x in table['fields']:
                         row.append(record[x]) 
                 elif isinstance(record, Model):
-                    row = [safe_unicode(record.get_display_value(x), default_encoding) for x in table['fields']]
+                    row = []
+                    for x in table['fields']:
+                        if hasattr(record, x):
+                            row.append(safe_unicode(record.get_display_value(x), default_encoding))
+                        else:
+                            row.append('')
                 elif not isinstance(record, (tuple, list)):
                     row = list(record)
                 else:

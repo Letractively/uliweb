@@ -463,7 +463,7 @@ class TextLinesField(TextField):
 
 class BooleanField(BaseField):
     """
-    >>> a = BooleanField(name='bool', id='field_bool')
+    >>> a = BooleanField(name='bool', id='field_bool', default=True)
     >>> print a.html('Test')
     <input checked class="checkbox" id="field_bool" name="bool" type="checkbox"></input>
     >>> print a.validate('on')
