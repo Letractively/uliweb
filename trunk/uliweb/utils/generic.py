@@ -1044,8 +1044,9 @@ class ListView(SimpleListView):
         """
         If pageno is None, then the ListView will not paginate 
         """
+        from uliweb.orm import get_model
             
-        self.model = model
+        self.model = get_model(model)
         self.condition = condition
         self.pageno = pageno
         self.order_by = order_by
