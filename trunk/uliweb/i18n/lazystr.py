@@ -42,5 +42,8 @@ class LazyString(object):
     def encode(self, encoding):
         return self.getvalue().encode(encoding)
     
+    def split(self, *args, **kwargs):
+        return self.getvalue().split(*args, **kwargs)
+    
 #    def __getattr__(self, name):
 #        return getattr(self.getvalue(), name)
