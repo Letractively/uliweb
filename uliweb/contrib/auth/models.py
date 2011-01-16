@@ -1,5 +1,6 @@
 from uliweb.orm import *
 import datetime
+from uliweb.i18n import ugettext_lazy as _
 
 def get_hexdigest(algorithm, salt, raw_password):
     """
@@ -39,15 +40,15 @@ def check_password(raw_password, enc_password):
     return hsh == get_hexdigest(algo, salt, raw_password)
 
 class User(Model):
-    username = Field(str, max_length=30, unique=True, index=True, nullable=False)
-    email = Field(str, max_length=40)
-    password = Field(str, max_length=128, nullable=False)
-    is_superuser = Field(bool)
-    last_login = Field(datetime.datetime)
-    date_join = Field(datetime.datetime, auto_now_add=True)
-    image = Field(str, max_length=128)
-    active = Field(bool)
-    locked = Field(bool)
+    username = Field(str, verbose_name=_('Username'), max_length=30, unique=True, index=True, nullable=False)
+    email = Field(str, verbose_name=_('Email'), max_length=40)
+    password = Field(str, verbose_name=_('Password'), max_length=128, nullable=False)
+    is_superuser = Field(bool, verbose_name=_('Is Superuser'))
+    last_login = Field(datetime.datetime, verbose_name=_('Last Login'))
+    date_join = Field(datetime.datetime, verbose_name=_('Join Date'), auto_now_add=True)
+    image = Field(FILE, verbose_name=_('Portrait'), max_length=128)
+    active = Field(bool, verbose_name=_('Active Status'))
+    locked = Field(bool, verbose_name=_('Lock Status'))
     
     def set_password(self, raw_password):
         import random
@@ -86,5 +87,23 @@ class User(Model):
     
     class Meta:
         display_field = 'username'
+        
+    class AddForm:
+        fields = ('username', 'email', 'is_superuser')
+        
+    class EditForm:
+        fields = ('username', 'email')
+        
+    class DetailView:
+        fields = ('username', 'email', 'is_superuser', 'date_join', 'last_login')
+        
+    class Table:
+        fields = [
+            {'name':'username'},
+            {'name':'email'},
+            {'name':'is_superuser'},
+            {'name':'date_join'},
+            {'name':'last_login'},
+        ]
     
     

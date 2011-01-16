@@ -286,7 +286,7 @@ class AddView(object):
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
-        post_created_form=None, layout=None, file_replace=True):
+        post_created_form=None, layout=None, file_replace=True, template_data=None):
 
         self.model = model
         self.ok_url = ok_url
@@ -296,6 +296,7 @@ class AddView(object):
         if fail_msg:
             self.fail_msg = fail_msg
         self.data = data or {}
+        self.template_data = template_data or {}
         
         #default_data used for create object
         self.default_data = default_data or {}
@@ -396,6 +397,7 @@ class AddView(object):
         if not self.form:
             self.form = self.make_form()
         
+        result = self.template_data.copy()
         if request.method == 'POST':
             flag = self.form.validate(request.values, request.files)
             if flag:
@@ -416,9 +418,9 @@ class AddView(object):
                 return redirect(get_url(self.ok_url, obj.id))
             else:
                 flash(self.fail_msg, 'error')
-                return {'form':self.form}
-        else:
-            return {'form':self.form}
+                
+        result.update({'form':self.form})
+        return result
         
     def save(self, data):
         obj = self.model(**data)
@@ -463,7 +465,11 @@ class EditView(AddView):
         
         if not self.form:
             self.form = self.make_form(obj)
+            
+        #binding obj to self.form.object
+        self.form.object = obj
         
+        result = self.template_data.copy()
         if request.method == 'POST':
             flag = self.form.validate(request.values, request.files)
             if flag:
@@ -484,9 +490,8 @@ class EditView(AddView):
                 return redirect(get_url(self.ok_url, obj.id))
             else:
                 flash(self.fail_msg, 'error')
-                return {'form':self.form, 'object':obj}
-        else:
-            return {'form':self.form, 'object':obj}
+        result.update({'form':self.form, 'object':obj})
+        return result
         
     def save(self, obj, data):
         obj.update(**data)
@@ -608,7 +613,7 @@ class DetailView(object):
     
     def __init__(self, model, condition=None, obj=None, fields=None, 
         types_convert_map=None, fields_convert_map=None, table_class_attr='table width100',
-        layout_class=None, layout=None):
+        layout_class=None, layout=None, template_data=None):
         self.model = model
         self.condition = condition
         self.obj = obj
@@ -620,6 +625,7 @@ class DetailView(object):
         self.table_class_attr = table_class_attr
         self.layout_class = layout_class or DetailLayout
         self.layout = layout
+        self.template_data = template_data or {}
         
     def run(self):
         from uliweb.orm import get_model
@@ -633,7 +639,9 @@ class DetailView(object):
             obj = self.obj
         view_text = self.render(obj)
         
-        return {'object':obj, 'view':''.join(view_text)}
+        result = self.template_data.copy()
+        result.update({'object':obj, 'view':''.join(view_text)})
+        return result
     
     def query(self):
         return self.model.get(self.condition)
@@ -705,7 +713,7 @@ class DeleteView(object):
 class SimpleListView(object):
     def __init__(self, fields=None, query=None, cache_file=None,  
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
-        table_class_attr='table', table_width=False, pagination=True, total_fields=None):
+        table_class_attr='table', table_width=False, pagination=True, total_fields=None, template_data=None):
         """
         Pass a data structure to fields just like:
             [
@@ -725,6 +733,7 @@ class SimpleListView(object):
         self.table_width = table_width
         self.pagination = pagination
         self.create_total_infos(total_fields)
+        self.template_data = template_data or {}
         
     def create_total_infos(self, total_fields):
         if total_fields:
@@ -890,10 +899,12 @@ class SimpleListView(object):
         table = self.table_info()
             
         query = self.query(self.pageno, self.pagination)
+        result = self.template_data.copy()
         if head:
-            return {'table':self.render(table, head=head, body=body, query=query), 'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
+            result.update({'table':self.render(table, head=head, body=body, query=query), 'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}})
         else:
-            return {'table':self.render(table, head=head, body=body, query=query)}
+            result.update({'table':self.render(table, head=head, body=body, query=query)})
+        return result
 
     def render(self, table, head=True, body=True, query=None):
         """
@@ -1040,7 +1051,7 @@ class ListView(SimpleListView):
     def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
-        total_fields=None):
+        total_fields=None, template_data=None):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -1061,6 +1072,7 @@ class ListView(SimpleListView):
         self.total = 0
         self.pagination = pagination
         self.create_total_infos(total_fields)
+        self.template_data = template_data or {}
         
     def run(self, head=True, body=True):
         import uliweb.orm as orm
@@ -1081,10 +1093,12 @@ class ListView(SimpleListView):
             self.total = query.count()
         else:
             query = self.query(self.pageno, self.pagination)
+        result = self.template_data.copy()
         if head:
-            return {'table':self.render(table, query, head=head, body=body), 'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
+            result.update({'table':self.render(table, query, head=head, body=body), 'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}})
         else:
-            return {'table':self.render(table, query, head=head, body=body)}
+            result.update({'table':self.render(table, query, head=head, body=body)})
+        return result
 
     def render(self, table, query, head=True, body=True):
         """

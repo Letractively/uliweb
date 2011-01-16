@@ -7,7 +7,7 @@ import os, sys
 import cgi
 from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
-from werkzeug.exceptions import HTTPException, NotFound, InternalServerError
+from werkzeug.exceptions import HTTPException, NotFound
 
 import template
 from storage import Storage
@@ -98,8 +98,6 @@ def error(message='', errorpage=None, request=None, appname=None, **kwargs):
     raise HTTPError(errorpage, **kwargs)
 
 def function(fname, *args, **kwargs):
-    from uliweb.utils.common import import_attr
-    
     func = conf.settings.get_var('FUNCTIONS/'+fname)
     if func:
         if args or kwargs:
@@ -424,6 +422,7 @@ class Dispatcher(object):
                 try:
                     return compile(code, filename, 'exec')
                 except:
+#                    file('out.html', 'w').write(code)
                     raise
             
             return template.template_file(filename, vars, env, dirs, default_template, compile=_compile)
@@ -666,39 +665,45 @@ class Dispatcher(object):
     def dispatch_hooks(self):
         #process DISPATCH hooks
         d = conf.settings.get('BINDS', {})
-        for func, args in d.iteritems():
+        for topic, args in d.iteritems():
             if not args:
                 continue
-            if not isinstance(args, (tuple, list)):
-                args = (args,)
-            for x in args:
-                if isinstance(x, (tuple, list)):
-                    dispatch.bind(*x)(func)
-                elif isinstance(x, dict):
-                    dispatch.bind(**x)(func)
-                elif isinstance(x, str):
-                    dispatch.bind(x)(func)
-                else:
-                    log.error("BINDS definition [%s=%r] is not right" % (func, args))
-                    raise Exception, 'BINDS definition [%s=%r] is not right' % (func, args)
+            is_wrong = False
+            if isinstance(args, (tuple, list)):
+                if len(args) != 2:
+                    is_wrong = True
+                if not isinstance(args[1], dict):
+                    is_wrong = True
+                if not is_wrong:
+                    dispatch.bind(topic, **args[1])(args[0])
+            elif isinstance(args, (str, unicode)):
+                dispatch.bind(topic)(args)
+            else:
+                is_wrong = True
+            if is_wrong:
+                log.error('BINDS definition should be "url=endpoint" or "url=endpoint, {"args":value1,...}"')
+                raise Exception, 'BINDS definition [%s=%r] is not right' % (topic, args)
                 
         d = conf.settings.get('EXPOSES', {})
-        for func, args in d.iteritems():
+        for url, args in d.iteritems():
             if not args:
                 continue
-            if not isinstance(args, (tuple, list)):
-                args = (args,)
-            for x in args:
-                if isinstance(x, (tuple, list)):
-                    expose(*x)(func)
-                elif isinstance(x, dict):
-                    expose(**x)(func)
-                elif isinstance(x, str):
-                    expose(x)(func)
-                else:
-                    log.error("EXPOSES definition [%s=%r] is not right" % (func, args))
-                    raise Exception, 'EXPOSES definition [%s=%r] is not right' % (func, args)
-
+            is_wrong = False
+            if isinstance(args, (tuple, list)):
+                if len(args) != 2:
+                    is_wrong = True
+                if not isinstance(args[1], dict):
+                    is_wrong = True
+                if not is_wrong:
+                    expose(url, **args[1])(args[0])
+            elif isinstance(args, (str, unicode)):
+                expose(url)(args)
+            else:
+                is_wrong = True
+            if is_wrong:
+                log.error('EXPOSES definition should be "url=endpoint" or "url=endpoint, {"args":value1,...}"')
+                raise Exception, 'EXPOSES definition [%s=%r] is not right' % (url, args)
+                
     def get_template_dirs(self):
         """
         Get templates directory from apps, but in reversed order, so the same named template
