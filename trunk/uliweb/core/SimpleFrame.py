@@ -667,6 +667,8 @@ class Dispatcher(object):
         #process DISPATCH hooks
         d = conf.settings.get('BINDS', {})
         for func, args in d.iteritems():
+            if not args:
+                continue
             if not isinstance(args, (tuple, list)):
                 args = (args,)
             for x in args:
@@ -682,6 +684,8 @@ class Dispatcher(object):
                 
         d = conf.settings.get('EXPOSES', {})
         for func, args in d.iteritems():
+            if not args:
+                continue
             if not isinstance(args, (tuple, list)):
                 args = (args,)
             for x in args:

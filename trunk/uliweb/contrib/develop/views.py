@@ -199,7 +199,7 @@ def develop_app_conf():
     if is_pyfile_exist(app_path, 'conf'):
         try:
             mod = __import__(module + '.conf', {}, {}, [''])
-            f = getattr(mod, 'ManageForm')
+            f = getattr(mod, 'ManageForm', None)
             if f:
                 form = f(action=url_for(develop_app_conf)+'?module=%s' % module, method='post')
                 if request.method == 'POST':

@@ -22,7 +22,7 @@ def startup(sender):
     
     path = pkg.resource_filename('uliweb', '')
     localedir = ([os.path.normpath(sender.apps_dir + '/..')] + 
-        [get_app_dir(appname) for appname in sender.apps] + [path])
+        [get_app_dir(appname) for appname in sender.apps] + [path] + sender.settings.get_var('I18N/LOCALE_DIRS', []))
     install('uliweb', localedir)
     set_default_language(sender.settings.I18N.LANGUAGE_CODE)
     
