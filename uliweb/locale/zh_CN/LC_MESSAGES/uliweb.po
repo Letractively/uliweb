@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: uliweb 0.0.1\n"
 "POT-Creation-Date: Mon Dec 13 13:20:53 2010\n"
-"PO-Revision-Date: 2010-12-13 13:21+0800\n"
+"PO-Revision-Date: 2011-01-29 21:35+0800\n"
 "Last-Translator: limodou <limodou@gmail.com>\n"
 "Language-Team: uliweb <limodou@gmail.com>\n"
 "MIME-Version: 1.0\n"
@@ -132,5 +132,39 @@ msgstr "对象没有修改。"
 msgid "The object has been deleted successfully!"
 msgstr "对象已经被成功删除！"
 
-#~ msgid "The date is not a valid data format."
-#~ msgstr "日期不是一个有效的日期格式。"
+msgid "Total"
+msgstr "合计"
+
+msgid "Email"
+msgstr "邮件"
+
+msgid "Last Login"
+msgstr "上次登录"
+
+msgid "Portrait"
+msgstr "头像"
+
+msgid "Active Status"
+msgstr "活动状态"
+
+msgid "Query"
+msgstr "查询"
+
+msgid "Password"
+msgstr "口令"
+
+msgid "Username"
+msgstr "用户名"
+
+msgid "Is Superuser"
+msgstr "超级用户"
+
+msgid "Lock Status"
+msgstr "锁状态"
+
+msgid "Join Date"
+msgstr "加入日期"
+
+msgid "more"
+msgstr "更多条件"
+

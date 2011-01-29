@@ -1,4 +1,5 @@
 from __future__ import with_statement
+from uliweb.i18n import gettext_lazy as _
 
 __all__ = ['Layout', 'TableLayout', 'CSSLayout', 'YamlLayout']
 
@@ -147,7 +148,7 @@ class QueryLayout(Layout):
                             with buf.td:
                                 buf << self.form.get_buttons()
                                 if more:
-                                    buf << '<a href="#" id="more_query">more</a>'
+                                    buf << '<a href="#" id="more_query">%s</a>' % _('more')
                             
             else:
                 f = getattr(self.form, line)

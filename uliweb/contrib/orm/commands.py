@@ -1,6 +1,8 @@
 import os, sys
-from uliweb.utils.common import log, check_apps_dir, is_pyfile_exist
 import datetime
+from uliweb.core.commands import Command
+from optparse import make_option
+from uliweb.utils.common import log, check_apps_dir, is_pyfile_exist
 
 def get_engine(apps_dir):
     from uliweb.core.SimpleFrame import Dispatcher
@@ -9,7 +11,7 @@ def get_engine(apps_dir):
     engine = app.settings.ORM.CONNECTION
     return engine
 
-def get_tables(apps_dir, appname=None, engine=None, import_models=False):
+def get_tables(apps_dir, apps=None, engine=None, import_models=False):
     from uliweb.core.SimpleFrame import get_apps, get_app_dir
     from uliweb import orm
     from sqlalchemy import create_engine
@@ -27,8 +29,8 @@ def get_tables(apps_dir, appname=None, engine=None, import_models=False):
     
     if import_models:
         apps = get_apps(apps_dir)
-        if appname:
-            apps_list = [appname]
+        if apps:
+            apps_list = apps
         else:
             apps_list = apps[:]
         models = []
@@ -54,12 +56,10 @@ def get_tables(apps_dir, appname=None, engine=None, import_models=False):
             print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
             raise
             
-    if appname:
+    if apps:
         tables = {}
-        if not isinstance(appname, (tuple, list)):
-            appname = [appname]
         for tablename, m in db.metadata.tables.iteritems():
-            if hasattr(m, '__appname__') and m.__appname__ in appname:
+            if hasattr(m, '__appname__') and m.__appname__ in apps:
                 tables[tablename] = db.metadata.tables[tablename]
     else:
         tables = db.metadata.tables
@@ -107,123 +107,136 @@ def load_table(name, table, dir, con):
     finally:
         f.close()
 
-def action_syncdb(apps_dir):
-    def action():
-        """create all models according all available apps"""
+class SyncdbCommand(Command):
+    name = 'syncdb'
+    help = 'Sync models with database. But all models should be defined in settings.ini.'
+    
+    def handle(self, options, global_options, *args):
         from sqlalchemy import create_engine
 
-        check_apps_dir(apps_dir)
-
-        engine = get_engine(apps_dir)
+        engine = get_engine(global_options.project)
         con = create_engine(engine)
         
-        for name, t in get_tables(apps_dir).items():
-            print 'Creating %s...' % name
-            
-    return action
+        for name, t in get_tables(global_options.project).items():
+            if global_options.verbose:
+                print 'Creating %s...' % name
 
-def action_reset(apps_dir):
-    def action(appname=('a', ''), verbose=('v', False)):
-        """Reset the appname models(drop and recreate)"""
+class ResetCommand(Command):
+    name = 'reset'
+    args = '<appname, appname, ...>'
+    help = 'Reset the apps models(drop and recreate). If no apps, then reset the whole database.'
+
+    def handle(self, options, global_options, *args):
         from sqlalchemy import create_engine
 
-        ans = raw_input("""This command will drop all tables of app [%s], are you sure to reset[Y/n]""" % appname)
+        if args:
+            message = """This command will drop all tables of app [%s], are you sure to reset[Y/n]""" % ','.join(args)
+        else:
+            message = """This command will drop whole database, are you sure to reset[Y/n]"""
+        ans = raw_input(message)
         if ans and ans.upper() != 'Y':
             print "Command be cancelled!"
             return
         
-        check_apps_dir(apps_dir)
-
-        engine = get_engine(apps_dir)
+        engine = get_engine(global_options.project)
         con = create_engine(engine)
-        if verbose:
-            con.echo = True
         
-        for name, t in get_tables(apps_dir, appname).items():
-            print 'Resetting %s...' % name
+        for name, t in get_tables(global_options.project, args).items():
+            if global_options.verbose:
+                print 'Resetting %s...' % name
             t.drop(con)
             t.create(con)
         
-    return action
-
-def action_sql(apps_dir):
-    def action(appname=('a', '')):
-        """Display the table creation sql statement"""
+class SQLCommand(Command):
+    name = 'sql'
+    args = '<appname, appname, ...>'
+    help = 'Display the table creation sql statement. If no apps, then process the whole database.'
+    
+    def handle(self, options, global_options, *args):
         from sqlalchemy.schema import CreateTable
         
-        check_apps_dir(apps_dir)
-        
-        for name, t in sorted(get_tables(apps_dir, appname).items()):
+        for name, t in sorted(get_tables(global_options.project, args).items()):
             _t = CreateTable(t)
             print _t
             
-    return action
-
-def action_dump(apps_dir):
-    def action(appname=('a', ''), verbose=('v', False)):
-        """Dump all models records according all available apps"""
-            
+class DumpCommand(Command):
+    name = 'dump'
+    args = '<appname, appname, ...>'
+    help = 'Dump all models records according all available apps. If no apps, then process the whole database.'
+    option_list = (
+        make_option('-o', dest='output_dir', default='./data',
+            help='Output the data files to this directory.'),
+    )
+    has_options = True
+    
+    def handle(self, options, global_options, *args):
         from sqlalchemy import create_engine
 
-        check_apps_dir(apps_dir)
+        if not os.path.exists(options.output_dir):
+            os.makedirs(options.output_dir)
         
-        output_dir = './data'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        
-        engine = get_engine(apps_dir)
+        engine = get_engine(global_options.project)
         con = create_engine(engine)
 
-        for name, t in get_tables(apps_dir, appname, engine=engine).items():
-            print 'Dumpping %s...' % name
-            dump_table(name, t, output_dir, con, std=verbose)
-        
-    return action
+        for name, t in get_tables(global_options.project, args, engine=engine).items():
+            if global_options.verbose:
+                print 'Dumpping %s...' % name
+            dump_table(name, t, options.output_dir, con, std=verbose)
 
-def action_load(apps_dir):
-    def action(appname=('a', '')):
-        """load all models records according all available apps"""
-            
+class LoadCommand(Command):
+    name = 'load'
+    args = '<appname, appname, ...>'
+    help = 'Load all models records according all available apps. If no apps, then process the whole database.'
+    option_list = (
+        make_option('-d', dest='dir', default='./data',
+            help='Directory of data files.'),
+    )
+    has_options = True
+    
+    def handle(self, options, global_options, *args):
         from uliweb import orm
         
-        ans = raw_input("""This command will delete all data of table before loading, 
-are you sure to load data[Y/n]""")
+        if args:
+            message = """This command will delete all data of [%s] before loading, 
+are you sure to load data[Y/n]""" % ','.join(args)
+        else:
+            message = """This command will delete whole database before loading, 
+are you sure to load data[Y/n]"""
+
+        ans = raw_input(message)
         if ans and ans.upper() != 'Y':
             print "Command be cancelled!"
             return
 
-        check_apps_dir(apps_dir)
+        if not os.path.exists(options.dir):
+            os.makedirs(options.dir)
         
-        output_dir = './data'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        
-        engine = get_engine(apps_dir)
+        engine = get_engine(global_options.project)
         con = orm.get_connection(engine)
 
-        for name, t in get_tables(apps_dir, appname, engine=engine).items():
-            print 'Loading %s...' % name
+        for name, t in get_tables(global_options.project, args, engine=engine).items():
+            if global_options.verbose:
+                print 'Loading %s...' % name
             try:
                 con.begin()
-                load_table(name, t, output_dir, con)
+                load_table(name, t, options.dir, con)
                 con.commit()
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
                 con.rollback()
-        
-    return action
 
-def action_dbinit(apps_dir):
-    def action(appname=('a', '')):
-        """Initialize database, it'll run the code in dbinit.py of each app"""
-        check_apps_dir(apps_dir)
+class DbinitdCommand(Command):
+    name = 'dbinit'
+    args = '<appname, appname, ...>'
+    help = "Initialize database, it'll run the code in dbinit.py of each app. If no apps, then process the whole database."
 
+    def handle(self, options, global_options, *args):
         from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
         from uliweb import orm
 
-        app = Dispatcher(apps_dir=apps_dir, start=False)
+        app = Dispatcher(apps_dir=global_options.project, start=False)
 
-        apps = get_apps(apps_dir)
+        apps = get_apps(global_options.project)
         if appname:
             apps_list = [appname]
         else:
@@ -236,35 +249,33 @@ def action_dbinit(apps_dir):
                 continue
             m = '%s.dbinit' % p
             try:
-                print "Processing %s..." % m
+                if global_options.verbose:
+                    print "Processing %s..." % m
                 con.begin()
                 mod = __import__(m, {}, {}, [''])
                 con.commit()
             except ImportError:
                 con.rollback()
                 log.exception("There are something wrong when importing module [%s]" % m)
-        
-    return action
 
-def action_sqldot(apps_dir):
-    def action(applist=('a', '')):
-        """Initialize database, it'll run the code in dbinit.py of each app"""
+class SqldotCommand(Command):
+    name = 'sqldot'
+    args = '<appname, appname, ...>'
+    help = "Create graphviz dot file. If no apps, then process the whole database."
+
+    def handle(self, options, global_options, *args):
         from sqlalchemy import create_engine
         from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
         from graph import generate_dot
 
-        check_apps_dir(apps_dir)
-
-        app = Dispatcher(apps_dir=apps_dir, start=False)
-        if applist:
-            apps = [applist]
+        app = Dispatcher(apps_dir=global_options.project, start=False)
+        if args:
+            apps = args
         else:
-            apps = get_apps(apps_dir)
+            apps = get_apps(global_options.project)
         
-        engine = get_engine(apps_dir)
+        engine = get_engine(global_options.project)
         
-        tables = get_tables(apps_dir, None, engine=engine)
+        tables = get_tables(global_options.project, None, engine=engine)
         print generate_dot(tables, apps)
         
-    return action
-

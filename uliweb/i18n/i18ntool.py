@@ -1,6 +1,8 @@
 import os
+from optparse import make_option
 from uliweb.core import SimpleFrame
 from uliweb.utils.common import pkg
+from uliweb.core.commands import Command
 
 #def getfiles(path):
 #    files_list = []
@@ -31,29 +33,41 @@ def _process(path, locale):
         merge(output[:-4]+'.po', output)
     except:
         raise
+ 
+class I18nCommand(Command):
+    name = 'i18n'
+    args = '<appname, appname, ...>'
+    help = 'Extract i18n message catalog form app or all apps. Please notice that you can not set -p, -d, --uliweb, --apps and <appname, ...> at the same time.'
+    has_options = True
+    option_list = (
+        make_option('--apps', dest='apps', action='store_true', default=False,
+            help='If set, then extract translation messages from all apps located in project direcotry, and save .po file in each app direcotry.'),
+        make_option('-p', dest='project', action='store_true', default=False,
+            help='If set, then extract translation messages from project directory.'),
+        make_option('-d', dest='directory', 
+            help='If set, then extract translation messages from directory.'),
+        make_option('--uliweb', dest='uliweb', action='store_true', default=False,
+            help='If set, then extract translation messages from uliweb.'),
+        make_option('-l', dest='locale', default='en',
+            help='Target locale. Default is "en".'),
+    )
     
-
-def make_extract(apps_directory):
-    apps_dir = apps_directory
-    def action(appname=('a', ''), project=False, apps=False, core=False, locale=('l', 'en')):
-        """
-        extract i18n message catalog form app or all apps
-        """
-        path = ''
-        if appname:
-            _process(SimpleFrame.get_app_dir(appname), locale)
-        elif project:
-            _process(os.path.normpath(apps_dir + '/..'), locale)
-        elif apps:
-            _apps = SimpleFrame.get_apps(apps_dir)
+    def handle(self, options, global_options, *args):
+        if options.project:
+            _process(os.path.normpath(global_options.project + '/..'), options.locale)
+        elif options.apps or args:
+            if options.apps:
+                _apps = SimpleFrame.get_apps(global_options.project)
+            else:
+                _apps = args
             for appname in _apps:
                 path = SimpleFrame.get_app_dir(appname)
-                if not path.startswith(apps_dir):
+                if not path.startswith(global_options.project):
                     continue
-                _process(SimpleFrame.get_app_dir(appname), locale)
-        elif core:
+                _process(SimpleFrame.get_app_dir(appname), options.locale)
+        elif options.uliweb:
             path = pkg.resource_filename('uliweb', '')
-            _process(path, locale)
+            _process(path, options.locale)
+        elif options.directory:
+            _process(options.directory, options.locale)
             
-    return action
-

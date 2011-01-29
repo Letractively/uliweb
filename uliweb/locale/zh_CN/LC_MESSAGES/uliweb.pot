@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: Mon Dec 13 13:20:53 2010\n"
+"POT-Creation-Date: Sat Jan 29 21:33:39 2011\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -56,8 +56,8 @@ msgid "Password is not right."
 msgstr ""
 
 #: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:51
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:459
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:463
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:529
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:533
 msgid "Save"
 msgstr ""
 
@@ -69,6 +69,42 @@ msgstr ""
 msgid "Old Password:"
 msgstr ""
 
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:43
+msgid "Username"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:44
+msgid "Email"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:45
+msgid "Password"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:46
+msgid "Is Superuser"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:47
+msgid "Last Login"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:48
+msgid "Join Date"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:49
+msgid "Portrait"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:50
+msgid "Active Status"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:51
+msgid "Lock Status"
+msgstr ""
+
 #: d:\project\mywork\uliweb\uliweb\contrib\i18n\__init__.py:6
 msgid "English"
 msgstr ""
@@ -77,19 +113,23 @@ msgstr ""
 msgid "Simplified Chinese"
 msgstr ""
 
+#: d:\project\mywork\uliweb\uliweb\form\layout.py:151
+msgid "more"
+msgstr ""
+
 #: d:\project\mywork\uliweb\uliweb\form\uliform.py:235
 msgid "This field is required."
 msgstr ""
 
-#: d:\project\mywork\uliweb\uliweb\form\uliform.py:688
+#: d:\project\mywork\uliweb\uliweb\form\uliform.py:704
 msgid "The date is not a valid date format."
 msgstr ""
 
-#: d:\project\mywork\uliweb\uliweb\form\uliform.py:738
+#: d:\project\mywork\uliweb\uliweb\form\uliform.py:754
 msgid "The time is not a valid time format."
 msgstr ""
 
-#: d:\project\mywork\uliweb\uliweb\form\uliform.py:787
+#: d:\project\mywork\uliweb\uliweb\form\uliform.py:803
 msgid "The datetime is not a valid datetime format."
 msgstr ""
 
@@ -109,26 +149,37 @@ msgstr ""
 msgid "The file is not a valid image."
 msgstr ""
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:240
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:378
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:281
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:441
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:1198
 msgid "The information has been saved successfully!"
 msgstr ""
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:241
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:379
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:282
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:442
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:1199
 msgid "There are somethings wrong."
 msgstr ""
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:306
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:310
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:349
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:353
 msgid "Create"
 msgstr ""
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:419
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:488
 msgid "The object has not been changed."
 msgstr ""
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:595
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:672
 msgid "The object has been deleted successfully!"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:741
+msgid "Total"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:1263
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:1272
+msgid "Query"
 msgstr ""
 
