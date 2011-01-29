@@ -83,8 +83,13 @@ def copy_dir(src, dst, verbose=False, check=False):
     import shutil
 
     def _md5(filename):
-        import md5
-        a = md5.new()
+        try:
+            import hashlib
+            a = hashlib.md5()
+        except ImportError:
+            import md5
+            a = md5.new()
+            
         a.update(file(filename, 'rb').read())
         return a.digest()
     
@@ -110,23 +115,23 @@ def copy_dir(src, dst, verbose=False, check=False):
                     a = _md5(fpath)
                     b = _md5(df)
                     if a != b:
-                        log.error("Error: Target file %s is already existed, and "
+                        log.error("Target file %s is already existed, and "
                             "it not same as source one %s, so copy failed" % (fpath, dst))
                 else:
                     shutil.copy2(fpath, dst)
                     if verbose:
-                        log.info("Info : Copy [%s] to [%s]" % (fpath, dst))
+                        log.info("Copy [%s] to [%s]" % (fpath, dst))
                     
             else:
                 shutil.copy2(fpath, dst)
                 if verbose:
-                    log.info("Info : Copy [%s] to [%s]" % (fpath, dst))
+                    log.info("Copy [%s] to [%s]" % (fpath, dst))
 
 def copy_dir_with_check(dirs, dst, verbose=False, check=True):
     for d in dirs:
         if not os.path.exists(d):
             if verbose:
-                log.warn("Warn : %s does not exist, SKIP" % d)
+                log.warn("%s does not exist, SKIP" % d)
             continue
 
         copy_dir(d, dst, verbose, check)
@@ -156,7 +161,7 @@ get_logger()
 
 def check_apps_dir(apps_dir):
     if not os.path.exists(apps_dir):
-        log.error("Error: Can't find the apps_dir [%s], please check it out", apps_dir)
+        log.error("Can't find the apps_dir [%s], please check it out", apps_dir)
         sys.exit(1)
 
 def is_pyfile_exist(dir, pymodule):

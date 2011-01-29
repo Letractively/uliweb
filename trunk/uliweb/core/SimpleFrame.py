@@ -354,6 +354,7 @@ class Dispatcher(object):
 #                conf.url_map = urls.url_map
                 conf.static_views = rules.static_views
                 flag = False
+                log.info("Found urls.py, and disable dynamic expose functionality of views.")
             except ImportError:
                 pass
         Dispatcher.modules = self.collect_modules(flag)
