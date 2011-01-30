@@ -288,6 +288,19 @@ def simple_value(v, encoding='utf-8', none=False):
             return ''
     else:
         return v
+    
+__caches__ = {}
+def cache_get(key, func, _type='default'):
+    global __caches__
+    v = __caches__.setdefault(_type, {})
+    if key in v and v[key]:
+        return v[key]
+    else:
+        v[key] = func(key)
+        return v[key]
+    
+def norm_path(path):
+    return os.path.normcase(os.path.abspath(path))
 
 if __name__ == '__main__':
     log.info('Info: info')
