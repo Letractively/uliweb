@@ -263,10 +263,7 @@ class Ini(SortedDict):
                     #process include notation
                     if sec_name.startswith('include:'):
                         _filename = sec_name[8:].strip()
-                        if self._inifile:
-                            _filename = os.path.abspath(os.path.join(os.path.dirname(self._inifile), _filename))
-                        else:
-                            _filename = os.path.abspath(_filename)
+                        _filename = os.path.abspath(_filename)
                         if os.path.exists(_filename):
                             old_encoding = self._encoding
                             self.read(_filename)
