@@ -12,7 +12,8 @@ from werkzeug.exceptions import HTTPException, NotFound
 import template
 from storage import Storage
 import dispatch
-from uliweb.utils.common import pkg, log, sort_list, import_attr, import_mod_attr, myimport, wraps
+from uliweb.utils.common import (pkg, log, sort_list, import_attr, 
+    import_mod_attr, myimport, wraps, norm_path, cache_get)
 from uliweb.utils.pyini import Ini
 import uliweb as conf
 from rules import Mapping, add_rule
@@ -266,10 +267,10 @@ def get_app_dir(app):
 
 def get_apps(apps_dir, include_apps=None, settings_file='settings.ini'):
     include_apps = include_apps or []
-    inifile = os.path.join(apps_dir, settings_file)
+    inifile = norm_path(os.path.join(apps_dir, settings_file))
     apps = []
-    if os.path.exists(inifile):
-        x = Ini(inifile)
+    x = cache_get(inifile, lambda x:Ini(x), 'ini')
+    if x:
         apps = x.GLOBAL.get('INSTALLED_APPS', [])
     if not apps and os.path.exists(apps_dir):
         for p in os.listdir(apps_dir):

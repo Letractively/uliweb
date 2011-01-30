@@ -14,7 +14,7 @@
 # float, string, etc. So it's very like a normal python file, but it's has
 # some sections definition.
 
-import sys
+import sys, os
 import re
 import codecs
 import StringIO
@@ -260,6 +260,21 @@ class Ini(SortedDict):
                     comments.append(line)
                 elif line.startswith('[') and line.endswith(']'):
                     sec_name = line[1:-1].strip()
+                    #process include notation
+                    if sec_name.startswith('include:'):
+                        _filename = sec_name[8:].strip()
+                        if self._inifile:
+                            _filename = os.path.abspath(os.path.join(os.path.dirname(self._inifile), _filename))
+                        else:
+                            _filename = os.path.abspath(_filename)
+                        if os.path.exists(_filename):
+                            old_encoding = self._encoding
+                            self.read(_filename)
+                            self._encoding = old_encoding
+                        else:
+                            import warnings
+                            warnings.warn("Can't find the file [%s], so just skip it" % _filename, RuntimeWarning)
+                        continue
                     section = self.add(sec_name, comments)
                     comments = []
                 elif '=' in line:
