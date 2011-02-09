@@ -269,9 +269,12 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini'):
     include_apps = include_apps or []
     inifile = norm_path(os.path.join(apps_dir, settings_file))
     apps = []
-    x = cache_get(inifile, lambda x:Ini(x), 'ini')
-    if x:
-        apps = x.GLOBAL.get('INSTALLED_APPS', [])
+    if not os.path.exists(apps_dir):
+        return apps
+    if os.path.exists(inifile):
+        x = cache_get(inifile, lambda x:Ini(x), 'ini')
+        if x:
+            apps = x.GLOBAL.get('INSTALLED_APPS', [])
     if not apps and os.path.exists(apps_dir):
         for p in os.listdir(apps_dir):
             if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):

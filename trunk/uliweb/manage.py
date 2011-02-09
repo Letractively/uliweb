@@ -125,6 +125,7 @@ class MakeAppCommand(Command):
     name = 'makeapp'
     args = 'appname'
     help = 'Create a new app according the appname parameter.'
+    check_apps_dirs = False
     
     def handle(self, options, global_options, *args):
         if not args:
