@@ -1,15 +1,19 @@
-from uliweb.utils.common import check_apps_dir
+import os, sys
+import datetime
+from uliweb.core.commands import Command
+from optparse import make_option
+from uliweb.utils.common import log, is_pyfile_exist
 
-def action_createsuperuser(apps_dir):
-    def action():
-        """create a super user account"""
-        check_apps_dir(apps_dir)
-
+class CreateSuperUserCommand(Command):
+    name = 'createsuperuser'
+    help = 'Create a super user account.'
+    
+    def handle(self, options, global_options, *args):
         from uliweb.core.SimpleFrame import Dispatcher
         from uliweb import orm
         from getpass import getpass
         
-        app = Dispatcher(apps_dir=apps_dir, start=False)
+        app = Dispatcher(apps_dir=global_options.project, start=False)
         orm.set_auto_create(True)
         db = orm.get_connection(app.settings.ORM.CONNECTION)
         
@@ -36,6 +40,3 @@ def action_createsuperuser(apps_dir):
         user.set_password(password)
         user.is_superuser = True
         user.save()
-        
-    return action
-
