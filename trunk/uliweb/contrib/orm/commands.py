@@ -2,7 +2,7 @@ import os, sys
 import datetime
 from uliweb.core.commands import Command
 from optparse import make_option
-from uliweb.utils.common import log, check_apps_dir, is_pyfile_exist
+from uliweb.utils.common import log, is_pyfile_exist
 
 def get_engine(apps_dir):
     from uliweb.core.SimpleFrame import Dispatcher
@@ -181,7 +181,7 @@ class DumpCommand(Command):
         for name, t in get_tables(global_options.project, args, engine=engine).items():
             if global_options.verbose:
                 print 'Dumpping %s...' % name
-            dump_table(name, t, options.output_dir, con, std=verbose)
+            dump_table(name, t, options.output_dir, con)
 
 class LoadCommand(Command):
     name = 'load'
@@ -236,11 +236,10 @@ class DbinitdCommand(Command):
 
         app = Dispatcher(apps_dir=global_options.project, start=False)
 
-        apps = get_apps(global_options.project)
-        if appname:
-            apps_list = [appname]
+        if not args:
+            apps_list = get_apps(global_options.project)
         else:
-            apps_list = apps[:]
+            apps_list = args
         
         con = orm.get_connection()
         
@@ -264,8 +263,7 @@ class SqldotCommand(Command):
     help = "Create graphviz dot file. If no apps, then process the whole database."
 
     def handle(self, options, global_options, *args):
-        from sqlalchemy import create_engine
-        from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
+        from uliweb.core.SimpleFrame import get_apps, Dispatcher
         from graph import generate_dot
 
         app = Dispatcher(apps_dir=global_options.project, start=False)
