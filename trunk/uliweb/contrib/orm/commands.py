@@ -162,7 +162,7 @@ class SQLCommand(Command):
 class DumpCommand(Command):
     name = 'dump'
     args = '<appname, appname, ...>'
-    help = 'Dump all models records according all available apps. If no apps, then process the whole database.'
+    help = 'Dump all models records according all available tables. If no tables, then process the whole database.'
     option_list = (
         make_option('-o', dest='output_dir', default='./data',
             help='Output the data files to this directory.'),
@@ -179,6 +179,37 @@ class DumpCommand(Command):
         con = create_engine(engine)
 
         for name, t in get_tables(global_options.project, args, engine=engine).items():
+            if global_options.verbose:
+                print 'Dumpping %s...' % name
+            dump_table(name, t, options.output_dir, con)
+
+class DumpTableCommand(Command):
+    name = 'dumptable'
+    args = '<tablename, tablename, ...>'
+    help = 'Dump all tables records according all available apps. If no apps, then will do nothing.'
+    option_list = (
+        make_option('-o', dest='output_dir', default='./data',
+            help='Output the data files to this directory.'),
+    )
+    has_options = True
+    
+    def handle(self, options, global_options, *args):
+        from sqlalchemy import create_engine
+        from uliweb import orm
+        
+        if not os.path.exists(options.output_dir):
+            os.makedirs(options.output_dir)
+        
+        engine = get_engine(global_options.project)
+        con = create_engine(engine)
+
+        if not args:
+            print "Failed! You should pass one or more tables name."
+            sys.exit(1)
+            
+        for name in args:
+            m = orm.get_model(name)
+            t = m.table
             if global_options.verbose:
                 print 'Dumpping %s...' % name
             dump_table(name, t, options.output_dir, con)
@@ -215,6 +246,50 @@ are you sure to load data[Y/n]"""
         con = orm.get_connection(engine)
 
         for name, t in get_tables(global_options.project, args, engine=engine).items():
+            if global_options.verbose:
+                print 'Loading %s...' % name
+            try:
+                con.begin()
+                load_table(name, t, options.dir, con)
+                con.commit()
+            except:
+                log.exception("There are something wrong when loading table [%s]" % name)
+                con.rollback()
+
+class LoadTableCommand(Command):
+    name = 'loadtable'
+    args = '<tablename, tablename, ...>'
+    help = 'Load all tables records according all available tables. If no tables, then will no nothing.'
+    option_list = (
+        make_option('-d', dest='dir', default='./data',
+            help='Directory of data files.'),
+    )
+    has_options = True
+    
+    def handle(self, options, global_options, *args):
+        from uliweb import orm
+        
+        if args:
+            message = """This command will delete all data of [%s] before loading, 
+are you sure to load data[Y/n]""" % ','.join(args)
+        else:
+            print "Failed! You should pass one or more tables name."
+            sys.exit(1)
+
+        ans = raw_input(message)
+        if ans and ans.upper() != 'Y':
+            print "Command be cancelled!"
+            return
+
+        if not os.path.exists(options.dir):
+            os.makedirs(options.dir)
+        
+        engine = get_engine(global_options.project)
+        con = orm.get_connection(engine)
+
+        for name in args:
+            m = orm.get_model(name)
+            t = m.table
             if global_options.verbose:
                 print 'Loading %s...' % name
             try:
