@@ -209,6 +209,9 @@ class DumpTableCommand(Command):
             
         for name in args:
             m = orm.get_model(name)
+            if not m:
+                print "Error! Can't find the table %s...Skipped!" % name
+                continue
             t = m.table
             if global_options.verbose:
                 print 'Dumpping %s...' % name
@@ -289,6 +292,9 @@ are you sure to load data[Y/n]""" % ','.join(args)
 
         for name in args:
             m = orm.get_model(name)
+            if not m:
+                print "Error! Can't find the table %s...Skipped!" % name
+                continue
             t = m.table
             if global_options.verbose:
                 print 'Loading %s...' % name

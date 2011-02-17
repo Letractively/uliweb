@@ -134,7 +134,7 @@ class NewOptionParser(OptionParser):
     
 class ApplicationCommandManager(Command):
     option_list = (
-        make_option('-h', '--help', action='store_true', dest='help',
+        make_option('--help', action='store_true', dest='help',
             help='show this help message and exit.'),
         make_option('-v', '--verbose', action='store_true', 
             help='Output the result in verbose mode.'),

@@ -74,7 +74,7 @@ class ManyToManySelectField(ReferenceSelectField):
             empty=None, multiple=True, **kwargs)
             
 def get_fields(model, fields, meta):
-    if fields:
+    if fields is not None:
         f = fields
     elif hasattr(model, meta):
         f = getattr(model, meta).fields
@@ -301,7 +301,7 @@ class AddView(object):
         #default_data used for create object
         self.default_data = default_data or {}
         
-        self.fields = fields or []
+        self.fields = fields
         self.form_cls = form_cls
         self.form_args = form_args or {}
         self.static_fields = static_fields or []
@@ -384,10 +384,27 @@ class AddView(object):
                     
         return flag
     
+    def on_success(self, d):
+        from uliweb import function
+        from uliweb import redirect
+        flash = function('flash')
+
+        if self.pre_save:
+            self.pre_save(d)
+            
+        r = self.process_files(d)
+        
+        obj = self.save(d)
+        
+        if self.post_save:
+            self.post_save(obj, d)
+                
+        flash(self.success_msg)
+        return redirect(get_url(self.ok_url, obj.id))
+    
     def run(self):
         from uliweb import request, function
         from uliweb.orm import get_model
-        from uliweb import redirect
         
         if isinstance(self.model, str):
             self.model = get_model(self.model)
@@ -403,19 +420,7 @@ class AddView(object):
             if flag:
                 d = self.default_data.copy()
                 d.update(self.form.data)
-                
-                if self.pre_save:
-                    self.pre_save(d)
-                    
-                r = self.process_files(d)
-                
-                obj = self.save(d)
-
-                if self.post_save:
-                    self.post_save(obj, d)
-                        
-                flash(self.success_msg)
-                return redirect(get_url(self.ok_url, obj.id))
+                return self.on_success(d)
             else:
                 flash(self.fail_msg, 'error')
                 
