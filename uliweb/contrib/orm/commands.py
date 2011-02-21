@@ -125,7 +125,8 @@ class ResetCommand(Command):
     name = 'reset'
     args = '<appname, appname, ...>'
     help = 'Reset the apps models(drop and recreate). If no apps, then reset the whole database.'
-
+    check_apps = True
+    
     def handle(self, options, global_options, *args):
         from sqlalchemy import create_engine
 
@@ -151,6 +152,7 @@ class SQLCommand(Command):
     name = 'sql'
     args = '<appname, appname, ...>'
     help = 'Display the table creation sql statement. If no apps, then process the whole database.'
+    check_apps = True
     
     def handle(self, options, global_options, *args):
         from sqlalchemy.schema import CreateTable
@@ -168,6 +170,7 @@ class DumpCommand(Command):
             help='Output the data files to this directory.'),
     )
     has_options = True
+    check_apps = True
     
     def handle(self, options, global_options, *args):
         from sqlalchemy import create_engine
@@ -226,6 +229,7 @@ class LoadCommand(Command):
             help='Directory of data files.'),
     )
     has_options = True
+    check_apps = True
     
     def handle(self, options, global_options, *args):
         from uliweb import orm
@@ -310,6 +314,7 @@ class DbinitdCommand(Command):
     name = 'dbinit'
     args = '<appname, appname, ...>'
     help = "Initialize database, it'll run the code in dbinit.py of each app. If no apps, then process the whole database."
+    check_apps = True
 
     def handle(self, options, global_options, *args):
         from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
@@ -342,7 +347,8 @@ class SqldotCommand(Command):
     name = 'sqldot'
     args = '<appname, appname, ...>'
     help = "Create graphviz dot file. If no apps, then process the whole database."
-
+    check_apps = True
+    
     def handle(self, options, global_options, *args):
         from uliweb.core.SimpleFrame import get_apps, Dispatcher
         from graph import generate_dot
