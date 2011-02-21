@@ -101,7 +101,8 @@ class Command(object):
                 if p not in all_apps:
                     print 'Error: Appname %s is not a valid app' % p
                     sys.exit(1)
-            
+                else:
+                    args.append(p)
         try:
             self.handle(options, global_options, *args)
         except CommandError, e:
