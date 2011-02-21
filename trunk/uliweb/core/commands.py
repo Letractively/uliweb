@@ -37,6 +37,7 @@ class Command(object):
     args = ''
     check_apps_dirs = True
     has_options = False
+    check_apps = False
 
     def create_parser(self, prog_name, subcommand):
         """
@@ -88,9 +89,19 @@ class Command(object):
     def execute(self, args, options, global_options):
         #todo: add translation process
         from uliweb.utils.common import check_apps_dir
+        from uliweb.core.SimpleFrame import get_apps
 
         if self.check_apps_dirs:
             check_apps_dir(global_options.project)
+        if self.check_apps and args: #then args should be apps
+            all_apps = get_apps(global_options.project)
+            apps = args
+            args = []
+            for p in apps:
+                if p not in all_apps:
+                    print 'Error: Appname %s is not a valid app' % p
+                    sys.exit(1)
+            
         try:
             self.handle(options, global_options, *args)
         except CommandError, e:
