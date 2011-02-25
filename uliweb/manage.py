@@ -177,6 +177,7 @@ class MakeProjectCommand(Command):
     name = 'makeproject'
     help = 'Create a new project directory according the project name'
     args = 'project_name'
+    check_apps_dirs = False
 
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import extract_dirs
