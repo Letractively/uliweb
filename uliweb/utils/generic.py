@@ -376,11 +376,10 @@ class AddView(object):
         fields_list = self.get_fields()
         for f in fields_list:
             if isinstance(f['prop'], orm.FileProperty):
-                if f['name'] in data:
+                if f['name'] in data and data[f['name']]:
                     fobj = data[f['name']]
-                    if fobj:
-                        data[f['name']] = save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
-                        flag = True
+                    data[f['name']] = save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
+                    flag = True
                     
         return flag
     
