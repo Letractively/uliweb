@@ -49,6 +49,18 @@ class ReferenceSelectField(SelectField):
             query = self.query
         else:
             query = model.all()
+            if hasattr(model, 'Meta') and hasattr(model.Meta, 'order_by'):
+                _order = model.Meta.order_by
+                if not isinstance(_order, (list, tuple)):
+                    _order = [model.Meta.order_by]
+                for x in _order:
+                    if x.startswith('-'):
+                        f = model.c[x[1:]].desc()
+                    else:
+                        if x.startswith('+'):
+                            x = x[1:]
+                        f = model.c[x].asc()
+                    query = query.order_by(f)
         if self.condition is not None:
             query = query.filter(self.condition)
         if self.group_field:
