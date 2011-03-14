@@ -533,6 +533,300 @@ def test_without_id():
     True
     """
     
+def test_Reference_not_int():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     __without_id__ = True
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(datetime.datetime, auto_now_add=True, auto_now=True)
+    >>> 'id' in Test.properties
+    False
+    >>> class Test(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(datetime.datetime, auto_now_add=True, auto_now=True)
+    >>> 'id' in Test.properties
+    True
+    """
+    
+def test_reference_not_id():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Test1(Model):
+    ...     test = Reference(Test, collection_name='tttt', reference_fieldname='username')
+    ...     year = Field(int)
+    ...     name = Field(CHAR, max_length=20)
+    >>> a1 = Test(username='limodou1', year=20)
+    >>> a1.save()
+    True
+    >>> b1 = Test1(name='user', year=5, test=a1)
+    >>> b1.save()
+    True
+    >>> b2 = Test1(name='aaaa', year=10, test=a1)
+    >>> b2.save()
+    True
+    >>> print repr(a1), repr(b1), repr(b2)
+    <Test {'username':u'limodou1','year':20,'id':1}> <Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':5,'name':u'user','id':1}> <Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':10,'name':u'aaaa','id':2}>
+    >>> print repr(b2.test)
+    <Test {'username':u'limodou1','year':20,'id':1}>
+    >>> print b2._test_
+    limodou1
+    >>> print a1.tttt.has(b1, b2)
+    True
+    >>> print a1.tttt.ids()
+    [1, 2]
+    >>> print list(Test1.all())
+    [<Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':5,'name':u'user','id':1}>, <Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':10,'name':u'aaaa','id':2}>]
+    >>> a1.tttt.clear(b2)
+    >>> print list(Test1.all())
+    [<Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':5,'name':u'user','id':1}>]
+    """
+
+def test_one2one_reference_field():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(str)
+    ...     year = Field(int)
+    >>> class Test1(Model):
+    ...     test = OneToOne(Test, reference_fieldname='username')
+    ...     name = Field(str)
+    >>> a1 = Test(username='limodou1')
+    >>> a1.save()
+    True
+    >>> b1 = Test1(name='user', test=a1)
+    >>> b1.save()
+    True
+    >>> a1
+    <Test {'username':u'limodou1','year':0,'id':1}>
+    >>> a1.test1
+    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>
+    >>> b1.test
+    <Test {'username':u'limodou1','year':0,'id':1}>
+    """
+    
+def test_many2many_reference_field():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     users = ManyToMany(User, reference_fieldname='username')
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='user', year=10)
+    >>> b.save()
+    True
+    >>> c = User(username='abc', year=20)
+    >>> c.save()
+    True
+    >>> print list(User.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>, <User {'username':u'abc','year':20,'id':3}>]
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
+    >>> print list(Group.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
+    >>> g1.users.add(a)
+    >>> g1.users.add(b)
+    >>> g2.users.add(a)
+    >>> print list(g1.users.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
+    >>> print list(g1.users.all().order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>, <User {'username':u'limodou','year':5,'id':1}>]
+    >>> print list(g1.users.filter(User.c.year>5).order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>]
+    >>> print g1.users.has(a)
+    True
+    >>> print list(a.group_set.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    """
+
+def test_many2many_reference_field_and_reversed_field():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     users = ManyToMany(User, reference_fieldname='username', reversed_fieldname='name')
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='user', year=10)
+    >>> b.save()
+    True
+    >>> c = User(username='abc', year=20)
+    >>> c.save()
+    True
+    >>> print list(User.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>, <User {'username':u'abc','year':20,'id':3}>]
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
+    >>> print list(Group.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
+    >>> g1.users.add(a)
+    >>> g1.users.add(b)
+    >>> g2.users.add(a)
+    >>> print list(g1.users.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
+    >>> print list(g1.users.all().order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>, <User {'username':u'limodou','year':5,'id':1}>]
+    >>> print list(g1.users.filter(User.c.year>5).order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>]
+    >>> print g1.users.has(a)
+    True
+    >>> print list(a.group_set.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    """
+
+def test_many2many_through():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     users = ManyToMany(User, through='relation')
+    >>> class Relation(Model):
+    ...     user = Reference(User)
+    ...     group = Reference(Group)
+    ...     year = Field(int)
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='user', year=10)
+    >>> b.save()
+    True
+    >>> c = User(username='abc', year=20)
+    >>> c.save()
+    True
+    >>> print list(User.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>, <User {'username':u'abc','year':20,'id':3}>]
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
+    >>> print list(Group.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
+    >>> g1.users.add(a)
+    >>> g1.users.add(b)
+    >>> g2.users.add(a)
+    >>> print list(g1.users.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
+    >>> print list(g1.users.all().order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>, <User {'username':u'limodou','year':5,'id':1}>]
+    >>> print list(g1.users.filter(User.c.year>5).order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>]
+    >>> print g1.users.has(a)
+    True
+    >>> print list(a.group_set.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    """
+
+def test_many2many_through_alone():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     users = ManyToMany(User, through='relation')
+    >>> class Relation(Model):
+    ...     user = Reference(User)
+    ...     group = Reference(Group)
+    ...     year = Field(int)
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='user', year=10)
+    >>> b.save()
+    True
+    >>> c = User(username='abc', year=20)
+    >>> c.save()
+    True
+    >>> print list(User.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>, <User {'username':u'abc','year':20,'id':3}>]
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
+    >>> print list(Group.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
+    >>> r1 = Relation(user=a, group=g1, year=10)
+    >>> r1.save()
+    True
+    >>> r2 = Relation(user=b, group=g1, year=5)
+    >>> r2.save()
+    True
+    >>> r3 = Relation(user=a, group=g2, year=8)
+    >>> r3.save()
+    True
+    >>> print list(g1.users.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
+    >>> print list(g1.users.all().order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>, <User {'username':u'limodou','year':5,'id':1}>]
+    >>> print list(g1.users.filter(User.c.year>5).order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>]
+    >>> print g1.users.has(a)
+    True
+    >>> print list(a.group_set.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    >>> print list(g1.users.filter(Relation.c.year>5))
+    [<User {'username':u'limodou','year':5,'id':1}>]
+    >>> print list(a.group_set.filter(Relation.c.year>5))
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    
+    """
 
 #if __name__ == '__main__':
 #    set_debug_query(True)

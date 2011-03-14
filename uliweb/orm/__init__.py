@@ -3,9 +3,6 @@
 # 2008.06.11
 # Update:
 #   2010.4.1 Add get() support to Result and ManyResult
-# Update:
-#   2011.3.14 Add __without_id__ to Model class, so if set it to True, the 'id' 
-#       field will not be created automatically, others will created 'id' field
 
 
 __all__ = ['Field', 'get_connection', 'Model', 'create_all',
@@ -31,7 +28,7 @@ import threading
 import datetime
 from uliweb.utils import date
 from sqlalchemy import *
-from sqlalchemy.sql import select
+from sqlalchemy.sql import select, ColumnElement
 from uliweb.core import dispatch
 import threading
 
@@ -660,7 +657,7 @@ class ReferenceProperty(Property):
         super(ReferenceProperty, self).__init__(verbose_name, **attrs)
 
         self.collection_name = collection_name
-        self.reference_fieldname = reference_fieldname
+        self.reference_fieldname = reference_fieldname or 'id'
         self.required = required
 
         if reference_class is None:
@@ -686,6 +683,17 @@ class ReferenceProperty(Property):
         f_type = self._create_type()
 #        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
         return Column(self.property_name, f_type, **args)
+    
+    def _create_type(self):
+        if not hasattr(self.reference_class, self.reference_fieldname):
+            raise KindError('reference_fieldname is not existed')
+        self.reference_field = getattr(self.reference_class, self.reference_fieldname)
+        field_class = self.reference_field.field_class
+        if self.reference_field.max_length:
+            f_type = field_class(self.reference_field.max_length)
+        else:
+            f_type = field_class
+        return f_type
     
     def __property_config__(self, model_class, property_name):
         """Loads all of the references that point to this model.
@@ -714,7 +722,7 @@ class ReferenceProperty(Property):
         """
         if model_instance is None:
             return self
-        if hasattr(model_instance, self._id_attr_name()):
+        if hasattr(model_instance, self._attr_name()):
             reference_id = getattr(model_instance, self._attr_name())
         else:
             reference_id = None
@@ -724,8 +732,10 @@ class ReferenceProperty(Property):
             if resolved is not None:
                 return resolved
             else:
-                id_field = self._id_attr_name()
-                d = self.reference_class.c[id_field]
+                #change id_field to reference_fieldname
+#                id_field = self._id_attr_name()
+#                d = self.reference_class.c[id_field]
+                d = self.reference_class.c[self.reference_fieldname]
                 instance = self.reference_class.get(d==reference_id)
                 if instance is None:
                     raise Error('ReferenceProperty failed to be resolved')
@@ -744,11 +754,11 @@ class ReferenceProperty(Property):
         """Set reference."""
         value = self.validate(value)
         if value is not None:
-            if isinstance(value, (int, long)):
+            if not isinstance(value, Model):
                 setattr(model_instance, self._attr_name(), value)
                 setattr(model_instance, self._resolved_attr_name(), None)
             else:
-                setattr(model_instance, self._attr_name(), value.id)
+                setattr(model_instance, self._attr_name(), getattr(value, self.reference_fieldname))
                 setattr(model_instance, self._resolved_attr_name(), value)
         else:
             setattr(model_instance, self._attr_name(), None)
@@ -765,7 +775,7 @@ class ReferenceProperty(Property):
                 - Value is not saved.
                 - Object not of correct model type for reference.
         """
-        if isinstance(value, (int, long)):
+        if not isinstance(value, Model):
             return value
 
         if value is not None and not value.is_saved():
@@ -785,8 +795,6 @@ class ReferenceProperty(Property):
         """Get attribute of referenced id.
         #todo add id function or key function to model
         """
-        if not self.reference_fieldname:
-            self.reference_fieldname = 'id'
         return self.reference_fieldname
 
     def _resolved_attr_name(self):
@@ -833,14 +841,13 @@ class OneToOne(ReferenceProperty):
         setattr(self.reference_class, self.collection_name,
             _OneToOneReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
   
-def get_objs_ids(*objs):
+def get_objs_columns(objs, field='id'):
     ids = []
     for o in objs:
-        assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
-        if isinstance(o, (int, long)):
+        if not isinstance(o, Model):
             _id = o
         else:
-            _id = o.id
+            _id = o.get_datastore_value(field)
         if _id not in ids:
             ids.append(_id)
     return ids
@@ -951,13 +958,13 @@ class Result(object):
             yield o
   
 class ReverseResult(Result):
-    def __init__(self, model, condition, reference_id, table, instance, table_field, *args, **kwargs):
+    def __init__(self, model, condition, a_field, b_table, instance, b_field, *args, **kwargs):
         self.model = model
-        self.table = table
-        self.table_field = table_field
+        self.b_table = b_table
+        self.b_field = b_field
         self.instance = instance
         self.condition = condition
-        self.reference_id = reference_id
+        self.a_field = a_field
         self.columns = [self.model.table]
         self.funcs = []
         self.args = args
@@ -965,9 +972,12 @@ class ReverseResult(Result):
         self.result = None
         
     def has(self, *objs):
-        ids = get_objs_ids(*objs)
+        ids = get_objs_columns(objs)
         
-        result = self.model.table.count(self.condition & (self.model.table.c[self.table_field].in_(ids))).execute()
+        if not ids:
+            return False
+        
+        result = self.model.table.count(self.condition & (self.model.table.c['id'].in_(ids))).execute()
         count = 0
         if result:
             r = result.fetchone()
@@ -978,7 +988,7 @@ class ReverseResult(Result):
         return count > 0
     
     def ids(self):
-        query = select([self.model.c.id], self.condition)
+        query = select([self.model.c['id']], self.condition)
         ids = [x[0] for x in query.execute()]
         return ids
     
@@ -987,18 +997,20 @@ class ReverseResult(Result):
         Clear the third relationship table, but not the ModelA or ModelB
         """
         if objs:
-            ids = get_objs_ids(*objs)
-            self.model.table.delete(self.condition & self.model.table.c[self.table_field].in_(ids)).execute()
+            ids = get_objs_columns(objs)
+            self.model.table.delete(self.condition & self.model.table.c['id'].in_(ids)).execute()
         else:
             self.model.table.delete(self.condition).execute()
     
 class ManyResult(Result):
-    def __init__(self, modela, modelb, table, fielda, fieldb, valuea):
+    def __init__(self, modela, modelb, table, fielda, fieldb, realfielda, realfieldb, valuea):
         self.modela = modela
         self.modelb = modelb
         self.table = table  #third table
         self.fielda = fielda
         self.fieldb = fieldb
+        self.realfielda = realfielda
+        self.realfieldb = realfieldb
         self.valuea = valuea
         self.columns = [self.modelb.table]
         self.condition = None
@@ -1006,18 +1018,17 @@ class ManyResult(Result):
         self.result = None
         
     def get(self, condition=None):
-        if isinstance(condition, (int, long)):
-            return self.filter(self.modelb.c.id==condition).one()
+        if not isinstance(condition, ColumnElement):
+            return self.filter(self.modelb.c[self.realfieldb]==condition).one()
         else:
             return self.filter(condition).one()
 
     def add(self, *objs):
         for o in objs:
-            assert isinstance(o, (int, long, Model)), 'Value should be Integer or instance of Property, but it is %s' % type(o).__name__
-            if isinstance(o, (int, long)):
-                v = o
+            if isinstance(o, Model):
+                v = getattr(o, self.realfieldb)
             else:
-                v = o.id
+                v = o
             d = {self.fielda:self.valuea, self.fieldb:v}
             self.table.insert().execute(**d)
          
@@ -1032,7 +1043,7 @@ class ManyResult(Result):
         """
         ids = self.ids()
         old_ids = ids[:]
-        new_ids = get_objs_ids(*objs)
+        new_ids = get_objs_columns(objs, self.realfieldb)
 
         if get_dispatch_send():
             dispatch.call(self.__class__, 'pre_update', instance=self, data=new_ids, old_data=ids)
@@ -1061,13 +1072,13 @@ class ManyResult(Result):
         Clear the third relationship table, but not the ModelA or ModelB
         """
         if objs:
-            ids = get_objs_ids(*objs)
+            ids = get_objs_columns(objs, self.realfieldb)
             self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
         else:
             self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
     
     def count(self):
-        result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb] == self.modelb.c.id) & self.condition).execute()
+        result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition).execute()
         count = 0
         if result:
             r = result.fetchone()
@@ -1078,7 +1089,10 @@ class ManyResult(Result):
         return count
     
     def has(self, *objs):
-        ids = get_objs_ids(*objs)
+        ids = get_objs_columns(objs, self.realfieldb)
+        
+        if not ids:
+            return False
         
         result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
         count = 0
@@ -1091,7 +1105,7 @@ class ManyResult(Result):
         return count > 0
         
     def run(self, limit=0):
-        query = select(self.columns, (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c.id) & self.condition)
+        query = select(self.columns, (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         if limit > 0:
@@ -1128,26 +1142,93 @@ class ManyResult(Result):
             yield o
         
 class ManyToMany(ReferenceProperty):
+    def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
+        reference_fieldname=None, reversed_fieldname=None, required=False, through=None, **attrs):
+            
+        super(ManyToMany, self).__init__(reference_class=reference_class,
+            verbose_name=verbose_name, collection_name=collection_name, 
+            reference_fieldname=reference_fieldname, required=required, **attrs)
+    
+        self.reversed_fieldname = reversed_fieldname or 'id'
+        self.through = through
+
     def create(self, cls):
-        self.fielda = a = "%s_id" % self.model_class.tablename
-        self.fieldb = b = "%s_id" % self.reference_class.tablename
-        a_id = "%s.id" % self.model_class.tablename
-        b_id = "%s.id" % self.reference_class.tablename
-        
-        #add autoincrement=False according to:
-        #http://www.sqlalchemy.org/docs/05/reference/dialects/mysql.html#keys
-        self.table = Table(self.tablename, cls.metadata,
-            Column(a, Integer, primary_key=True, autoincrement=False),
-            Column(b, Integer, primary_key=True, autoincrement=False),
+#        if self.through:
+#            if not (
+#                    (isinstance(self.through, type) and issubclass(self.reference_class, Model)) or
+#                    valid_model(self.reference_class)):
+#                raise KindError('through must be Model or available table name')
+#            self.through = get_model(self.through)
+#            for k, v in self.through.properties.items():
+#                if isinstance(v, ReferenceProperty):
+#                    if self.model_class is v.reference_class:
+#                        self.fielda = k
+#                        self.reversed_fieldname = v.reference_fieldname
+#                    elif self.reference_class is v.reference_class:
+#                        self.fieldb = k
+#                        self.reference_fieldname = v.reference_fieldname
+#            if not hasattr(self.through, self.fielda):
+#                raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fielda, self.through))
+#            if not hasattr(self.through, self.fieldb):
+#                raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fieldb, self.through))
+#            self.table = self.through.table
+        if not self.through:
+            self.fielda = "%s_id" % self.model_class.tablename
+            self.fieldb = "%s_id" % self.reference_class.tablename
+            self.table = self.create_table()
+            #add appname to self.table
+            appname = self.model_class.__module__
+            if appname.endswith('.models'):
+                self.table.__appname__ = appname[:-7]
+            self.model_class.manytomany.append(self.table)
+            Index('%s_manytomany_indx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
+    
+    def get_real_property(self, model, field):
+        return getattr(model, field).field_class
+    
+    def get_type(self, model, field):
+        field = getattr(model, field)
+        field_class = field.field_class
+        if field.max_length:
+            f_type = field_class(field.max_length)
+        else:
+            f_type = field_class
+        return f_type
+    
+    def create_table(self):
+        _table = Table(self.tablename, self.model_class.metadata,
+            Column(self.fielda, self.get_type(self.model_class, self.reversed_fieldname)),
+            Column(self.fieldb, self.get_type(self.reference_class, self.reference_fieldname)),
 #            ForeignKeyConstraint([a], [a_id]),
 #            ForeignKeyConstraint([b], [b_id]),
         )
-        #add appname to self.table
-        appname = cls.__module__
-        if appname.endswith('.models'):
-            self.table.__appname__ = appname[:-7]
-        cls.manytomany.append(self.table)
-        return
+        return _table
+    
+    def init_through(self):
+        if self.through and (not isinstance(self.through, type) or not issubclass(self.through, Model)):
+            if not (
+                    (isinstance(self.through, type) and issubclass(self.reference_class, Model)) or
+                    valid_model(self.reference_class)):
+                raise KindError('through must be Model or available table name')
+            self.through = get_model(self.through)
+            for k, v in self.through.properties.items():
+                if isinstance(v, ReferenceProperty):
+                    if self.model_class is v.reference_class:
+                        self.fielda = k
+                        self.reversed_fieldname = v.reference_fieldname
+                    elif self.reference_class is v.reference_class:
+                        self.fieldb = k
+                        self.reference_fieldname = v.reference_fieldname
+            if not hasattr(self.through, self.fielda):
+                raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fielda, self.through))
+            if not hasattr(self.through, self.fieldb):
+                raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fieldb, self.through))
+            self.table = self.through.table
+            appname = self.model_class.__module__
+            if appname.endswith('.models'):
+                self.table.__appname__ = appname[:-7]
+            self.model_class.manytomany.append(self.table)
+            Index('%s_manytomany_indx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
     
     def __property_config__(self, model_class, property_name):
         """Loads all of the references that point to this model.
@@ -1163,7 +1244,7 @@ class ManyToMany(ReferenceProperty):
             raise DuplicatePropertyError('Class %s already has property %s'
                  % (self.reference_class.__name__, self.collection_name))
         setattr(self.reference_class, self.collection_name,
-            _ManyToManyReverseReferenceProperty(self, self._id_attr_name()))
+            _ManyToManyReverseReferenceProperty(self))
     
     def __get__(self, model_instance, model_class):
         """Get reference object.
@@ -1174,13 +1255,12 @@ class ManyToMany(ReferenceProperty):
         Returns:
             ReferenceProperty to Model object if property is set, else None.
         """
+        self.init_through()
         if model_instance:
-            if hasattr(model_instance, self._id_attr_name()):
-                reference_id = getattr(model_instance, self._id_attr_name())
-            else:
-                reference_id = None
+            reference_id = getattr(model_instance, self.reversed_fieldname, None)
             x = ManyResult(self.model_class, self.reference_class, self.table,
-                self.fielda, self.fieldb, reference_id)
+                self.fielda, self.fieldb, self.reversed_fieldname,
+                self.reference_fieldname, reference_id)
             return x
         else:
             return self
@@ -1190,7 +1270,7 @@ class ManyToMany(ReferenceProperty):
     
     def get_value_for_datastore(self, model_instance):
         """Get key of reference rather than reference itself."""
-        return getattr(model_instance, self._id_attr_name())
+        return getattr(model_instance, self.reversed_fieldname)
     
     def get_display_value(self, value):
         s = []
@@ -1205,8 +1285,8 @@ class ManyToMany(ReferenceProperty):
         if not objs:
             return (self.table.c[self.fielda]!=self.table.c[self.fielda])
         else:
-            ids = get_objs_ids(*objs)
-            return (self.model_class.c.id == self.table.c[self.fielda]) & (self.table.c[self.fieldb].in_(ids))
+            ids = get_objs_columns(objs, self.reference_fieldname)
+            return (self.model_class.c[self.reversed_fieldname] == self.table.c[self.fielda]) & (self.table.c[self.fieldb].in_(ids))
     
     def select_in(self, *objs):
         """
@@ -1215,9 +1295,9 @@ class ManyToMany(ReferenceProperty):
         if not objs:
             return self.table.c[self.fielda]!=self.table.c[self.fielda]
         else:
-            ids = get_objs_ids(*objs)
-            sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c.id) & (self.table.c[self.fieldb].in_(ids)))
-            query = self.model_class.c.id.in_(sub_query)
+            ids = get_objs_columns(objs)
+            sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fieldb].in_(ids)))
+            query = self.model_class.c[self.reversed_fieldname].in_(sub_query)
             return query
             
     
@@ -1248,18 +1328,18 @@ class _ReverseReferenceProperty(Property):
         Constructor does not take standard values of other property types.
 
         """
-        self._model = model
-        self._reference_id = reference_id    #B Reference(A) this is B's id
-        self._reversed_id = reversed_id    #A's id
+        self._model = model                 #A
+        self._reference_id = reference_id   #A Reference(B) this is A's reference field
+        self._reversed_id = reversed_id     #B's reference_field
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
-        if model_instance is not None:
+        if model_instance is not None:      #model_instance is B's
             _id = getattr(model_instance, self._reversed_id, None)
             if _id is not None:
-                b_id = self._reference_id
-                d = self._model.c[self._reference_id]
-                return ReverseResult(self._model, d==_id, self._reference_id, model_class.table, model_instance, self._reversed_id)
+                a_id = self._reference_id
+                a_field = self._model.c[self._reference_id]
+                return ReverseResult(self._model, a_field==_id, self._reference_id, model_class.table, model_instance, self._reversed_id)
             else:
 #                return Result()
                 return None
@@ -1295,25 +1375,25 @@ class _OneToOneReverseReferenceProperty(_ReverseReferenceProperty):
             return self
     
 class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
-    def __init__(self, reference_property, reversed_id):
+    def __init__(self, reference_property):
         """Constructor for reverse reference.
     
         Constructor does not take standard values of other property types.
     
         """
         self.reference_property = reference_property
-        self._reversed_id = reversed_id
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
+        self.reference_property.init_through()
+        self._reversed_id = self.reference_property.reference_fieldname
         if model_instance:
-            if hasattr(model_instance, self._reversed_id):
-                reference_id = getattr(model_instance, self._reversed_id)
-            else:
-                reference_id = None
+            reference_id = getattr(model_instance, self._reversed_id, None)
             x = ManyResult(self.reference_property.reference_class, 
                 self.reference_property.model_class, self.reference_property.table,
-                self.reference_property.fieldb, self.reference_property.fielda, reference_id)
+                self.reference_property.fieldb, self.reference_property.fielda, 
+                self.reference_property.reference_fieldname,
+                self.reference_property.reversed_fieldname, reference_id)
             return x
         else:
             return self
