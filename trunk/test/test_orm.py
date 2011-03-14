@@ -322,6 +322,9 @@ def test_floatproperty():
     <Test2 {'f':23.123456788999999,'id':1}>
     >>> Test2.get(1)
     <Test2 {'f':23.123456788999999,'id':1}>
+    >>> a.f = 0.000000001 #test float zero
+    >>> a.f
+    0.0
     """
     
 def test_datetime_property():

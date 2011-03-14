@@ -21,6 +21,7 @@ __default_connection__ = None  #global connection instance
 __auto_create__ = True
 __debug_query__ = None
 __default_encoding__ = 'utf-8'
+__zero_float__ = 0.0000005
 
 import decimal
 import threading
@@ -596,6 +597,8 @@ class FloatProperty(Property):
         if value is not None and not isinstance(value, float):
             raise BadValueError('Property %s must be a float, not a %s' 
                 % (self.name, type(value).__name__))
+        if abs(value) < __zero_float__:
+            value = 0.0
         return value
     
 class DecimalProperty(Property):
@@ -883,7 +886,7 @@ class Result(object):
     
     def values_one(self, *args, **kwargs):
         self.funcs.append(('with_only_columns', (args,), kwargs))
-        self.run()
+        self.run(1)
         result = self.result.fetchone()
         return result
 
@@ -899,18 +902,21 @@ class Result(object):
         self.funcs.append(('offset', args, kwargs))
         return self
     
-    def run(self):
+    def run(self, limit=0):
         if self.condition is not None:
             query = select(self.columns, self.condition)
         else:
             query = select(self.columns)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
+        #add limit support
+        if limit > 0:
+            query = getattr(query, 'limit')(limit)
         self.result = query.execute()
         return self.result
     
     def one(self):
-        self.run()
+        self.run(1)
         result = self.result.fetchone()
         if result:
             d = self.model._data_prepare(result)
@@ -1078,15 +1084,17 @@ class ManyResult(Result):
             count = 0
         return count > 0
         
-    def run(self):
+    def run(self, limit=0):
         query = select(self.columns, (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c.id) & self.condition)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
+        if limit > 0:
+            query = getattr(query, 'limit')(limit)
         self.result = query.execute()
         return self.result
         
     def one(self):
-        self.run()
+        self.run(1)
         if not self.result:
             return
         result = self.result.fetchone()
