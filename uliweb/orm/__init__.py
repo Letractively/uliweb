@@ -3,6 +3,9 @@
 # 2008.06.11
 # Update:
 #   2010.4.1 Add get() support to Result and ManyResult
+# Update:
+#   2011.3.14 Add __without_id__ to Model class, so if set it to True, the 'id' 
+#       field will not be created automatically, others will created 'id' field
 
 
 __all__ = ['Field', 'get_connection', 'Model', 'create_all',
@@ -236,7 +239,10 @@ class ModelMetaclass(type):
         #if there is already defined primary_key, the id will not be primary_key
         has_primary_key = bool([v for v in cls.properties.itervalues() if 'primary_key' in v.kwargs])
         
-        if 'id' not in cls.properties:
+        #add __without_id__ attribute to model, if set it, uliorm will not
+        #create 'id' field for the model
+        without_id = getattr(cls, '__without_id__', False)
+        if 'id' not in cls.properties and not without_id:
             cls.properties['id'] = f = Field(int, autoincrement=True, 
                 primary_key=not has_primary_key, default=None)
             f.__property_config__(cls, 'id')
