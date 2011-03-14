@@ -515,6 +515,24 @@ def test_save():
     {'username': u'newuser', 'id': 1}
     """
     
+def test_without_id():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     __without_id__ = True
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(datetime.datetime, auto_now_add=True, auto_now=True)
+    >>> 'id' in Test.properties
+    False
+    >>> class Test(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(datetime.datetime, auto_now_add=True, auto_now=True)
+    >>> 'id' in Test.properties
+    True
+    """
+    
 
 #if __name__ == '__main__':
 #    set_debug_query(True)
