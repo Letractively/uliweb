@@ -898,7 +898,7 @@ class SimpleListView(object):
                         convert = fields_convert_map.get(x)
                         if convert:
                             row[i] = convert(row[i], record)
-                w.writerow(simple_value(row, encoding))
+                w.writerow(simple_value(row[:len(table['fields'])], encoding))
             total = self.get_total(table)
             if total:
                 row = []

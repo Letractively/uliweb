@@ -303,25 +303,17 @@ def test_floatproperty():
     """
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
-    >>> class Test(Model):
-    ...     f = FloatProperty()
-    >>> Test.f.precision
-    2
     >>> class Test1(Model):
     ...     f = FloatProperty(precision=6)
     >>> Test1.f.precision
     6
-    >>> class Test2(Model):
-    ...     f = FloatProperty(max_length=5)
-    >>> Test2.f.precision
-    5
-    >>> a = Test2(f=23.123456789)
+    >>> a = Test1(f=23.123456789)
     >>> a.save()
     True
     >>> a
-    <Test2 {'f':23.123456788999999,'id':1}>
-    >>> Test2.get(1)
-    <Test2 {'f':23.123456788999999,'id':1}>
+    <Test1 {'f':23.123456788999999,'id':1}>
+    >>> Test1.get(1)
+    <Test1 {'f':23.123456788999999,'id':1}>
     >>> a.f = 0.000000001 #test float zero
     >>> a.f
     0.0
@@ -826,6 +818,22 @@ def test_many2many_through_alone():
     >>> print list(a.group_set.filter(Relation.c.year>5))
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
     
+    """
+
+def test_decimal_float():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     float = FloatProperty(precision=5)
+    ...     decimal = DecimalProperty(precision=3, scale=1)
+    >>> a = Test()
+    >>> a.float = 200.02
+    >>> a.decimal = decimal.Decimal("10.2")
+    >>> a.save()
+    True
+    >>> a
+    <Test {'float':200.02000000000001,'decimal':Decimal('10.2'),'id':1}>
     """
 
 #if __name__ == '__main__':
