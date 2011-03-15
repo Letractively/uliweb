@@ -576,22 +576,11 @@ class FloatProperty(Property):
     data_type = float
     field_class = Float
     
-    def __init__(self, verbose_name=None, default=0.0, **kwds):
+    def __init__(self, verbose_name=None, default=0.0, precision=None, **kwds):
         super(FloatProperty, self).__init__(verbose_name, default=default, **kwds)
-        precision = 2
-        if self.max_length:
-            precision = self.max_length
-        if 'precision' in self.kwargs:
-            precision = self.kwargs.pop('precision')
         self.precision = precision
         
-#        length = 2
-#        if 'length' in self.kwargs:
-#            length = self.kwargs.get('length')
-#        self.length = length
-#        
     def _create_type(self):
-#        f_type = self.field_class(**dict(precision=self.precision, length=self.length))
         f_type = self.field_class(precision=self.precision)
         return f_type
     
@@ -610,8 +599,10 @@ class DecimalProperty(Property):
     data_type = decimal.Decimal
     field_class = Numeric
     
-    def __init__(self, verbose_name=None, default='0.0', **kwds):
+    def __init__(self, verbose_name=None, default='0.0', precision=None, scale=None, **kwds):
         super(DecimalProperty, self).__init__(verbose_name, default=default, **kwds)
+        self.precision = precision
+        self.scale = scale
    
     def validate(self, value):
         value = super(DecimalProperty, self).validate(value)
@@ -619,7 +610,11 @@ class DecimalProperty(Property):
             raise BadValueError('Property %s must be a decimal, not a %s'
                 % (self.name, type(value).__name__))
         return value
-
+    
+    def _create_type(self):
+        f_type = self.field_class(precision=self.precision, scale=self.scale)
+        return f_type
+    
 class BooleanProperty(Property):
     """A boolean property."""
 
