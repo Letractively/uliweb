@@ -579,6 +579,11 @@ def test_reference_not_id():
     >>> a1.tttt.clear(b2)
     >>> print list(Test1.all())
     [<Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':5,'name':u'user','id':1}>]
+    >>> b3 = Test1(name='aaaa', year=10, test='limodou1')
+    >>> b3.save()
+    True
+    >>> print repr(b3)
+    <Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':10,'name':u'aaaa','id':2}>
     """
 
 def test_one2one_reference_field():

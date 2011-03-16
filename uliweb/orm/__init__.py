@@ -115,6 +115,29 @@ def set_connection(db, default=True, debug=False):
         db.echo = debug
     metadata = MetaData(db)
     db.metadata = metadata
+    
+def Begin(db=None):
+    if not db:
+        db = get_connection()
+    db.begin()
+    
+def Commit(db=None, close=False):
+    if not db:
+        db = get_connection()
+    conn = db.contextual_connect()
+    if conn.in_transaction():
+        db.commit()
+    if close:
+        conn.close()
+
+def Rollback(db=None, close=False):
+    if not db:
+        db = get_connection()
+    conn = db.contextual_connect()
+    if conn.in_transaction():
+        db.rollback()
+    if close:
+        conn.close()
 
 class SQLStorage(dict):
     """
