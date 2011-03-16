@@ -7,7 +7,6 @@ class TransactionMiddle(Middleware):
     def __init__(self, application, settings):
         from uliweb.orm import get_connection
         self.db = get_connection()
-        self.conn = self.db.contextual_connect()
         
     def process_request(self, request):
         self.db.begin()
