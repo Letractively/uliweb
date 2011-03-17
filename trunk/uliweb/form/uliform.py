@@ -587,7 +587,7 @@ class SelectField(BaseField):
         else:
             return self.choices
         
-    def html(self, data, py=True):
+    def html(self, data='', py=True):
 #        if py:
 #            value = self.to_html(data)
 #        else:
