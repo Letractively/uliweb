@@ -986,6 +986,7 @@ class SimpleListView(object):
         
     def create_table_head(self, table):
         from uliweb.core.html import Tag
+        from uliweb.utils.common import simple_value
 
         s = []
         fields = []
@@ -1021,7 +1022,7 @@ class SimpleListView(object):
                 j = i + 1
                 while j<n:
                     field_n = get_field(fields, j, max_rowspan-y)
-                    if field['name'] == field_n['name'] and field['rowspan'] == field_n['rowspan']:
+                    if simple_value(field['name']) == simple_value(field_n['name']) and field['rowspan'] == field_n['rowspan']:
                         #combine
                         remove_field(fields, j)
                         field['colspan'] += 1

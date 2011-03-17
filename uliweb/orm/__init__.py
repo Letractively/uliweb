@@ -15,7 +15,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'create_all',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError',
-    'BadPropertyTypeError', 'FILE']
+    'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback']
 
 __default_connection__ = None  #global connection instance
 __auto_create__ = True

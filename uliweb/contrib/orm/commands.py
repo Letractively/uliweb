@@ -147,7 +147,40 @@ class ResetCommand(Command):
                 print 'Resetting %s...' % name
             t.drop(con)
             t.create(con)
+
+class ResetTableCommand(Command):
+    name = 'resettable'
+    args = '<tablename, tablename, ...>'
+    help = 'Reset the tables(drop and recreate). If no tables, then will do nothing.'
+    
+    def handle(self, options, global_options, *args):
+        from sqlalchemy import create_engine
+        from uliweb import orm
+
+        if not args:
+            print "Failed! You should pass one or more tables name."
+            sys.exit(1)
+
+        message = """This command will drop all tables [%s], are you sure to reset[Y/n]""" % ','.join(args)
+        ans = raw_input(message)
+        if ans and ans.upper() != 'Y':
+            print "Command be cancelled!"
+            return
         
+        engine = get_engine(global_options.project)
+        con = create_engine(engine)
+        
+        for name in args:
+            m = orm.get_model(name)
+            if not m:
+                print "Error! Can't find the table %s...Skipped!" % name
+                continue
+            t = m.table
+            if global_options.verbose:
+                print 'Resetting %s...' % name
+            t.drop(con)
+            t.create(con)
+
 class SQLCommand(Command):
     name = 'sql'
     args = '<appname, appname, ...>'
