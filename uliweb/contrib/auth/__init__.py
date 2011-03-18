@@ -89,9 +89,16 @@ def require_login(f, login_url='/login'):
     
     @wraps(f)
     def _f(*args, **kwargs):
-        from uliweb import request, redirect
-        
-        if not request.user:
-            return redirect(login_url + '?next=%s' % request.path)
+        r = if_login(login_url)
+        if r:
+            return r
         return f(*args, **kwargs)
     return _f
+
+def if_login(login_url='/login'):
+    from uliweb import request, redirect
+    import urllib
+    
+    if not request.user:
+        return redirect(login_url + '?next=%s' % urllib.quote(request.path+'?'+request.query_string))
+    

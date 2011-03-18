@@ -786,14 +786,19 @@ class SimpleListView(object):
                 s.append(v)
         return s
 
-    def render_total(self, table):
+    def render_total(self, table, json=False):
         s = []
         if self.total_fields:
-            s.append('<tr class="sum">')
-            for v in self.get_total(table):
-                v = str(v) or '&nbsp;'
-                s.append('<td>%s</td>' % v)
-            s.append('</tr>')
+            if json:
+                for v in self.get_total(table):
+                    v = str(v)
+                    s.append(v)
+            else:
+                s.append('<tr class="sum">')
+                for v in self.get_total(table):
+                    v = str(v) or '&nbsp;'
+                    s.append('<td>%s</td>' % v)
+                s.append('</tr>')
         return s
     
     def query_all(self):
@@ -1091,7 +1096,7 @@ class ListView(SimpleListView):
         self.create_total_infos(total_fields)
         self.template_data = template_data or {}
         
-    def run(self, head=True, body=True):
+    def run(self, head=True, body=True, json_body=False):
         import uliweb.orm as orm
         
         if isinstance(self.model, str):
@@ -1112,20 +1117,22 @@ class ListView(SimpleListView):
             query = self.query(self.pageno, self.pagination)
         result = self.template_data.copy()
         if head:
-            result.update({'table':self.render(table, query, head=head, body=body), 'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}})
+            result.update(self.render(table, query, head=head, body=body))
         else:
-            result.update({'table':self.render(table, query, head=head, body=body)})
+            result.update(self.render(table, query, head=head, body=body, json_body=json_body))
         return result
+    
+    def json(self):
+        return self.run(head=False, body=True, json_body=True)
 
-    def render(self, table, query, head=True, body=True):
+    def render(self, table, query, head=True, body=True, json_body=False):
         """
         table is a dict, just like
         table = {'fields_name':[fieldname,...],
             'fields_list':[{'name':fieldname,'width':100,'align':'left'},...],
             'count':10,
         """
-        from uliweb.core.html import Tag
-
+        result = {}
         s = []
         if head:
             if self.table_width:
@@ -1137,28 +1144,52 @@ class ListView(SimpleListView):
             s.extend(self.create_table_head(table))
             s.append('</thead>')
             s.append('<tbody>')
+            result = {'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
         
         if body:
             #create table body
             for record in query:
-                s.append('<tr>')
+                r = []
                 for i, x in enumerate(table['fields_list']):
                     if hasattr(self.model, x['name']):
                         field = getattr(self.model, x['name'])
                     else:
                         field = x
                     v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
-                    s.append(str(Tag('td', v['display'])))
-                s.append('</tr>')
+                    r.append((x['name'], v['display']))
+                    
+                if json_body:
+                    s.append(self.json_body_render(r))
+                else:
+                    s.extend(self.default_body_render(r))
                 self.cal_total(table, record)
-            s.extend(self.render_total(table))
+            if json_body:
+                total = self.render_total(table, json_body)
+                if total:
+                    s.append(total)
+                return {'total':self.total, 'rows':s}
+            else:
+                s.extend(self.render_total(table))
                 
         if head:
             s.append('</tbody>')
             s.append('</table>')
         
-        return '\n'.join(s)
+        result['table'] = '\n'.join(s)
+        return result
     
+    def json_body_render(self, record):
+        return dict(record)
+        
+    def default_body_render(self, record):
+        from uliweb.core.html import Tag
+        
+        s = ['<tr>']
+        for n, f in record:
+            s.append(str(Tag('td', f)))
+        s.append('</tr>')
+        return s
+        
     def query_all(self):
         return self.query_model(self.model, self.condition, order_by=self.order_by)
     
