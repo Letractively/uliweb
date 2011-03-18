@@ -729,7 +729,8 @@ class DeleteView(object):
 class SimpleListView(object):
     def __init__(self, fields=None, query=None, cache_file=None,  
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
-        table_class_attr='table', table_width=False, pagination=True, total_fields=None, template_data=None):
+        table_class_attr='table', table_width=False, pagination=True, total_fields=None, 
+        template_data=None, default_column_width=100):
         """
         Pass a data structure to fields just like:
             [
@@ -750,6 +751,7 @@ class SimpleListView(object):
         self.pagination = pagination
         self.create_total_infos(total_fields)
         self.template_data = template_data or {}
+        self.default_column_width = default_column_width
         
     def create_total_infos(self, total_fields):
         if total_fields:
@@ -1056,6 +1058,79 @@ class SimpleListView(object):
             
         return s
         
+    def get_columns(self):
+        from uliweb.utils.common import simple_value
+    
+        table = self.table_info()
+        
+        columns = []
+        fields = []
+        max_rowspan = 0
+        for i, f in enumerate(table['fields_name']):
+            _f = list(f.split('/'))
+            max_rowspan = max(max_rowspan, len(_f))
+            fields.append((_f, i))
+        
+        def get_field(fields, i, m_rowspan):
+            f_list, col = fields[i]
+            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1}
+            if len(f_list) == 1:
+                field['rowspan'] = m_rowspan
+            return field
+        
+        def remove_field(fields, i):
+            del fields[i][0][0]
+        
+        def clear_fields(fields):
+            for i in range(len(fields)-1, -1, -1):
+                if len(fields[i][0]) == 0:
+                    del fields[i]
+                    
+        n = len(fields)
+        y = 0
+        while n>0:
+            s = []
+            i = 0
+            while i<n:
+                field = get_field(fields, i, max_rowspan-y)
+                remove_field(fields, i)
+                j = i + 1
+                while j<n:
+                    field_n = get_field(fields, j, max_rowspan-y)
+                    if simple_value(field['name']) == simple_value(field_n['name']) and field['rowspan'] == field_n['rowspan']:
+                        #combine
+                        remove_field(fields, j)
+                        field['colspan'] += 1
+                        field['width'] += field_n['width']
+                        j += 1
+                    else:
+                        break
+                _f = table['fields_list'][field['col']].copy()
+                kwargs = {}
+                kwargs['field'] = _f.pop('name')
+                _f.pop('verbose_name', None)
+                kwargs['title'] = field['name']
+                span = False
+                if field['colspan'] > 1:
+                    kwargs['colspan'] = field['colspan']
+                    span = True
+                if field['rowspan'] > 1:
+                    kwargs['rowspan'] = field['rowspan']
+                    span = True
+                if not span:
+                    kwargs['width'] = _f.pop('width', self.default_column_width)
+                _f.pop('width', None)
+                kwargs.update(_f)
+                s.append(kwargs)
+                
+                i = j
+            clear_fields(fields)
+            n = len(fields)
+            y += 1
+            columns.append(s)
+            
+        return columns
+
     def table_info(self):
         t = {'fields_name':[], 'fields':[]}
         t['fields_list'] = self.fields
@@ -1073,7 +1148,7 @@ class ListView(SimpleListView):
     def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
-        total_fields=None, template_data=None):
+        total_fields=None, template_data=None, default_column_width=100):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -1095,6 +1170,7 @@ class ListView(SimpleListView):
         self.pagination = pagination
         self.create_total_infos(total_fields)
         self.template_data = template_data or {}
+        self.default_column_width = default_column_width
         
     def run(self, head=True, body=True, json_body=False):
         import uliweb.orm as orm
@@ -1159,7 +1235,10 @@ class ListView(SimpleListView):
                     r.append((x['name'], v['display']))
                     
                 if json_body:
-                    s.append(self.json_body_render(r))
+                    _r = self.json_body_render(r)
+                    if 'id' not in _r and hasattr(record, 'id'):
+                        _r['id'] = getattr(record, 'id')
+                    s.append(_r)
                 else:
                     s.extend(self.default_body_render(r))
                 self.cal_total(table, record)
