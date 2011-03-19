@@ -13,7 +13,6 @@ import os, sys
 
 application = None
 settings = None
-urls = []
 static_views = []
 url_map = None
 local = None
@@ -26,5 +25,5 @@ workpath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(workpath, 'lib'))
 
 from uliweb.core.SimpleFrame import (Request, Response, redirect, error, json, 
-        POST, GET, url_for, expose, get_app_dir, get_apps, function, simple_expose,
+        POST, GET, url_for, expose, get_app_dir, get_apps, function, 
     )
