@@ -5,18 +5,21 @@
 
 import os, sys
 import cgi
+import types
 from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound
+from werkzeug.routing import Map
 
 import template
 from storage import Storage
 import dispatch
 from uliweb.utils.common import (pkg, log, sort_list, import_attr, 
-    import_mod_attr, myimport, wraps, norm_path, cache_get)
+    myimport, wraps, norm_path, cache_get)
 from uliweb.utils.pyini import Ini
 import uliweb as conf
-from rules import Mapping, add_rule
+#from rules import Mapping, add_rule
+import rules
 
 try:
     set
@@ -25,11 +28,8 @@ except:
 
 conf.local = local = Local()
 local_manager = LocalManager([local])
-
-conf.url_map = Mapping()
+conf.url_map = Map()
 __app_dirs__ = {}
-__use_urls__ = False
-__url_names__ = {}
 
 class Request(OriginalRequest):
     GET = OriginalRequest.args
@@ -125,109 +125,12 @@ def json(data, unicode=False):
     else:
         return Response(json_dumps(data), content_type='application/json; charset=utf-8')
 
-class ReservedKeyError(Exception):pass
-
-reserved_keys = ['settings', 'redirect', 'application', 'request', 'response', 'error',
-    'json']
-
-def _get_rule(f):
-    import inspect
-    args = inspect.getargspec(f)[0]
-    if args :
-        args = ['<%s>' % x for x in args]
-    if f.__name__ in reserved_keys:
-        raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
-    m = f.__module__.split('.')
-    s = []
-    for i in m:
-        if not i.startswith('views'):
-            s.append(i)
-    appname = '.'.join(s)
-    rule = '/' + '/'.join(['/'.join(s), f.__name__] + args)
-    return appname, rule
-    
-def expose(rule=None, **kw):
-    """
-    add a url assigned to the function to url_map, if rule is None, then
-    the url will be function name, for example:
-        
-        @expose
-        def index(req):
-            
-        will be url_map.add('index', index)
-    """
-    def fix_url(module, url):
-        m = module.split('.')
-        s = []
-        for i in m:
-            if not i.startswith('views'):
-                s.append(i)
-        appname = '.'.join(s)
-        
-        if 'URL' in conf.settings and appname in conf.settings.URL:
-            suffix = conf.settings.URL[appname]
-            url = url.lstrip('/')
-            return os.path.join(suffix, url).replace('\\', '/')
-        else:
-            return url
-        
-    static = kw.pop('static', None)
-    if callable(rule):
-        if conf.use_urls:
-            return rule
-        f = rule
-        appname, rule = _get_rule(f)
-        kw['endpoint'] = f.__module__ + '.' + f.__name__
-        rule = fix_url(appname, rule)
-        conf.urls.append((rule, kw))
-        if static:
-            conf.static_views.append(kw['endpoint'])
-        add_rule(conf.url_map, rule, **kw)
-        return f
-        
-    def decorate(f, rule=rule):
-        if conf.use_urls:
-            return f
-        if callable(f):
-            appname, x = _get_rule(f)
-        if not rule:
-            rule = x
-        if callable(f):
-            f_name = f.__name__
-            endpoint = f.__module__ + '.' + f.__name__
-            module = appname
-        else:
-            f_name = f.split('.')[-1]
-            endpoint = f
-            module = f
-            
-        if f_name in reserved_keys:
-            raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f_name
-        kw['endpoint'] = endpoint
-        rule = fix_url(module, rule)
-        conf.urls.append((rule, kw.copy()))
-        if static:
-            conf.static_views.append(kw['endpoint'])
-        name = kw.pop('name', None)
-        if name:
-            __url_names__[name] = endpoint
-        add_rule(conf.url_map, rule, **kw)
-        return f
-    return decorate
-
-def simple_expose(url, endpoint, **kw):
-    static = kw.pop('static', None)
-    if callable(endpoint):
-        f_name = endpoint.__name__
-        endpoint = endpoint.__module__ + '.' + endpoint.__name__
-    kw['endpoint'] = endpoint
-    conf.urls.append((url, kw.copy()))
-    if static:
-        conf.static_views.append(endpoint)
-    name = kw.pop('name', None)
-    if name:
-        __url_names__[name] = endpoint
-    add_rule(conf.url_map, url, **kw)
+def expose(rule=None, **kwargs):
+    e = rules.Expose(rule, **kwargs)
+    if e.parse_level == 1:
+        return rule
+    else:
+        return e
 
 def POST(rule, **kw):
     kw['methods'] = ['POST']
@@ -241,8 +144,8 @@ def url_for(endpoint, **values):
     if callable(endpoint):
         endpoint = endpoint.__module__ + '.' + endpoint.__name__
     _external = values.pop('_external', False)
-    if endpoint in __url_names__:
-        endpoint = __url_names__[endpoint]
+    if endpoint in rules.__url_names__:
+        endpoint = rules.__url_names__[endpoint]
     return conf.local.url_adapter.build(endpoint, values, force_external=_external)
 
 def get_app_dir(app):
@@ -331,16 +234,16 @@ class Loader(object):
     
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir='apps', use_urls=None, include_apps=None, start=True, default_settings=None, settings_file='settings.ini'):
+    def __init__(self, apps_dir='apps', include_apps=None, start=True, default_settings=None, settings_file='settings.ini'):
         conf.application = self
         self.debug = False
-        self.use_urls = conf.use_urls = use_urls
         self.include_apps = include_apps or []
         self.default_settings = default_settings or {}
         self.settings_file = settings_file
         if not Dispatcher.installed:
             self.init(apps_dir)
             dispatch.call(self, 'startup_installed')
+            self.init_urls()
             
         if start:
             dispatch.call(self, 'startup')
@@ -349,19 +252,7 @@ class Dispatcher(object):
         conf.apps_dir = apps_dir
         Dispatcher.apps_dir = apps_dir
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps)
-        #add urls.py judgement
-        flag = True
-        if self.use_urls is None or self.use_urls is True:
-            try:
-                import urls
-                from uliweb.core import rules
-#                conf.url_map = urls.url_map
-                conf.static_views = rules.static_views
-                flag = False
-                log.info("Found urls.py, and disable dynamic expose functionality of views.")
-            except ImportError:
-                pass
-        Dispatcher.modules = self.collect_modules(flag)
+        Dispatcher.modules = self.collect_modules()
         self.install_settings(self.modules['settings'])
         Dispatcher.settings = conf.settings
         Dispatcher.env = self._prepare_env()
@@ -373,13 +264,7 @@ class Dispatcher(object):
         dispatch.call(self, 'after_init_apps')
 
         Dispatcher.url_map = conf.url_map
-        if flag:
-            self.install_views(self.modules['views'])
-            Dispatcher.url_infos = conf.urls
-        else:
-            Dispatcher.url_infos = []
-#        Dispatcher.templateplugins_dirs = self.get_templateplugins_dirs()
-        
+        self.install_views(self.modules['views'])
         #process dispatch hooks
         self.dispatch_hooks()
         
@@ -497,8 +382,21 @@ class Dispatcher(object):
         request.application = self
         
         #get handler
+        _klass = None
         if isinstance(endpoint, (str, unicode)):
-            mod, handler = import_mod_attr(endpoint)
+            module, func = endpoint.rsplit('.', 1)
+            #if the module contains a class name, then import the class
+            #it set by expose()
+            if module.endswith('__class__'):
+                module, cls = module.rsplit('.', 1)
+                cls = cls[:-9]
+            mod = __import__(module, {}, {}, [''])
+            if cls:
+                #create class instance
+                _klass = getattr(mod, cls)()
+                handler = getattr(_klass, func)
+            else:
+                handler = getattr(mod, func)
         elif callable(endpoint):
             handler = endpoint
             mod = sys.modules[handler.__module__]
@@ -510,9 +408,9 @@ class Dispatcher(object):
                 request.appname = p
                 break
         request.function = handler.__name__
-        return mod, handler
+        return mod, _klass, handler
     
-    def call_view(self, mod, handler, request, response=None, **values):
+    def call_view(self, mod, cls, handler, request, response=None, **values):
         #get env
         env = self.get_view_env()
         
@@ -520,6 +418,12 @@ class Dispatcher(object):
         #continue running
         if hasattr(mod, '__begin__'):
             f = getattr(mod, '__begin__')
+            result = self._call_function(f, request, response, env)
+            if result is not None:
+                return self.wrap_result(result, request, response, env)
+        
+        if hasattr(cls, '__begin__'):
+            f = getattr(cls, '__begin__')
             result = self._call_function(f, request, response, env)
             if result is not None:
                 return self.wrap_result(result, request, response, env)
@@ -533,7 +437,14 @@ class Dispatcher(object):
             if result1 is not None:
                 return self.wrap_result(result1, request, response, env)
         
-        return result or result1
+        result1 = None
+        if hasattr(cls, '__end__'):
+            f = getattr(cls, '__end__')
+            result1, env = self._call_function(f, request, response, env)
+            if result1 is not None:
+                return self.wrap_result(result1, request, response, env)
+
+        return result
         
     def wrap_result(self, result, request, response, env):
 #        #process ajax invoke, return a json response
@@ -646,6 +557,18 @@ class Dispatcher(object):
                 myimport(v)
             except Exception, e:
                 log.exception(e)
+         
+    def init_urls(self):
+        #set app rules
+        rules.set_app_rules(conf.settings.get('URL', {}))
+        
+        #initialize urls
+        for v in rules.merge_rules():
+            appname, endpoint, url, kw = v
+            static = kw.pop('static', None)
+            if static:
+                conf.static_views.append(endpoint)
+            rules.add_rule(conf.url_map, url, endpoint, **kw)
     
     def install_apps(self):
         for p in self.apps:
@@ -731,11 +654,11 @@ class Dispatcher(object):
         try:
             endpoint, values = adapter.match()
             
-            mod, handler = self.prepare_request(req, endpoint)
+            mod, cls, handler = self.prepare_request(req, endpoint)
             
             #process static
             if endpoint in conf.static_views:
-                response = self.call_view(mod, handler, req, res, **values)
+                response = self.call_view(mod, cls, handler, req, res, **values)
             else:
                 response = None
                 _clses = {}
@@ -770,7 +693,7 @@ class Dispatcher(object):
                 
                 if response is None:
                     try:
-                        response = self.call_view(mod, handler, req, res, **values)
+                        response = self.call_view(mod, cls, handler, req, res, **values)
                         
                     except Exception, e:
                         for middleware in reversed(middlewares):

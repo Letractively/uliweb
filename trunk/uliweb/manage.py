@@ -228,35 +228,35 @@ class ExportStaticCommand(Command):
         copy_dir_with_check(dirs, outputdir, global_options.verbose, options.check)
 register_command(ExportStaticCommand)
         
-class ExtractUrlsCommand(Command):
-    name = 'extracturls'
-    help = 'Extract all url mappings from view modules to a specified file.'
-    args = ''
-    
-    def handle(self, options, global_options, *args):
-        urlfile = 'urls.py'
-        
-        application = SimpleFrame.Dispatcher(apps_dir=global_options.project, use_urls=False, start=False)
-        filename = os.path.join(application.apps_dir, urlfile)
-        if os.path.exists(filename):
-            answer = raw_input("Error: [%s] is existed already, do you want to overwrite it[Y/n]:" % urlfile)
-            if answer.strip() and answer.strip.lower() != 'y':
-                return
-        f = file(filename, 'w')
-        print >>f, "from uliweb import simple_expose\n"
-        application.url_infos.sort()
-        for url, kw in application.url_infos:
-            endpoint = kw.pop('endpoint')
-            if kw:
-                s = ['%s=%r' % (k, v) for k, v in kw.items()]
-                t = ', %s' % ', '.join(s)
-            else:
-                t = ''
-            print >>f, "simple_expose(%r, %r%s)" % (url, endpoint, t)
-        f.close()
-        print 'urls.py has been created successfully.'
-register_command(ExtractUrlsCommand)
-        
+#class ExtractUrlsCommand(Command):
+#    name = 'extracturls'
+#    help = 'Extract all url mappings from view modules to a specified file.'
+#    args = ''
+#    
+#    def handle(self, options, global_options, *args):
+#        urlfile = 'urls.py'
+#        
+#        application = SimpleFrame.Dispatcher(apps_dir=global_options.project, start=False)
+#        filename = os.path.join(application.apps_dir, urlfile)
+#        if os.path.exists(filename):
+#            answer = raw_input("Error: [%s] is existed already, do you want to overwrite it[Y/n]:" % urlfile)
+#            if answer.strip() and answer.strip.lower() != 'y':
+#                return
+#        f = file(filename, 'w')
+#        print >>f, "from uliweb import simple_expose\n"
+#        application.url_infos.sort()
+#        for url, kw in application.url_infos:
+#            endpoint = kw.pop('endpoint')
+#            if kw:
+#                s = ['%s=%r' % (k, v) for k, v in kw.items()]
+#                t = ', %s' % ', '.join(s)
+#            else:
+#                t = ''
+#            print >>f, "simple_expose(%r, %r%s)" % (url, endpoint, t)
+#        f.close()
+#        print 'urls.py has been created successfully.'
+#register_command(ExtractUrlsCommand)
+#        
 class CallCommand(Command):
     name = 'call'
     help = 'Call <exefile>.py for each installed app according the command argument.'
@@ -369,7 +369,7 @@ class ShellCommand(Command):
     banner = "Uliweb Command Shell"
     
     def make_shell_env(self):
-        application = SimpleFrame.Dispatcher(apps_dir=apps_dir, use_urls=False, start=False)
+        application = SimpleFrame.Dispatcher(apps_dir=apps_dir, start=False)
         env = {'application':application, 'settings':application.settings}
         return env
     
