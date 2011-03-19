@@ -5,7 +5,7 @@
 
 import os, sys
 import cgi
-import types
+import inspect, types
 from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound
@@ -141,12 +141,20 @@ def GET(rule, **kw):
     return expose(rule, **kw)
 
 def url_for(endpoint, **values):
-    if callable(endpoint):
-        endpoint = endpoint.__module__ + '.' + endpoint.__name__
+    if inspect.isfunction(endpoint):
+        point = endpoint.__module__ + '.' + endpoint.__name__
+    elif inspect.ismethod(endpoint):
+        if not endpoint.im_self:    #instance method
+            clsname = endpoint.im_class.__name__
+        else:                       #class method
+            clsname = endpoint.im_self.__name__
+        point = '.'.join([endpoint.__module__, clsname, endpoint.__name__])
+    else:
+        point = endpoint
     _external = values.pop('_external', False)
-    if endpoint in rules.__url_names__:
-        endpoint = rules.__url_names__[endpoint]
-    return conf.local.url_adapter.build(endpoint, values, force_external=_external)
+    if point in rules.__url_names__:
+        point = rules.__url_names__[point]
+    return conf.local.url_adapter.build(point, values, force_external=_external)
 
 def get_app_dir(app):
     """
@@ -387,16 +395,15 @@ class Dispatcher(object):
             module, func = endpoint.rsplit('.', 1)
             #if the module contains a class name, then import the class
             #it set by expose()
-            if module.endswith('__class__'):
-                module, cls = module.rsplit('.', 1)
-                cls = cls[:-9]
-            mod = __import__(module, {}, {}, [''])
-            if cls:
-                #create class instance
-                _klass = getattr(mod, cls)()
+            x, last = module.rsplit('.', 1)
+            if last.startswith('views'):
+                mod = __import__(module, {}, {}, [''])
                 handler = getattr(_klass, func)
             else:
-                handler = getattr(mod, func)
+                module = x
+                mod = __import__(module, {}, {}, [''])
+                _klass = getattr(mod, last)()
+                handler = getattr(_klass, func)
         elif callable(endpoint):
             handler = endpoint
             mod = sys.modules[handler.__module__]
