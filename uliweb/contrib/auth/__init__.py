@@ -100,5 +100,9 @@ def if_login(login_url='/login'):
     import urllib
     
     if not request.user:
-        return redirect(login_url + '?next=%s' % urllib.quote(request.path+'?'+request.query_string))
+        if request.query_string:
+            path = urllib.quote(request.path+'?'+request.query_string)
+        else:
+            path = request.path
+        return redirect(login_url + '?next=%s' % path)
     

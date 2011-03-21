@@ -600,7 +600,7 @@ class Dispatcher(object):
     def dispatch_hooks(self):
         #process DISPATCH hooks
         d = conf.settings.get('BINDS', {})
-        for topic, args in d.iteritems():
+        for func, args in d.iteritems():
             if not args:
                 continue
             is_wrong = False
@@ -610,14 +610,14 @@ class Dispatcher(object):
                 if not isinstance(args[1], dict):
                     is_wrong = True
                 if not is_wrong:
-                    dispatch.bind(topic, **args[1])(args[0])
+                    dispatch.bind(args[0], **args[1])(func)
             elif isinstance(args, (str, unicode)):
-                dispatch.bind(topic)(args)
+                dispatch.bind(args)(func)
             else:
                 is_wrong = True
             if is_wrong:
-                log.error('BINDS definition should be "url=endpoint" or "url=endpoint, {"args":value1,...}"')
-                raise Exception, 'BINDS definition [%s=%r] is not right' % (topic, args)
+                log.error('BINDS definition should be "function=topic" or "function=topic, {"args":value1,...}"')
+                raise Exception, 'BINDS definition [%s=%r] is not right' % (func, args)
                 
         d = conf.settings.get('EXPOSES', {})
         for url, args in d.iteritems():
