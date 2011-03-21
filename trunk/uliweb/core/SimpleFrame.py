@@ -398,7 +398,7 @@ class Dispatcher(object):
             x, last = module.rsplit('.', 1)
             if last.startswith('views'):
                 mod = __import__(module, {}, {}, [''])
-                handler = getattr(_klass, func)
+                handler = getattr(mod, func)
             else:
                 module = x
                 mod = __import__(module, {}, {}, [''])
