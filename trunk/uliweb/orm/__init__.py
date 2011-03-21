@@ -398,7 +398,7 @@ class Property(object):
                 value = self.convert(value)
             except TypeError, err:
                 raise BadValueError('Property %s must be convertible '
-                    'to a string or unicode (%s)' % (self.name, err))
+                    'to %s, but the value is (%s)' % (self.name, self.data_type, err))
         
         for v in self.validators:
             v(value)

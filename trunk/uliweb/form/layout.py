@@ -148,7 +148,7 @@ class QueryLayout(Layout):
                             with buf.td:
                                 buf << self.form.get_buttons()
                                 if more:
-                                    buf << '<a href="#" id="more_query">%s</a>' % _('more')
+                                    buf << '<a href="javascript:void(0)" id="more_query">%s</a>' % _('more')
                             
             else:
                 f = getattr(self.form, line)
