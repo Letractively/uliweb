@@ -8,7 +8,7 @@ class SessionMiddle(Middleware):
         self.options = dict(settings.get('SESSION_STORAGE', {}))
         
         #process Session options
-        Session.default_expiry_time = settings.SESSION.timeout
+        Session.default_expiry_time = settings.SESSION.remember_me_timeout
         Session.default_storage_type = settings.SESSION.type
         
         #process Cookie options
@@ -22,9 +22,11 @@ class SessionMiddle(Middleware):
         else:
             timeout = settings.SESSION_COOKIE.timeout
         SessionCookie.default_expiry_time = timeout
+        self.timeout = settings.SESSION.timeout
         
     def process_request(self, request):
         key = request.cookies.get(SessionCookie.default_cookie_id)
+        print request.cookies
         if not key:
             key = request.values.get(SessionCookie.default_cookie_id)
         session = Session(key, options=self.options)
@@ -41,11 +43,12 @@ class SessionMiddle(Middleware):
                 if session.remember:
                     max_age = c.expiry_time
                 else:
-                    max_age = None
+                    max_age = self.timeout
                 response.set_cookie(c.cookie_id,
                         session.key, max_age=max_age,
                         expires=None, domain=c.domain,
                         path=c.path,
                         secure=c.secure)
+                print response.headers
         return response
         
