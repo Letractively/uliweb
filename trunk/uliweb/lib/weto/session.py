@@ -50,6 +50,9 @@ class Session(dict):
         'lock_dir':'./sessions/session_files_lock'}
     
     def __init__(self, key=None, storage_type=None, options=None, expiry_time=None):
+        """
+        expiry_time is just like max_age, the unit is second
+        """
         dict.__init__(self)
         self._old_value = {}
         self._storage_type = storage_type or self.default_storage_type
@@ -153,6 +156,10 @@ class Session(dict):
                 
         self.deleted = True
          
+    def set_expiry(self, value):
+        self.expiry_time = value
+        self.cookie.expiry_time = value
+        
     def _check(f):
         def _func(self, *args, **kw):
             try:
