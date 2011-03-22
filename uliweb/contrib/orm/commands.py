@@ -1,5 +1,6 @@
 import os, sys
 import datetime
+from decimal import Decimal
 from uliweb.core.commands import Command
 from optparse import make_option
 from uliweb.utils.common import log, is_pyfile_exist
