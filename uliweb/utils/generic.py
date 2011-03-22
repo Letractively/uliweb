@@ -99,6 +99,8 @@ def get_fields(model, fields, meta):
             fields_list.append((x, getattr(model, x)))
         elif isinstance(x, tuple):
             fields_list.append(x)   #x should be a tuple, just like (field_name, form_field_obj)
+        elif isinstance(x, dict):
+            fields_list.append((x['name'], x))
         else:
             raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
     return fields_list
@@ -295,13 +297,14 @@ class AddView(object):
     builds_args_map = {}
     meta = 'AddForm'
     
-    def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
+    def __init__(self, model, ok_url=None, ok_template=None, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None, file_replace=True, template_data=None):
 
         self.model = model
         self.ok_url = ok_url
+        self.ok_template = ok_template
         self.form = form
         if success_msg:
             self.success_msg = success_msg
@@ -396,8 +399,8 @@ class AddView(object):
         return flag
     
     def on_success(self, d):
-        from uliweb import function
-        from uliweb import redirect
+        from uliweb import function, response, redirect
+
         flash = function('flash')
 
         if self.pre_save:
@@ -411,7 +414,11 @@ class AddView(object):
             self.post_save(obj, d)
                 
         flash(self.success_msg)
-        return redirect(get_url(self.ok_url, obj.id))
+        if self.ok_url:
+            return redirect(get_url(self.ok_url, obj.id))
+        else:
+            response.template = self.ok_template
+            return d
     
     def run(self):
         from uliweb import request, function
@@ -459,13 +466,13 @@ class EditView(AddView):
     builds_args_map = {}
     meta = 'EditForm'
     
-    def __init__(self, model, ok_url, condition=None, obj=None, **kwargs):
+    def __init__(self, model, ok_url=None, condition=None, obj=None, **kwargs):
         AddView.__init__(self, model, ok_url, **kwargs)
         self.condition = condition
         self.obj = obj
         
     def run(self):
-        from uliweb import request, function
+        from uliweb import request, function, response
         from uliweb import redirect
         import uliweb.orm as orm
         
@@ -503,7 +510,11 @@ class EditView(AddView):
                 else:
                     msg = _("The object has not been changed.")
                 flash(msg)
-                return redirect(get_url(self.ok_url, obj.id))
+                if self.ok_url:
+                    return redirect(get_url(self.ok_url, obj.id))
+                else:
+                    response.template = self.ok_template
+                    return data
             else:
                 flash(self.fail_msg, 'error')
         result.update({'form':self.form, 'object':obj})
@@ -623,8 +634,6 @@ class DetailLayout(object):
         return str(uaml.Parser(self.get_text(), self.writer))
     
 class DetailView(object):
-    types_convert_map = {}
-    fields_convert_map = {}
     meta = 'DetailView'
     
     def __init__(self, model, condition=None, obj=None, fields=None, 
@@ -634,10 +643,8 @@ class DetailView(object):
         self.condition = condition
         self.obj = obj
         self.fields = fields
-        if self.types_convert_map:
-            self.types_convert_map = types_convert_map
-        if self.fields_convert_map:
-            self.fields_convert_map = fields_convert_map or {}
+        self.types_convert_map = types_convert_map or {}
+        self.fields_convert_map = fields_convert_map or {}
         self.table_class_attr = table_class_attr
         self.layout_class = layout_class or DetailLayout
         self.layout = layout
@@ -677,7 +684,6 @@ class DetailView(object):
         view_text = ['<table class="%s">' % self.table_class_attr]
         for field_name, prop in get_fields(self.model, self.fields, self.meta):
             field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
-            
             if field:
                 view_text.append('<tr><th align="right" width=150>%s</th><td>%s</td></tr>' % (field["label"], field["display"]))
                 
