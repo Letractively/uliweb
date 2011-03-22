@@ -26,7 +26,6 @@ class SessionMiddle(Middleware):
         
     def process_request(self, request):
         key = request.cookies.get(SessionCookie.default_cookie_id)
-        print request.cookies
         if not key:
             key = request.values.get(SessionCookie.default_cookie_id)
         session = Session(key, options=self.options)
@@ -49,6 +48,5 @@ class SessionMiddle(Middleware):
                         expires=None, domain=c.domain,
                         path=c.path,
                         secure=c.secure)
-                print response.headers
         return response
         
