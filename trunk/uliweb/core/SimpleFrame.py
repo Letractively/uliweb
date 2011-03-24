@@ -415,6 +415,10 @@ class Dispatcher(object):
                 request.appname = p
                 break
         request.function = handler.__name__
+        if _klass:
+            request.view_class = _klass.__class__.__name__
+        else:
+            request.view_class = None
         return mod, _klass, handler
     
     def call_view(self, mod, cls, handler, request, response=None, **values):
@@ -463,7 +467,14 @@ class Dispatcher(object):
             if hasattr(response, 'template'):
                 tmpfile = response.template
             else:
-                tmpfile = request.function + conf.settings.GLOBAL.TEMPLATE_SUFFIX
+                args = {'function':request.function, 'view_class':request.view_class, 'appname':request.appname}
+                #TEMPLATE_TEMPLATE should be two elements tuple or list, the first one will be used for view_class is not empty
+                #and the second one will be used for common functions
+                if request.view_class:
+                    tmpfile = conf.settings.GLOBAL.TEMPLATE_TEMPLATE[0] % args + conf.settings.GLOBAL.TEMPLATE_SUFFIX
+                else:
+                    tmpfile = conf.settings.GLOBAL.TEMPLATE_TEMPLATE[1] % args + conf.settings.GLOBAL.TEMPLATE_SUFFIX
+                response.template = tmpfile
             content_type = response.content_type
             
             #if debug mode, then display a default_template
