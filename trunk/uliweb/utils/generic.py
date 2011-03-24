@@ -884,7 +884,7 @@ class SimpleListView(object):
         dirname = os.path.dirname(t_filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        with tempfile.NamedTemporaryFile(suffix = ".tmp", prefix = "workload_", dir=dirname, delete = False) as f:
+        with tempfile.NamedTemporaryFile(suffix = ".tmp", prefix = r_filename+'_', dir=dirname, delete = False) as f:
             t_filename = f.name
             w = csv.writer(f)
             row = [safe_unicode(x, default_encoding) for x in table['fields_name']]
