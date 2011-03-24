@@ -1043,12 +1043,13 @@ class ManyResult(Result):
 
     def add(self, *objs):
         for o in objs:
-            if isinstance(o, Model):
-                v = getattr(o, self.realfieldb)
-            else:
-                v = o
-            d = {self.fielda:self.valuea, self.fieldb:v}
-            self.table.insert().execute(**d)
+            if not self.has(o):
+                if isinstance(o, Model):
+                    v = getattr(o, self.realfieldb)
+                else:
+                    v = o
+                d = {self.fielda:self.valuea, self.fieldb:v}
+                self.table.insert().execute(**d)
          
     def ids(self):
         query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
