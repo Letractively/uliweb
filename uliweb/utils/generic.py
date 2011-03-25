@@ -923,27 +923,29 @@ class SimpleListView(object):
                 w.writerow(simple_value(row, encoding))
         return filedown(request.environ, r_filename, real_filename=t_filename, inline=inline, download=download)
         
-    def run(self, head=True, body=True):
+    def json(self):
+        return self.run(head=False, body=True, json_body=True)
+
+    def run(self, head=True, body=True, json_body=False):
         #create table header
         table = self.table_info()
             
         query = self.query(self.pageno, self.pagination)
         result = self.template_data.copy()
         if head:
-            result.update({'table':self.render(table, head=head, body=body, query=query), 'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}})
+            result.update(self.render(table, head=head, body=body, query=query))
         else:
-            result.update({'table':self.render(table, head=head, body=body, query=query)})
+            result.update(self.render(table, head=head, body=body, query=query, json_body=json_body))
         return result
 
-    def render(self, table, head=True, body=True, query=None):
+    def render(self, table, head=True, body=True, query=None, json_body=False):
         """
         table is a dict, just like
         table = {'fields_name':[fieldname,...],
             'fields_list':[{'name':fieldname,'width':100,'align':'left'},...],
             'total':10,
         """
-        from uliweb.core.html import Tag
-
+        result = {}
         s = []
         if head:
             if self.table_width:
@@ -956,26 +958,54 @@ class SimpleListView(object):
             s.extend(self.create_table_head(table))
             s.append('</thead>')
             s.append('<tbody>')
-        
+            result = {'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
+            
         if body:
             #create table body
             for record in query:
-                s.append('<tr>')
+                r = []
                 if not isinstance(record, dict):
                     record = dict(zip(table['fields'], record))
+                r = []
                 for i, x in enumerate(table['fields_list']):
                     v = self.make_view_field(x, record, self.fields_convert_map)
-                    s.append(str(Tag('td', v['display'])))
-                s.append('</tr>')
+                    r.append((x['name'], v['display']))
+                    
+                if json_body:
+                    _r = self.json_body_render(r)
+                    if 'id' not in _r and hasattr(record, 'id'):
+                        _r['id'] = getattr(record, 'id')
+                    s.append(_r)
+                else:
+                    s.extend(self.default_body_render(r))
                 self.cal_total(table, record)
-            s.extend(self.render_total(table))
+            if json_body:
+                total = self.render_total(table, json_body)
+                if total:
+                    s.append(total)
+                return {'total':self.total, 'rows':s}
+            else:
+                s.extend(self.render_total(table))
         
         if head:
             s.append('</tbody>')
             s.append('</table>')
         
-        return '\n'.join(s)
+        result['table'] = '\n'.join(s)
+        return result
     
+    def json_body_render(self, record):
+        return dict(record)
+        
+    def default_body_render(self, record):
+        from uliweb.core.html import Tag
+        
+        s = ['<tr>']
+        for n, f in record:
+            s.append(str(Tag('td', f)))
+        s.append('</tr>')
+        return s
+
     def make_view_field(self, field, record, fields_convert_map):
         fields_convert_map = fields_convert_map or {}
         convert = None
@@ -1263,18 +1293,6 @@ class ListView(SimpleListView):
         result['table'] = '\n'.join(s)
         return result
     
-    def json_body_render(self, record):
-        return dict(record)
-        
-    def default_body_render(self, record):
-        from uliweb.core.html import Tag
-        
-        s = ['<tr>']
-        for n, f in record:
-            s.append(str(Tag('td', f)))
-        s.append('</tr>')
-        return s
-        
     def query_all(self):
         return self.query_model(self.model, self.condition, order_by=self.order_by)
     

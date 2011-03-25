@@ -73,6 +73,7 @@ class Select(Build):
         group = False
         if self.choices:
             group = len(self.choices[0]) > 2
+        print 'xxxxxxxxxxxxxxxxxxxxxx', self.choices
         if group:
             for k, g in groupby(self.choices, lambda x:x[0]):
                 s.append(begin_tag('optgroup', label=k))
