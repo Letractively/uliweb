@@ -31,7 +31,7 @@ def clear_rules():
 
 def set_app_rules(rules):
     global __app_rules__
-    __app_rules__ = rules
+    __app_rules__.update(rules)
     
 def expose(rule=None, **kwargs):
     e = Expose(rule, **kwargs)
