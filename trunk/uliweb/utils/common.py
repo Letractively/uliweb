@@ -1,5 +1,13 @@
 import os, sys
 
+def safe_import(path):
+    module = path.split('.')
+    g = __import__(module[0], {}, {}, [''])
+    for i in module[1:]:
+        mod = g
+        g = getattr(mod, i)
+    return mod, g
+        
 def import_mod_attr(path):
     module, func = path.rsplit('.', 1)
     mod = __import__(module, {}, {}, [''])
