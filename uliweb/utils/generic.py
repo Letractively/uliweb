@@ -1386,7 +1386,6 @@ class QueryView(object):
                 'hidden':field_name in self.hidden_fields,
                 'required':False}
             f.append(d)
-            
         return f
     
     def get_layout(self):
@@ -1428,7 +1427,6 @@ class QueryView(object):
         
         for f in self.get_fields():
             field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
-            
             if field:
                 DummyForm.add_field(f['name'], field, True)
         
