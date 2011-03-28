@@ -263,6 +263,10 @@ class Dispatcher(object):
         Dispatcher.modules = self.collect_modules()
         self.install_settings(self.modules['settings'])
         Dispatcher.settings = conf.settings
+        
+        #set app rules
+        rules.set_app_rules(dict(conf.settings.get('URL', {})))
+        
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_dirs = self.get_template_dirs()
         
@@ -577,9 +581,6 @@ class Dispatcher(object):
                 log.exception(e)
          
     def init_urls(self):
-        #set app rules
-        rules.set_app_rules(conf.settings.get('URL', {}))
-        
         #initialize urls
         for v in rules.merge_rules():
             appname, endpoint, url, kw = v
