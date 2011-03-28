@@ -270,7 +270,7 @@ class Ini(SortedDict):
                             self._encoding = old_encoding
                         else:
                             import warnings
-                            warnings.warn("Can't find the file [%s], so just skip it" % _filename, RuntimeWarning)
+                            warnings.warn(Warning("Can't find the file [%s], so just skip it" % _filename), stacklevel=2)
                         continue
                     section = self.add(sec_name, comments)
                     comments = []
