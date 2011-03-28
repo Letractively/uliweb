@@ -389,6 +389,8 @@ class Dispatcher(object):
         return e
     
     def prepare_request(self, request, endpoint):
+        from uliweb.utils.common import safe_import
+
         #binding some variable to request
         request.settings = conf.settings
         request.application = self
@@ -396,18 +398,25 @@ class Dispatcher(object):
         #get handler
         _klass = None
         if isinstance(endpoint, (str, unicode)):
-            module, func = endpoint.rsplit('.', 1)
-            #if the module contains a class name, then import the class
-            #it set by expose()
-            x, last = module.rsplit('.', 1)
-            if last.startswith('views'):
-                mod = __import__(module, {}, {}, [''])
-                handler = getattr(mod, func)
-            else:
-                module = x
-                mod = __import__(module, {}, {}, [''])
-                _klass = getattr(mod, last)()
-                handler = getattr(_klass, func)
+            mod, handler = safe_import(endpoint)
+            if inspect.ismethod(handler):
+                if not handler.im_self:    #instance method
+                    _klass = handler.im_class
+                else:                       #class method
+                    _klass = handler.im_self
+            
+#            module, func = endpoint.rsplit('.', 1)
+#            #if the module contains a class name, then import the class
+#            #it set by expose()
+#            x, last = module.rsplit('.', 1)
+#            if last.startswith('views'):
+#                mod = __import__(module, {}, {}, [''])
+#                handler = getattr(mod, func)
+#            else:
+#                module = x
+#                mod = __import__(module, {}, {}, [''])
+#                _klass = getattr(mod, last)()
+#                handler = getattr(_klass, func)
         elif callable(endpoint):
             handler = endpoint
             mod = sys.modules[handler.__module__]
