@@ -1200,7 +1200,7 @@ class ManyToMany(ReferenceProperty):
             if appname.endswith('.models'):
                 self.table.__appname__ = appname[:-7]
             self.model_class.manytomany.append(self.table)
-            Index('%s_manytomany_indx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
+            Index('%s_mindx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
     
     def get_real_property(self, model, field):
         return getattr(model, field).field_class
