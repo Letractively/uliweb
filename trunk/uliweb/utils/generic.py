@@ -1323,12 +1323,24 @@ class ListView(SimpleListView):
         else:
             fields = [x for x, y in self.model._fields_list]
             
+        def get_table_meta_field(name):
+            if hasattr(self.model, 'Table'):
+                for f in self.model.Table.fields:
+                    if isinstance(f, dict):
+                        if name == f['name']:
+                            return f
+                    elif isinstance(f, str):
+                        return None
+            
         w = 0
         fields_list = []
         for x in fields:
             if isinstance(x, (str, unicode)):
                 name = x
                 d = {'name':x}
+                f = get_table_meta_field(name)
+                if f:
+                    d = f
             elif isinstance(x, dict):
                 name = x['name']
                 d = x
