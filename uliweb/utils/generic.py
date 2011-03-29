@@ -982,7 +982,7 @@ class SimpleListView(object):
             if json_body:
                 total = self.render_total(table, json_body)
                 if total:
-                    s.append(total)
+                    s.append(dict(zip(table['fields'], total)))
                 return {'total':self.total, 'rows':s}
             else:
                 s.extend(self.render_total(table))
@@ -1153,12 +1153,12 @@ class SimpleListView(object):
                 if field['rowspan'] > 1:
                     kwargs['rowspan'] = field['rowspan']
                     span = True
-                if not span:
-                    kwargs['width'] = _f.pop('width', self.default_column_width)
                 #find the bottom column
                 if kwargs.get('rowspan', 1) + y != max_rowspan:
                     _f.pop('width', None)
                     kwargs.pop('field', None)
+                else:
+                    kwargs['width'] = _f.pop('width', self.default_column_width)
                 kwargs.update(_f)
                 s.append(kwargs)
                 
@@ -1284,7 +1284,7 @@ class ListView(SimpleListView):
             if json_body:
                 total = self.render_total(table, json_body)
                 if total:
-                    s.append(total)
+                    s.append(dict(zip(table['fields'], total)))
                 return {'total':self.total, 'rows':s}
             else:
                 s.extend(self.render_total(table))
