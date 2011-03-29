@@ -1155,7 +1155,10 @@ class SimpleListView(object):
                     span = True
                 if not span:
                     kwargs['width'] = _f.pop('width', self.default_column_width)
-                _f.pop('width', None)
+                #find the bottom column
+                if kwargs.get('rowspan', 1) + y != max_rowspan:
+                    _f.pop('width', None)
+                    kwargs.pop('field', None)
                 kwargs.update(_f)
                 s.append(kwargs)
                 
