@@ -1,12 +1,5 @@
 from uliweb.i18n import gettext_lazy as _
 
-class ValidationError(Exception):
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return str(self.message)
-
 def __get_choices_keys(choices):
     if callable(choices):
         choices = choices()
@@ -20,29 +13,48 @@ def __get_choices_keys(choices):
             else:
                 keys.add(v)
     else:
-        raise ValidationError, _('Choices need a dict, tuple or list data.')
+        raise Exception, _('Choices need a dict, tuple or list data.')
     return keys
     
 def IS_IN_SET(choices):
     '''
     choices should be a list or a tuple, e.g. [1,2,3]
     '''
-    def f(data, rquest=None):
+    def f(data):
         if data not in __get_choices_keys(choices):
-            raise ValidationError, _('Select a valid choice. That choice is not one of the available choices.')
+            return _('Select a valid choice. That choice is not one of the available choices.')
     return f
 
 def IS_IMAGE(size=None):
-    def f(data, request=None):
+    def f(data):
         import Image
         try:
             try:
                 image = Image.open(data.file)
                 if size:
                     if image.size[0]>size[0] or image.size[1]>size[1]:
-                        raise ValidationError, _("The image file size exceeds the limit.")
+                        return _("The image file size exceeds the limit.")
             except Exception, e:
-                raise ValidationError, _("The file is not a valid image.")
+                return _("The file is not a valid image.")
         finally:
             data.file.seek(0)
     return f
+
+def IS_PAST_DATE(date=None):
+    """Used for test the date should less than some day"""
+    def f(data, date=date):
+        import datetime
+        
+        if isinstance(date, datetime.date):
+            if not date:
+                date = datetime.date.today()
+        elif isinstance(date, datetime.datetime):
+            if not date:
+                date = datetime.datetime.now()
+        else:
+            return 'Not support this type %r' % data
+        
+        if data > date:
+            return 'The date can not be greater than %s' % date
+    return f
+    

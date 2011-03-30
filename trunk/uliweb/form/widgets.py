@@ -14,7 +14,7 @@ class Build(object):
         return ''
     
     def html(self):
-        return '\n'.join([self.pre_html() % self.kwargs] + [self.to_html()] + 
+        return ''.join([self.pre_html() % self.kwargs] + [self.to_html()] + 
             [self.post_html() % self.kwargs])
 
     def __str__(self):

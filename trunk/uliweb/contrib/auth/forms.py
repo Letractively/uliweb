@@ -19,7 +19,7 @@ class RegisterForm(Form):
         User = get_model('user')
         user = User.get(User.c.username==data)
         if user:
-            raise ValidationError, 'User "%s" does not exist!' % data
+            return 'User "%s" does not exist!' % data
     
     def form_validate(self, all_data):
         if all_data.password != all_data.password1:
@@ -40,7 +40,7 @@ class LoginForm(Form):
         User = get_model('user')
         user = User.get(User.c.username==data)
         if not user:
-            raise ValidationError, 'User "%s" does not exist!' % data
+            return 'User "%s" does not exist!' % data
         self._user = user
     
     def form_validate(self, all_data):
@@ -64,4 +64,4 @@ class ChangePasswordForm(Form):
         from uliweb import request
         
         if not request.user.check_password(data):
-            raise ValidationError, 'Password is not right.'
+            return 'Password is not right.'
