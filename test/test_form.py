@@ -5,8 +5,9 @@
 import time, sys
 sys.path.insert(0, '../uliweb/lib')
 
-from webob import Request
 from uliweb.form import *
+from uliweb.utils.test import BlankRequest
+import datetime
 
 def test_1():
     """
@@ -15,41 +16,53 @@ def test_1():
     ...     content = TextField(label='Content:')
     >>> f = F()
     >>> print f
-    <form class="form" action="" method="POST">
-    <fieldset>
-    <label class="field" for="field_title">
-    Title:<span class="field_required">
-    (*)
-    </span>
+    <form class="yform" action="" method="POST">
+    <div class="type-text">
+        <label class="field" for="field_title">Title:<span class="field_required">*</span>
     </label>
-    <input class="field" id="field_title" name="title" type="text" value=""></input>
-    <br/><label class="field" for="field_content">
-    Content:
-    </label>
-    <textarea class="field" cols="40" id="field_content" name="content" rows="5"></textarea>
-    <br/><label class="field">
-    &nbsp;
-    </label>
-    <input class="button" type="submit" value="Submit"></input>
-    <br/>
-    </fieldset>
+    <BLANKLINE>
+        <label class="description" for="field_title">Title help string</label>
+    <BLANKLINE>
+        <input class="field" id="field_title" name="title" type="text" value=""></input>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    <div class="type-text">
+        <label class="field" for="field_content">Content:</label>
+    <BLANKLINE>
+    <BLANKLINE>
+        <textarea class="field" cols="75" id="field_content" name="content" rows="10"></textarea>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    <div class="line">
+        <div class="type-button">
+            <input class="button" name="submit" type="submit" value="Submit"></input>
+    <BLANKLINE>
+    <BLANKLINE>
+        </div>
+    </div>
+    <BLANKLINE>
     </form>
-    >>> req = Request.blank('/test?title=&content=')
-    >>> f.check(req.GET)
+    <BLANKLINE>
+    >>> req = BlankRequest('/test?title=&content=')
+    >>> f.validate(req.GET)
     False
-    >>> req = Request.blank('/test?title=Hello&content=')
-    >>> f.check(req.GET)
+    >>> req = BlankRequest('/test?title=Hello&content=')
+    >>> f.validate(req.GET)
     True
-    >>> req = Request.blank('/test?title=Hello&content=aaaa')
-    >>> f.check(req.GET)
+    >>> req = BlankRequest('/test?title=Hello&content=aaaa')
+    >>> f.validate(req.GET)
     True
     >>> f.title.data
     'Hello'
     >>> f.title.data = 'limodou'
-    >>> f.title.html
-    '<input class="field" id="field_title" name="title" type="text" value="limodou"></input>'
-    >>> F.title.html()
-    '<input class="field" id="field_title" name="title" type="text" value=""></input>'
+    >>> print f.title.html
+    <input class="field" id="field_title" name="title" type="text" value="limodou"></input>
+    <BLANKLINE>
+    >>> print F.title.html()
+    <input class="field" id="field_title" name="title" type="text" value=""></input>
+    <BLANKLINE>
     """
 
 def test_2():
@@ -57,21 +70,30 @@ def test_2():
     >>> buf = Buf()
     >>> a = buf << Tag('div') << Tag('p', 'hello')
     >>> print buf
-    <div>
-    <p>
-    hello
-    </p>
-    </div>
+    <BLANKLINE>
+    <p>hello</p>
+    <BLANKLINE>
+    <BLANKLINE>
     
     """
     
-def test_3():
-    class F(Form):
-        title = StringField(label='Title:', required=True, help_string='Title help string')
-        content = TextField(label='Content:')
-    f = F(title='Test form')
-    f.layout_class = CSSLayout
-    print f
-    
-if __name__ == '__main__':
-    test_3()
+def test_IS_PAST_DATE():
+    """
+    >>> date = datetime.datetime(2011, 10, 12)
+    >>> f = IS_PAST_DATE(date)
+    >>> d = datetime.datetime(2011, 10, 12)
+    >>> f(d)
+    >>> f(datetime.datetime(2011, 10, 13))
+    'The date can not be greater than 2011-10-12 00:00:00'
+    >>> f(datetime.datetime(2011, 10, 11))
+    """
+#def test_3():
+#    class F(Form):
+#        title = StringField(label='Title:', required=True, help_string='Title help string')
+#        content = TextField(label='Content:')
+#    f = F(title='Test form')
+#    f.layout_class = CSSLayout
+#    print f
+#    
+#if __name__ == '__main__':
+#    test_3()
