@@ -363,7 +363,10 @@ class Property(object):
         if value is None:
             return ''
         if self.choices:
-            return dict(self.get_choices()).get(value, '')
+            v = dict(self.get_choices()).get(value, '')
+            if isinstance(v, str):
+                v = unicode(v, __default_encoding__)
+            return v
         else:
             return unicode(value)
 
