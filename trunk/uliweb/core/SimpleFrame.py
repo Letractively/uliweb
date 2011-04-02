@@ -401,9 +401,9 @@ class Dispatcher(object):
             mod, handler = safe_import(endpoint)
             if inspect.ismethod(handler):
                 if not handler.im_self:    #instance method
-                    _klass = handler.im_class
+                    _klass = handler.im_class()
                 else:                       #class method
-                    _klass = handler.im_self
+                    _klass = handler.im_self()
             
 #            module, func = endpoint.rsplit('.', 1)
 #            #if the module contains a class name, then import the class
@@ -430,6 +430,7 @@ class Dispatcher(object):
         request.function = handler.__name__
         if _klass:
             request.view_class = _klass.__class__.__name__
+            handler = getattr(_klass, handler.__name__)
         else:
             request.view_class = None
         return mod, _klass, handler
@@ -682,11 +683,11 @@ class Dispatcher(object):
         try:
             endpoint, values = adapter.match()
             
-            mod, cls, handler = self.prepare_request(req, endpoint)
+            mod, handler_cls, handler = self.prepare_request(req, endpoint)
             
             #process static
             if endpoint in conf.static_views:
-                response = self.call_view(mod, cls, handler, req, res, **values)
+                response = self.call_view(mod, handler_cls, handler, req, res, **values)
             else:
                 response = None
                 _clses = {}
@@ -721,7 +722,7 @@ class Dispatcher(object):
                 
                 if response is None:
                     try:
-                        response = self.call_view(mod, cls, handler, req, res, **values)
+                        response = self.call_view(mod, handler_cls, handler, req, res, **values)
                         
                     except Exception, e:
                         for middleware in reversed(middlewares):
