@@ -82,10 +82,9 @@ class Buf(object):
     def __lshift__(self, obj):
         if isinstance(obj, (tuple, list)):
             for x in obj:
-                self._builder._write(str(x))
+                self._builder._write(u_str(x, self._encoding))
         else:
-            self._builder._write(str(obj))
-        return self
+            self._builder._write(u_str(obj, self._encoding))
 
 class Tag(Buf):
     _dummy = {}
@@ -113,7 +112,7 @@ class Tag(Buf):
         if _value is None:
             self._builder._write('<%s%s />' % (self.name, _create_kwargs(self.attributes)))
         elif _value != Tag._dummy:
-            self._builder._write('<%s%s>%s</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value), self.name))
+            self._builder._write('<%s%s>%s</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value, self._encoding), self.name))
             return
         return self
     
@@ -155,3 +154,9 @@ if __name__ == '__main__':
     b << 'hello'
     b << [Tag('a', 'Link', href='#'), Tag('a', 'Link', href='#')]
     print str(b)
+    script = Script()
+    with script:
+        script << "var flag=true;"
+        script << "if (flag > 6)"
+    print script
+    
