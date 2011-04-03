@@ -4,6 +4,8 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 import os, sys
 import time
+from uliweb.orm import get_model
+from uliweb import function, redirect, json
 
 __default_fields_builds__ = {}
 
@@ -36,8 +38,6 @@ class ReferenceSelectField(SelectField):
             else:
                 return self.choices
             
-        from uliweb.orm import get_model
-        
         model = get_model(self.model)
         if not self.group_field:
             if hasattr(model, 'Meta'):
@@ -110,6 +110,9 @@ def get_url(ok_url, *args):
         return ok_url(*args)
     else:
         return ok_url
+
+def to_json_result(success, msg='', d=None):
+    return json({'success':success, 'message':str(msg), 'data':d})
     
 def make_form_field(field, model, field_cls=None, builds_args_map=None):
     import uliweb.orm as orm
@@ -302,10 +305,9 @@ class AddView(object):
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None, file_replace=True, template_data=None):
 
-        self.model = model
+        self.model = get_model(model)
         self.ok_url = ok_url
         self.ok_template = ok_template
-        self.form = form
         if success_msg:
             self.success_msg = success_msg
         if fail_msg:
@@ -315,7 +317,7 @@ class AddView(object):
         
         #default_data used for create object
         self.default_data = default_data or {}
-        
+        self.layout = layout
         self.fields = fields
         self.form_cls = form_cls
         self.form_args = form_args or {}
@@ -325,9 +327,7 @@ class AddView(object):
         self.post_save = post_save
         self.post_created_form = post_created_form
         self.file_replace = file_replace
-        
-        #add layout support
-        self.layout = layout
+        self.form = self.make_form(form)
         
     def get_fields(self):
         f = []
@@ -348,24 +348,20 @@ class AddView(object):
             if hasattr(m, 'layout'):
                 return getattr(m, 'layout')
     
-    def make_form(self):
-        import uliweb.orm as orm
-        import uliweb.form as form
+    def make_form(self, form):
+        from uliweb.form import Form, Submit
         
-        if self.form:
-            return self.form
+        if form:
+            return form
         
-        if isinstance(self.model, str):
-            self.model = orm.get_model(self.model)
-            
         if self.form_cls:
             class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
-                DummyForm.form_buttons = form.Submit(value=_('Create'), _class=".submit")
+                DummyForm.form_buttons = Submit(value=_('Create'), _class=".submit")
            
         else:
-            class DummyForm(form.Form):
-                form_buttons = form.Submit(value=_('Create'), _class=".submit")
+            class DummyForm(Form):
+                form_buttons = Submit(value=_('Create'), _class=".submit")
             
         #add layout support
         layout = self.get_layout()
@@ -383,14 +379,14 @@ class AddView(object):
         return DummyForm(data=self.data, **self.form_args)
     
     def process_files(self, data):
+        from uliweb.orm import FileProperty
         from uliweb.contrib.upload import save_file
-        import uliweb.orm as orm
         
         flag = False
     
         fields_list = self.get_fields()
         for f in fields_list:
-            if isinstance(f['prop'], orm.FileProperty):
+            if isinstance(f['prop'], FileProperty):
                 if f['name'] in data and data[f['name']]:
                     fobj = data[f['name']]
                     data[f['name']] = save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
@@ -398,10 +394,8 @@ class AddView(object):
                     
         return flag
     
-    def on_success(self, d):
-        from uliweb import function, response, redirect
-
-        flash = function('flash')
+    def on_success(self, d, json_result=False):
+        from uliweb import response
 
         if self.pre_save:
             self.pre_save(d)
@@ -413,37 +407,54 @@ class AddView(object):
         if self.post_save:
             self.post_save(obj, d)
                 
-        flash(self.success_msg)
-        if self.ok_url:
-            return redirect(get_url(self.ok_url, obj.id))
+        if json_result:
+            return to_json_result(True, self.success_msg)
         else:
-            response.template = self.ok_template
+            flash = function('flash')
+            flash(self.success_msg)
+            if self.ok_url:
+                return redirect(get_url(self.ok_url, obj.id))
+            else:
+                response.template = self.ok_template
+                return d
+        
+    def on_fail(self, d, json_result=False):
+        if json_result:
+            return to_json_result(False, self.fail_msg, self.form.errors)
+        else:
+            flash = function('flash')
+            flash(self.fail_msg, 'error')
             return d
     
-    def run(self):
-        from uliweb import request, function
-        from uliweb.orm import get_model
-        
-        if isinstance(self.model, str):
-            self.model = get_model(self.model)
-            
-        flash = function('flash')
-        
+    def init_form(self):
         if not self.form:
             self.form = self.make_form()
+            
+    def display(self, json_result=False):
+        d = self.template_data.copy()
+        d.update({'form':self.form})
+        return d
+    
+    def execute(self, json_result=False):
+        from uliweb import request
         
-        result = self.template_data.copy()
+        flag = self.form.validate(request.values, request.files)
+        if flag:
+            d = self.default_data.copy()
+            d.update(self.form.data)
+            return self.on_success(d, json_result)
+        else:
+            d = self.template_data.copy()
+            d.update({'form':self.form})
+            return self.on_fail(d, json_result)
+        
+    def run(self, json_result=False):
+        from uliweb import request
+        
         if request.method == 'POST':
-            flag = self.form.validate(request.values, request.files)
-            if flag:
-                d = self.default_data.copy()
-                d.update(self.form.data)
-                return self.on_success(d)
-            else:
-                flash(self.fail_msg, 'error')
-                
-        result.update({'form':self.form})
-        return result
+            return self.execute(json_result)
+        else:
+            return self.display(json_result)
         
     def save(self, data):
         obj = self.model(**data)
@@ -467,58 +478,75 @@ class EditView(AddView):
     meta = 'EditForm'
     
     def __init__(self, model, ok_url=None, condition=None, obj=None, **kwargs):
+        self.model = get_model(model)
+        self.obj = obj or self.query()
+        
         AddView.__init__(self, model, ok_url, **kwargs)
         self.condition = condition
-        self.obj = obj
         
-    def run(self):
-        from uliweb import request, function, response
-        from uliweb import redirect
-        import uliweb.orm as orm
-        
-        if isinstance(self.model, str):
-            self.model = orm.get_model(self.model)
-        
-        flash = function('flash')
-        
-        if not self.obj:
-            obj = self.query()
-        else:
-            obj = self.obj
-        
-        if not self.form:
-            self.form = self.make_form(obj)
-            
-        #binding obj to self.form.object
+        #set obj to form.object
         self.form.object = obj
         
-        result = self.template_data.copy()
-        if request.method == 'POST':
-            flag = self.form.validate(request.values, request.files)
-            if flag:
-                data = self.form.data.copy()
-                if self.pre_save:
-                    self.pre_save(obj, data)
-                #process file field
-                r = self.process_files(data)
-                r = self.save(obj, data) or r
-                if self.post_save:
-                    r = self.post_save(obj, data) or r
-                
-                if r:
-                    msg = self.success_msg
-                else:
-                    msg = _("The object has not been changed.")
-                flash(msg)
-                if self.ok_url:
-                    return redirect(get_url(self.ok_url, obj.id))
-                else:
-                    response.template = self.ok_template
-                    return data
+    def display(self, json_result=False):
+        d = self.template_data.copy()
+        d.update({'form':self.form, 'object':self.obj})
+        return d
+    
+    def execute(self, json_result=False):
+        from uliweb import request
+        
+        flag = self.form.validate(request.values, request.files)
+        if flag:
+            d = self.form.data.copy()
+            return self.on_success(d, json_result)
+        else:
+            d = self.template_data.copy()
+            d.update({'form':self.form, 'object':self.obj})
+            return self.on_fail(d, json_result)
+
+    def on_success(self, d, json_result):
+        from uliweb import response
+        
+        if self.pre_save:
+            self.pre_save(self.obj, d)
+        #process file field
+        r = self.process_files(d)
+        r = self.save(self.obj, d) or r
+        if self.post_save:
+            r = self.post_save(self.obj, d) or r
+        
+        if r:
+            msg = self.success_msg
+        else:
+            msg = _("The object has not been changed.")
+        
+        if json_result:
+            return to_json_result(True, msg)
+        else:
+            flash = function('flash')
+            flash(msg)
+            if self.ok_url:
+                return redirect(get_url(self.ok_url, self.obj.id))
             else:
-                flash(self.fail_msg, 'error')
-        result.update({'form':self.form, 'object':obj})
-        return result
+                response.template = self.ok_template
+                return d
+            
+    def on_fail(self, d, json_result=False):
+        if json_result:
+            return to_json_result(False, self.fail_msg, self.form.errors)
+        else:
+            flash = function('flash')
+            flash(self.fail_msg, 'error')
+            return d
+        
+
+    def run(self, json_result=False):
+        from uliweb import request
+        
+        if request.method == 'POST':
+            return self.execute(json_result)
+        else:
+            return self.display(json_result)
         
     def save(self, obj, data):
         obj.update(**data)
@@ -543,21 +571,21 @@ class EditView(AddView):
     def query(self):
         return self.model.get(self.condition)
     
-    def make_form(self, obj):
+    def make_form(self, form):
         import uliweb.orm as orm
-        import uliweb.form as form
+        from uliweb.form import Form, Submit
         
-        if self.form:
-            return self.form
+        if form:
+            return form
 
         if self.form_cls:
             class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
-                DummyForm.form_buttons = form.Submit(value=_('Save'), _class=".submit")
+                DummyForm.form_buttons = Submit(value=_('Save'), _class=".submit")
            
         else:
-            class DummyForm(form.Form):
-                form_buttons = form.Submit(value=_('Save'), _class=".submit")
+            class DummyForm(Form):
+                form_buttons = Submit(value=_('Save'), _class=".submit")
             
         fields_list = self.get_fields()
         fields_name = [x['name'] for x in fields_list]
@@ -566,7 +594,7 @@ class EditView(AddView):
 #            fields_list.insert(0, d)
 #            fields_name.insert(0, 'id')
         
-        data = obj.to_dict(fields_name, convert=False).copy()
+        data = self.obj.to_dict(fields_name, convert=False).copy()
         data.update(self.data)
         
         for f in fields_list:
@@ -581,11 +609,11 @@ class EditView(AddView):
                 DummyForm.add_field(f['name'], field, True)
                 
                 if isinstance(f['prop'], orm.ManyToMany):
-                    value = getattr(obj, f['name']).ids()
+                    value = getattr(self.obj, f['name']).ids()
                     data[f['name']] = value
         
         if self.post_created_form:
-            self.post_created_form(DummyForm, self.model, obj)
+            self.post_created_form(DummyForm, self.model, self.obj)
             
         return DummyForm(data=data, **self.form_args)
 
@@ -639,9 +667,13 @@ class DetailView(object):
     def __init__(self, model, condition=None, obj=None, fields=None, 
         types_convert_map=None, fields_convert_map=None, table_class_attr='table width100',
         layout_class=None, layout=None, template_data=None):
-        self.model = model
+        self.model = get_model(model)
         self.condition = condition
-        self.obj = obj
+        if not obj:
+            self.obj = self.query()
+        else:
+            self.obj = obj
+        
         self.fields = fields
         self.types_convert_map = types_convert_map or {}
         self.fields_convert_map = fields_convert_map or {}
@@ -651,19 +683,9 @@ class DetailView(object):
         self.template_data = template_data or {}
         
     def run(self):
-        from uliweb.orm import get_model
-        
-        if isinstance(self.model, str):
-            self.model = get_model(self.model)
-        
-        if not self.obj:
-            obj = self.query()
-        else:
-            obj = self.obj
-        view_text = self.render(obj)
-        
+        view_text = self.render(self.obj)
         result = self.template_data.copy()
-        result.update({'object':obj, 'view':''.join(view_text)})
+        result.update({'object':self.obj, 'view':''.join(view_text)})
         return result
     
     def query(self):
@@ -694,34 +716,31 @@ class DeleteView(object):
     success_msg = _('The object has been deleted successfully!')
 
     def __init__(self, model, ok_url, condition=None, obj=None, pre_delete=None, post_delete=None):
-        self.model = model
+        self.model = get_model(model)
         self.condition = condition
         self.obj = obj
+        if not obj:
+            self.obj = self.model.get(self.condition)
+        else:
+            self.obj = obj
+        
         self.ok_url = ok_url
         self.pre_delete = pre_delete
         self.post_delete = post_delete
         
-    def run(self):
-        from uliweb.orm import get_model
-        from uliweb import redirect, function
-        
-        if isinstance(self.model, str):
-            self.model = get_model(self.model)
-        
-        if not self.obj:
-            obj = self.model.get(self.condition)
-        else:
-            obj = self.obj
-            
+    def run(self, json_result=False):
         if self.pre_delete:
-            self.pre_delete(obj)
-        self.delete(obj)
+            self.pre_delete(self.obj)
+        self.delete(self.obj)
         if self.post_delete:
             self.post_delete()
         
-        flash = function('flash')
-        flash(self.success_msg)
-        return redirect(self.ok_url)
+        if json_result:
+            return to_json_result(True, self.success_msg)
+        else:
+            flash = function('flash')
+            flash(self.success_msg)
+            return redirect(self.ok_url)
     
     def delete(self, obj):
         if obj:
@@ -1191,8 +1210,6 @@ class ListView(SimpleListView):
         """
         If pageno is None, then the ListView will not paginate 
         """
-        from uliweb.orm import get_model
-            
         self.model = get_model(model)
         self.condition = condition
         self.pageno = pageno
@@ -1214,9 +1231,6 @@ class ListView(SimpleListView):
     def run(self, head=True, body=True, json_body=False):
         import uliweb.orm as orm
         
-        if isinstance(self.model, str):
-            self.model = orm.get_model(self.model)
-            
         if not self.id:
             self.id = self.model.tablename
         
@@ -1451,8 +1465,7 @@ class QueryView(object):
         return DummyForm(data=self.data, **self.form_args)
     
     def run(self):
-        from uliweb import request, function
-        from uliweb.orm import get_model
+        from uliweb import request
         
         if isinstance(self.model, str):
             self.model = get_model(self.model)
