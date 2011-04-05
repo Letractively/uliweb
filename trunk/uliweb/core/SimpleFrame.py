@@ -5,7 +5,7 @@
 
 import os, sys
 import cgi
-import inspect, types
+import inspect
 from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound
@@ -404,7 +404,10 @@ class Dispatcher(object):
                     _klass = handler.im_class()
                 else:                       #class method
                     _klass = handler.im_self()
-            
+                #if _klass is class method, then the mod should be Class
+                #so the real mod should be mod.__module__
+                mod = sys.modules[mod.__module__]
+                
 #            module, func = endpoint.rsplit('.', 1)
 #            #if the module contains a class name, then import the class
 #            #it set by expose()

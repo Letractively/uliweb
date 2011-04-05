@@ -333,6 +333,8 @@ class RunserverCommand(Command):
             help='If auto enable debug mode. Default is True.'),
         make_option('--thread', dest='thread', action='store_true', default=False,
             help='If use thread server mode. Default is False.'),
+        make_option('--processes', dest='processes', type='int', default=1,
+            help='The default number of processes to start.')
     )
     develop = False
     
@@ -349,7 +351,7 @@ class RunserverCommand(Command):
             include_apps = []
         extra_files = collect_files(global_options.project, get_apps(global_options.project)+include_apps)
         run_simple(options.hostname, options.port, app, options.reload, False, True,
-                   extra_files, 1, options.thread, 1)
+                   extra_files, 1, options.thread, options.processes)
 register_command(RunserverCommand)
 
 class DevelopCommand(RunserverCommand):

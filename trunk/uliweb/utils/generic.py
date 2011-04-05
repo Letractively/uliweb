@@ -303,7 +303,7 @@ class AddView(object):
     def __init__(self, model, ok_url=None, ok_template=None, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
-        post_created_form=None, layout=None, file_replace=True, template_data=None):
+        post_created_form=None, layout=None, file_replace=True, template_data=None, success_data=None):
 
         self.model = get_model(model)
         self.ok_url = ok_url
@@ -327,6 +327,7 @@ class AddView(object):
         self.post_save = post_save
         self.post_created_form = post_created_form
         self.file_replace = file_replace
+        self.success_data = success_data
         self.form = self.make_form(form)
         
     def get_fields(self):
@@ -394,6 +395,14 @@ class AddView(object):
                     
         return flag
     
+    def on_success_data(self, obj):
+        if self.success_data is True:
+            return obj.to_dict()
+        elif callable(self.success_data):
+            return self.success_data(obj)
+        else:
+            return None
+    
     def on_success(self, d, json_result=False):
         from uliweb import response
 
@@ -408,7 +417,7 @@ class AddView(object):
             self.post_save(obj, d)
                 
         if json_result:
-            return to_json_result(True, self.success_msg)
+            return to_json_result(True, self.success_msg, self.on_success_data(obj))
         else:
             flash = function('flash')
             flash(self.success_msg)
@@ -521,7 +530,7 @@ class EditView(AddView):
             msg = _("The object has not been changed.")
         
         if json_result:
-            return to_json_result(True, msg)
+            return to_json_result(True, msg, self.on_success_data(self.obj))
         else:
             flash = function('flash')
             flash(msg)
