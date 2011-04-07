@@ -84,8 +84,12 @@ class UseNode(LinkNode):
             v = call(app, vars, env, *args, **kwargs)
             if v:
                 if 'depends' in v:
-                    for d, kw in v['depends']:
-                        UseNode.use(vars, env, d, **kw)
+                    for _t in v['depends']:
+                        if isinstance(_t, str):
+                            UseNode.use(vars, env, _t)
+                        else:
+                            d, kw = _t
+                            UseNode.use(vars, env, d, **kw)
                 for _type in ['toplinks', 'bottomlinks']:
                     if _type in v:
                         links = v[_type]
