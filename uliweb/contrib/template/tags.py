@@ -83,6 +83,9 @@ class UseNode(LinkNode):
         if call:
             v = call(app, vars, env, *args, **kwargs)
             if v:
+                if 'depends' in v:
+                    for d, kw in v['depends']:
+                        UseNode.use(vars, env, d, **kw)
                 for _type in ['toplinks', 'bottomlinks']:
                     if _type in v:
                         links = v[_type]
@@ -158,10 +161,11 @@ class HtmlMerge(object):
         bottomlinks = ['']
         for _type, result in [('toplinks', toplinks), ('bottomlinks', bottomlinks)]:
             for link in links[_type]:
-                link = url_for_static(link)
                 if link.endswith('.js'):
+                    link = url_for_static(link)
                     result.append('<script type="text/javascript" src="%s"></script>' % link)
                 elif link.endswith('.css'):
+                    link = url_for_static(link)
                     result.append('<link rel="stylesheet" type="text/css" href="%s"/>' % link)
                 else:
                     result.append(link)
