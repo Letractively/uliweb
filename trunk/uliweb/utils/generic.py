@@ -488,10 +488,10 @@ class EditView(AddView):
     
     def __init__(self, model, ok_url=None, condition=None, obj=None, **kwargs):
         self.model = get_model(model)
+        self.condition = condition
         self.obj = obj or self.query()
         
         AddView.__init__(self, model, ok_url, **kwargs)
-        self.condition = condition
         
         #set obj to form.object
         self.form.object = obj
