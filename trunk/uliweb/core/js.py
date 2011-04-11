@@ -9,6 +9,8 @@ import decimal
 #SIMPLE_IDEN = True
 #
 def simple_value(v):
+    from uliweb.i18n.lazystr import LazyString
+    
     if callable(v):
         v = v()
     if isinstance(v, datetime.datetime):
@@ -18,6 +20,8 @@ def simple_value(v):
     elif isinstance(v, datetime.time):
         return v.strftime('%H:%M:%S')
     elif isinstance(v, decimal.Decimal):
+        return str(v)
+    elif isinstance(v, LazyString):
         return str(v)
     else:
         return v
