@@ -541,7 +541,6 @@ class EditView(AddView):
                 return d
             
     def on_fail(self, d, json_result=False):
-        print self.form.errors
         if json_result:
             return to_json_result(False, self.fail_msg, self.form.errors)
         else:
