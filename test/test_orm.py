@@ -268,6 +268,9 @@ def test_7():
     >>> g2.users.add(c)
     >>> list(Group.filter(Group.users.in_(3)))
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    >>> g1.update(users=[1,2])
+    >>> g1.to_dict(manytomany=True)
+    {'users': [1, 2], 'id': 1, 'name': 'python'}
     """
 
 #test SelfReference
