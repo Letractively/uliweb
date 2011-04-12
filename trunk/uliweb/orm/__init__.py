@@ -1539,9 +1539,12 @@ class Model(object):
     def update(self, **data):
         for k, v in data.iteritems():
             if k in self.properties:
-                x = self.properties[k].get_value_for_datastore(self)
-                if self.field_str(x) != self.field_str(v):
-                    setattr(self, k, v)
+                if not isinstance(self.properties[k], ManyToMany):
+                    x = self.properties[k].get_value_for_datastore(self)
+                    if self.field_str(x) != self.field_str(v):
+                        setattr(self, k, v)
+                else:
+                    getattr(self, k).update(*v)
             
     def put(self, insert=False):
         """
