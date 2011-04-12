@@ -1463,7 +1463,7 @@ class Model(object):
     def set_saved(self):
         self._old_values = self.to_dict()
         
-    def to_dict(self, fields=[], convert=True):
+    def to_dict(self, fields=[], convert=True, manytomany=False):
         d = {}
         for k, v in self.properties.items():
             if fields and not k in fields:
@@ -1476,6 +1476,9 @@ class Model(object):
                     d[k] = self.field_str(t)
                 else:
                     d[k] = t
+            else:
+                if manytomany:
+                    d[k] = getattr(self, k).ids()
         return d
     
     def field_str(self, v):

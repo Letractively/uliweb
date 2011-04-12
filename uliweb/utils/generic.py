@@ -541,6 +541,7 @@ class EditView(AddView):
                 return d
             
     def on_fail(self, d, json_result=False):
+        print self.form.errors
         if json_result:
             return to_json_result(False, self.fail_msg, self.form.errors)
         else:
@@ -724,7 +725,7 @@ class DetailView(object):
 class DeleteView(object):
     success_msg = _('The object has been deleted successfully!')
 
-    def __init__(self, model, ok_url, condition=None, obj=None, pre_delete=None, post_delete=None):
+    def __init__(self, model, ok_url='', condition=None, obj=None, pre_delete=None, post_delete=None):
         self.model = get_model(model)
         self.condition = condition
         self.obj = obj
