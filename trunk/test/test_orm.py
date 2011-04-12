@@ -230,11 +230,7 @@ def test_7():
     True
     >>> g1.users.add(a)
     >>> g1.users.add(b, 3) #add can support multiple object, and object can also int
-    >>> try:
-    ...     g1.users.add(a, b)  #can't has duplicated records
-    ... except Exception, e:
-    ...     print e
-    (IntegrityError) columns group_id, user_id are not unique u'INSERT INTO group_user_users (group_id, user_id) VALUES (?, ?)' (1, 1)
+    >>> g1.users.add(a, b)  #can't has duplicated records
     >>> list(g1.users.all())
     [<User {'username':u'limodou','id':1}>, <User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
     >>> g1.users.clear(a)
@@ -242,6 +238,10 @@ def test_7():
     >>> g1.users.count()
     0
     >>> g1.users.add(a, b, c)
+    >>> g1.to_dict()
+    {'id': 1, 'name': 'python'}
+    >>> g1.to_dict(manytomany=True)
+    {'users': [1, 2, 3], 'id': 1, 'name': 'python'}
     >>> g1.users.count()
     3
     >>> g1.users.has(a)
