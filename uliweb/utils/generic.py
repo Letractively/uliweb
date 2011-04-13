@@ -761,7 +761,7 @@ class DeleteView(object):
             getattr(obj, k).clear()
         
 class SimpleListView(object):
-    def __init__(self, fields=None, query=None, cache_file=None,  
+    def __init__(self, fields=None, query=None, cache_file=None, 
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
         table_class_attr='table', table_width=False, pagination=True, total_fields=None, 
         template_data=None, default_column_width=100):
@@ -771,11 +771,19 @@ class SimpleListView(object):
                 {'name':'field_name', 'verbose_name':'Caption', 'width':100},
                 ...
             ]
+        
+        total_fields definition:
+            ['field1', 'field2']
+            
+            or 
+            
+            [{'name':'fields', 'cal':'sum' or 'avg', 'render':str function()]
         """
         self.fields = fields
         self._query = query
         self.pageno = pageno
         self.rows_per_page = rows_per_page
+        self.rows_num = 0
         self.id = id
         self.table_class_attr = table_class_attr
         self.fields_convert_map = fields_convert_map
@@ -789,10 +797,18 @@ class SimpleListView(object):
         
     def create_total_infos(self, total_fields):
         if total_fields:
-            self.total_fields = total_fields['fields']
+            self.total_fields = {}
+            for x in total_fields['fields']:
+                if isinstance(x, (str, unicode)):
+                    self.total_fields[x] = {}
+                elif isinstance(x, dict):
+                    self.total_fields[x['name']] = x
+                else:
+                    raise Exception, "Can't support this type (%r) at define total_fields for field %s" % (type(x), x)
+            total_fields['fields']
             self.total_field_name = total_fields.get('total_field_name', _('Total'))
         else:
-            self.total_fields = []
+            self.total_fields = {}
             self.total_field_name = None
         self.total_sums = {}
             
@@ -817,6 +833,17 @@ class SimpleListView(object):
                 else:
                     if f in self.total_fields:
                         v = self.total_sums.get(f, 0)
+                        #process cal and render
+                        x = self.total_fields[f]
+                        cal = x.get('cal', 'sum')
+                        if cal == 'sum':
+                            pass
+                        elif cal == 'avg':
+                            v = v * 1.0 / self.rows_num
+                        else:
+                            raise Exception, "Don't support this cal type [%s]" % cal
+                        render = x.get('render', str)
+                        v = render(v)
                     else:
                         v = ''
                 s.append(v)
@@ -864,7 +891,8 @@ class SimpleListView(object):
         if pagination:
             if isinstance(query_result, (list, tuple)):
                 self.total = len(query_result)
-                return query_result[pageno*self.rows_per_page : (pageno+1)*self.rows_per_page]
+                result = query_result[pageno*self.rows_per_page : (pageno+1)*self.rows_per_page]
+                return result
             else:
                 #first step, skip records before pageno*self.rows_per_page
                 flag, self.total, result = repeat(query_result, pageno*self.rows_per_page, self.total)
@@ -990,7 +1018,10 @@ class SimpleListView(object):
             
         if body:
             #create table body
+            self.rows_num = 0
             for record in query:
+                self.rows_num += 1
+                
                 r = []
                 if not isinstance(record, dict):
                     record = dict(zip(table['fields'], record))
@@ -1228,6 +1259,7 @@ class ListView(SimpleListView):
         self.types_convert_map = types_convert_map
         self.fields_convert_map = fields_convert_map
         self.id = id
+        self.rows_num = 0
         self._query = query
         self.table_width = table_width
         self.table_class_attr = table_class_attr
@@ -1285,8 +1317,10 @@ class ListView(SimpleListView):
             result = {'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
         
         if body:
+            self.rows_num = 0
             #create table body
             for record in query:
+                self.rows_num += 1
                 r = []
                 for i, x in enumerate(table['fields_list']):
                     if hasattr(self.model, x['name']):
