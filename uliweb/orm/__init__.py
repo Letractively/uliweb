@@ -1305,24 +1305,18 @@ class ManyToMany(ReferenceProperty):
         Create a condition
         """
         if not objs:
-            return (self.table.c[self.fielda]!=self.table.c[self.fielda])
-        else:
-            ids = get_objs_columns(objs, self.reference_fieldname)
-            return (self.model_class.c[self.reversed_fieldname] == self.table.c[self.fielda]) & (self.table.c[self.fieldb].in_(ids))
-    
-    def select_in(self, *objs):
-        """
-        Create a condition
-        """
-        if not objs:
             return self.table.c[self.fielda]!=self.table.c[self.fielda]
         else:
             ids = get_objs_columns(objs)
             sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fieldb].in_(ids)))
-            query = self.model_class.c[self.reversed_fieldname].in_(sub_query)
-            return query
+            condition = self.model_class.c[self.reversed_fieldname].in_(sub_query)
+            return condition
             
-    
+    def filter(self, condition=None):
+        sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & condition)
+        condition = self.model_class.c[self.reversed_fieldname].in_(sub_query)
+        return condition
+        
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
     """
