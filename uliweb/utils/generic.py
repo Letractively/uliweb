@@ -777,7 +777,7 @@ class SimpleListView(object):
             
             or 
             
-            [{'name':'fields', 'cal':'sum' or 'avg', 'render':str function()]
+            [{'name':'fields', 'cal':'sum' or 'avg', 'render':str function(value, total_sum)]
         """
         self.fields = fields
         self._query = query
@@ -842,8 +842,11 @@ class SimpleListView(object):
                             v = v * 1.0 / self.rows_num
                         else:
                             raise Exception, "Don't support this cal type [%s]" % cal
-                        render = x.get('render', str)
-                        v = render(v)
+                        render = x.get('render', None)
+                        if render:
+                            v = render(v, self.total_sums)
+                        else:
+                            v = str(v)
                     else:
                         v = ''
                 s.append(v)
