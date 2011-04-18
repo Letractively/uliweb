@@ -864,7 +864,14 @@ class OneToOne(ReferenceProperty):
   
 def get_objs_columns(objs, field='id'):
     ids = []
-    for o in objs:
+    new_objs = []
+    for x in objs:
+        if isinstance(x, (tuple, list)):
+            new_objs.extend(x)
+        else:
+            new_objs.append(x)
+            
+    for o in new_objs:
         if not isinstance(o, Model):
             _id = o
         else:
@@ -1045,7 +1052,14 @@ class ManyResult(Result):
             return self.filter(condition).one()
 
     def add(self, *objs):
-        for o in objs:
+        new_objs = []
+        for x in objs:
+            if isinstance(x, (tuple, list)):
+                new_objs.extend(x)
+            else:
+                new_objs.append(x)
+        
+        for o in new_objs:
             if not self.has(o):
                 if isinstance(o, Model):
                     v = getattr(o, self.realfieldb)

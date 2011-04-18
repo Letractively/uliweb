@@ -230,7 +230,7 @@ def test_7():
     True
     >>> g1.users.add(a)
     >>> g1.users.add(b, 3) #add can support multiple object, and object can also int
-    >>> g1.users.add(a, b)  #can't has duplicated records
+    >>> g1.users.add(a, b)  #can has duplicated records
     >>> list(g1.users.all())
     [<User {'username':u'limodou','id':1}>, <User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
     >>> g1.users.clear(a)
@@ -238,6 +238,7 @@ def test_7():
     >>> g1.users.count()
     0
     >>> g1.users.add(a, b, c)
+    >>> g1.users.add([a, b, c])
     >>> g1.to_dict()
     {'id': 1, 'name': 'python'}
     >>> g1.to_dict(manytomany=True)
