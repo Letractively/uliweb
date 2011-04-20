@@ -472,8 +472,9 @@ class StringProperty(CharProperty):
     field_class = String
     
 class FileProperty(StringProperty):
-    pass
-
+    def __init__(self, verbose_name=None, default='', max_length=255, **kwds):
+        super(FileProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
+        
 class UnicodeProperty(CharProperty):
     field_class = Unicode
     
