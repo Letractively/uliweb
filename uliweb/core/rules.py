@@ -142,6 +142,10 @@ class Expose(object):
         return f, (appname, endpoint, rule, self.kwargs.copy())
     
     def __call__(self, f):
+        from uliweb.utils.common import safe_import
+        
+        if isinstance(f, (str, unicode)):
+            _, f = safe_import(f)
         self.parse(f)
         return f
     
