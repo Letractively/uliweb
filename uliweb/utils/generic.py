@@ -1103,7 +1103,7 @@ class SimpleListView(object):
         
         def get_field(fields, i, m_rowspan):
             f_list, col = fields[i]
-            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1}
+            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1, 'title':table['fields_list'][col].get('help_string', '')}
             if len(f_list) == 1:
                 field['rowspan'] = m_rowspan
             return field
@@ -1146,6 +1146,8 @@ class SimpleListView(object):
                     kwargs['width'] = field['width']
 #                else:
 #                    kwargs['width'] = '100'
+                if kwargs.get('rowspan', 1) + y == max_rowspan:
+                    kwargs['title'] = field['title']
                 s.append(str(Tag('th', field['name'], **kwargs)))
                 
                 i = j
@@ -1171,7 +1173,7 @@ class SimpleListView(object):
         
         def get_field(fields, i, m_rowspan):
             f_list, col = fields[i]
-            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1}
+            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1, 'title':table['fields_list'][col].get('help_string', '')}
             if len(f_list) == 1:
                 field['rowspan'] = m_rowspan
             return field
@@ -1219,6 +1221,7 @@ class SimpleListView(object):
                 if kwargs.get('rowspan', 1) + y != max_rowspan:
                     _f.pop('width', None)
                     kwargs.pop('field', None)
+                    _f.pop('title', None)
                 else:
                     kwargs['width'] = _f.pop('width', self.default_column_width)
                 kwargs.update(_f)
