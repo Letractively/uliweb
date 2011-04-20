@@ -111,8 +111,10 @@ def get_url(ok_url, *args):
     else:
         return ok_url
 
-def to_json_result(success, msg='', d=None):
-    return json({'success':success, 'message':str(msg), 'data':d})
+def to_json_result(success, msg='', d=None, **kwargs):
+    t = {'success':success, 'message':str(msg), 'data':d}
+    t.update(kwargs)
+    return json(t)
     
 def make_form_field(field, model, field_cls=None, builds_args_map=None):
     import uliweb.orm as orm
@@ -530,7 +532,7 @@ class EditView(AddView):
             msg = _("The object has not been changed.")
         
         if json_result:
-            return to_json_result(True, msg, self.on_success_data(self.obj))
+            return to_json_result(True, msg, self.on_success_data(self.obj), modified=r)
         else:
             flash = function('flash')
             flash(msg)
