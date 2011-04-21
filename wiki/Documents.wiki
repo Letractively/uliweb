@@ -1,3 +1,4 @@
+#labels Featured
 = Installation=
 
 [InstallUliweb Install Uliweb]
