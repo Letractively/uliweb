@@ -14,7 +14,7 @@ Requirement
 Extra Requirement
 ------------------
 
-* SQLAlchemy 0.5+ (If you want to use Uliweb ORM you should install it)
+* SQLAlchemy 0.6+ (If you want to use Uliweb ORM you should install it)
 * pytz (Used in uliweb.utils.date and ORM for timezone process)
     
 Installation
