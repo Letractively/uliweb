@@ -286,6 +286,8 @@ class CallCommand(Command):
                 mod = __import__(m, {}, {}, [''])
                 if global_options.verbose:
                     print "Importing... %s.%s" % (f, command)
+                if hasattr(mod, 'call'):
+                    getattr(mod, 'call')(args, options, global_options)
                 exe_flag = True
             except ImportError:
                 continue
