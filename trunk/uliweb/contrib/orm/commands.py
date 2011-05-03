@@ -92,19 +92,25 @@ def load_table(name, table, dir, con):
     try:
         first_line = f.readline()
         fields = first_line[1:].strip().split()
+        n = 1
         for line in f:
-            r = eval(line)
-            record = dict(zip(fields, r))
-            params = {}
-            for c in table.c:
-                if c.name in record:
-                    params[c.name] = record[c.name]
-#                else:
-#                    params[c.name] = c.default
-#                    print c.name, c.default
-            
-            ins = table.insert().values(**params)
-            con.execute(ins)
+            try:
+                n += 1
+                r = eval(line)
+                record = dict(zip(fields, r))
+                params = {}
+                for c in table.c:
+                    if c.name in record:
+                        params[c.name] = record[c.name]
+    #                else:
+    #                    params[c.name] = c.default
+    #                    print c.name, c.default
+                
+                ins = table.insert().values(**params)
+                con.execute(ins)
+            except:
+                log.error('Error: Line %d' % n)
+                raise
     finally:
         f.close()
 

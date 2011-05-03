@@ -29,10 +29,11 @@ def filedown(environ, filename, cache=True, cache_timeout=None, download=False, 
 
     headers = [('Date', http_date())]
     
+    d_filename = os.path.basename(filename)
     if download:
-        headers.append(('Content-Disposition', 'attachment; filename=%s' % filename))
+        headers.append(('Content-Disposition', 'attachment; filename=%s' % d_filename))
     if inline:
-        headers.append(('Content-Disposition', 'inline; filename=%s' % filename))
+        headers.append(('Content-Disposition', 'inline; filename=%s' % d_filename))
     
     if cache:
         etag = _generate_etag(mtime, file_size, real_filename)
