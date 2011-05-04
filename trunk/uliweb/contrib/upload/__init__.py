@@ -60,7 +60,7 @@ def save_file(filename, fobj, replace=False):
     fname2 = files.save_file(fname1, fobj, replace, application.settings.UPLOAD.BUFFER_SIZE)
     
     #create new filename according fname2 and filename, the result should be unicode
-    return normfilename(os.path.join(os.path.dirname(filename), files.unicode_filename(fname2)))
+    return normfilename(os.path.join(os.path.dirname(filename), files.unicode_filename(fname2, s.FILESYSTEM_ENCODING)))
 
 def save_file_field(field, replace=False, filename=None):
     assert field
