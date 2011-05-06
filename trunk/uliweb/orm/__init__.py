@@ -151,7 +151,7 @@ class SQLStorage(dict):
     def __repr__(self): return '<SQLStorage ' + dict.__repr__(self) + '>'
 
 def check_reserved_word(f):
-    if f in ['put', 'save', 'table'] or f in dir(Model):
+    if f in ['put', 'save', 'table', 'tablename'] or f in dir(Model):
         raise ReservedWordError(
             "Cannot define property using reserved word '%s'. " % f
             )
