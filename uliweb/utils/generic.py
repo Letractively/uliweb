@@ -170,6 +170,9 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
                 field_type = form.DateTimeField
         elif cls is orm.DecimalProperty:
             field_type = form.StringField
+            if prop.choices is not None:
+                field_type = form.SelectField
+                kwargs['choices'] = prop.get_choices()
         elif cls is orm.FloatProperty:
             field_type = form.FloatField
         elif cls is orm.IntegerProperty:

@@ -642,6 +642,17 @@ class DecimalProperty(Property):
         f_type = self.field_class(precision=self.precision, scale=self.scale)
         return f_type
     
+    def get_display_value(self, value):
+        if value is None:
+            return ''
+        if self.choices:
+            v = dict(self.get_choices()).get(str(value), '')
+            if isinstance(v, str):
+                v = unicode(v, __default_encoding__)
+            return v
+        else:
+            return str(value)
+    
 class BooleanProperty(Property):
     """A boolean property."""
 
@@ -970,6 +981,8 @@ class Result(object):
         if self.condition is None:
             return
         return self.model.remove(self.condition)
+    
+    remove = clear
             
     def __del__(self):
         if self.result:
@@ -1030,6 +1043,8 @@ class ReverseResult(Result):
             self.model.table.delete(self.condition & self.model.table.c['id'].in_(ids)).execute()
         else:
             self.model.table.delete(self.condition).execute()
+    
+    remove = clear
     
 class ManyResult(Result):
     def __init__(self, modela, modelb, table, fielda, fieldb, realfielda, realfieldb, valuea):
