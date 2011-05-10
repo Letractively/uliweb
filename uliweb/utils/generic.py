@@ -729,20 +729,31 @@ class DetailView(object):
 class DeleteView(object):
     success_msg = _('The object has been deleted successfully!')
 
-    def __init__(self, model, ok_url='', condition=None, obj=None, pre_delete=None, post_delete=None):
+    def __init__(self, model, ok_url='', fail_url='', condition=None, obj=None, pre_delete=None, post_delete=None, validator=None):
         self.model = get_model(model)
         self.condition = condition
         self.obj = obj
+        self.validator = validator
         if not obj:
             self.obj = self.model.get(self.condition)
         else:
             self.obj = obj
         
         self.ok_url = ok_url
+        self.fail_url = fail_url
         self.pre_delete = pre_delete
         self.post_delete = post_delete
         
     def run(self, json_result=False):
+        if self.validator:
+            msg = self.validator(self.obj)
+            if msg:
+                if json_result:
+                    return to_json_result(False, msg)
+                else:
+                    flash(msg, 'error')
+                    return redirect(self.fail_url)
+                
         if self.pre_delete:
             self.pre_delete(self.obj)
         self.delete(self.obj)
