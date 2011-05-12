@@ -1094,12 +1094,8 @@ class ManyResult(Result):
         Update the third relationship table, but not the ModelA or ModelB
         """
         ids = self.ids()
-        old_ids = ids[:]
         new_ids = get_objs_columns(objs, self.realfieldb)
 
-        if get_dispatch_send():
-            dispatch.call(self.__class__, 'pre_update', instance=self, data=new_ids, old_data=ids)
-        
         modified = False
         for v in new_ids:
             if v in ids:    #the id has been existed, so don't insert new record
@@ -1113,10 +1109,6 @@ class ManyResult(Result):
             self.clear(*ids)
             modified = True
             
-        if modified:
-            if get_dispatch_send():
-                dispatch.call(self.__class__, 'post_update', instance=self, data=new_ids, old_data=old_ids)
-
         return modified
             
     def clear(self, *objs):
@@ -1470,6 +1462,7 @@ def Field(type, **kwargs):
 class Model(object):
 
     __metaclass__ = ModelMetaclass
+    __dispatch_enabled__ = True
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
@@ -1582,7 +1575,7 @@ class Model(object):
                 created = True
                 old = d.copy()
                 
-                if get_dispatch_send():
+                if get_dispatch_send() and self.__dispatch_enabled__:
                     dispatch.call(self.__class__, 'pre_save', instance=self, created=True, data=d, old_data=self._old_values)
                 
                 #process auto_now_add
@@ -1598,7 +1591,7 @@ class Model(object):
                 if d:
                     old = d.copy()
                     
-                    if get_dispatch_send():
+                    if get_dispatch_send() and self.__dispatch_enabled__:
                         dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d, old_data=self._old_values)
 
                     #process auto_now
@@ -1612,7 +1605,7 @@ class Model(object):
                     x = self.properties[k].get_value_for_datastore(self)
                     if self.field_str(x) != self.field_str(v):
                         setattr(self, k, v)
-                if get_dispatch_send():
+                if get_dispatch_send() and self.__dispatch_enabled__:
                     dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old, old_data=self._old_values)
                 self.set_saved()
                 
@@ -1621,10 +1614,10 @@ class Model(object):
     save = put
     
     def delete(self):
-        if get_dispatch_send():
+        if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'pre_delete', instance=self)
         self.table.delete(self.table.c.id==self.id).execute()
-        if get_dispatch_send():
+        if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'post_delete', instance=self)
         self.id = None
         self._old_values = {}
