@@ -1047,8 +1047,14 @@ class ReverseResult(Result):
     remove = clear
     
 class ManyResult(Result):
-    def __init__(self, modela, modelb, table, fielda, fieldb, realfielda, realfieldb, valuea):
+    def __init__(self, modela, instance, property_name, modelb, table, fielda, fieldb, realfielda, realfieldb, valuea):
+        """
+        modela will define property_name = ManyToMany(modelb) relationship.
+        instance will be modela instance
+        """
         self.modela = modela
+        self.instance = instance
+        self.property_name = property_name
         self.modelb = modelb
         self.table = table  #third table
         self.fielda = fielda
@@ -1120,7 +1126,7 @@ class ManyResult(Result):
             self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
         else:
             self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
-    
+        
     def count(self):
         result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition).execute()
         count = 0
@@ -1288,7 +1294,7 @@ class ManyToMany(ReferenceProperty):
             raise DuplicatePropertyError('Class %s already has property %s'
                  % (self.reference_class.__name__, self.collection_name))
         setattr(self.reference_class, self.collection_name,
-            _ManyToManyReverseReferenceProperty(self))
+            _ManyToManyReverseReferenceProperty(self, self.collection_name))
     
     def __get__(self, model_instance, model_class):
         """Get reference object.
@@ -1302,7 +1308,7 @@ class ManyToMany(ReferenceProperty):
         self.init_through()
         if model_instance:
             reference_id = getattr(model_instance, self.reversed_fieldname, None)
-            x = ManyResult(self.model_class, self.reference_class, self.table,
+            x = ManyResult(self.model_class, model_instance, self.property_name, self.reference_class, self.table,
                 self.fielda, self.fieldb, self.reversed_fieldname,
                 self.reference_fieldname, reference_id)
             return x
@@ -1310,11 +1316,22 @@ class ManyToMany(ReferenceProperty):
             return self
     
     def __set__(self, model_instance, value):
-        pass
+        if model_instance is None:
+            return
+        
+        if value:
+            value = get_objs_columns(value, self.reference_fieldname)
+        setattr(model_instance, self._attr_name(), value)
     
     def get_value_for_datastore(self, model_instance):
         """Get key of reference rather than reference itself."""
-        return getattr(model_instance, self.reversed_fieldname)
+        return getattr(model_instance, self._attr_name(), None)
+#        if value:
+#            return value
+#        else:
+#            value = getattr(model_instance, self.property_name).ids()
+#            setattr(model_instance, self._attr_name(), value)
+#            return value
     
     def get_display_value(self, value):
         s = []
@@ -1329,7 +1346,7 @@ class ManyToMany(ReferenceProperty):
         if not objs:
             return self.table.c[self.fielda]!=self.table.c[self.fielda]
         else:
-            ids = get_objs_columns(objs)
+            ids = get_objs_columns(objs, self.reference_fieldname)
             sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fieldb].in_(ids)))
             condition = self.model_class.c[self.reversed_fieldname].in_(sub_query)
             return condition
@@ -1413,13 +1430,14 @@ class _OneToOneReverseReferenceProperty(_ReverseReferenceProperty):
             return self
     
 class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
-    def __init__(self, reference_property):
+    def __init__(self, reference_property, collection_name):
         """Constructor for reverse reference.
     
         Constructor does not take standard values of other property types.
     
         """
         self.reference_property = reference_property
+        self.collection_name = collection_name
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
@@ -1427,7 +1445,8 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
         self._reversed_id = self.reference_property.reference_fieldname
         if model_instance:
             reference_id = getattr(model_instance, self._reversed_id, None)
-            x = ManyResult(self.reference_property.reference_class, 
+            x = ManyResult(self.reference_property.reference_class, model_instance,
+                self.collection_name,
                 self.reference_property.model_class, self.reference_property.table,
                 self.reference_property.fieldb, self.reference_property.fielda, 
                 self.reference_property.reference_fieldname,
@@ -1470,17 +1489,16 @@ class Model(object):
     def __init__(self, **kwargs):
         self._old_values = {}
         for prop in self.properties.values():
-            if not isinstance(prop, ManyToMany):
-                if prop.name in kwargs:
-                    value = kwargs[prop.name]
-                else:
-                    value = prop.default_value()
-                prop.__set__(self, value)
+            if prop.name in kwargs:
+                value = kwargs[prop.name]
+            else:
+                value = prop.default_value()
+            prop.__set__(self, value)
         
     def set_saved(self):
-        self._old_values = self.to_dict()
+        self._old_values = self.to_dict(manytomany=True, manytomany_fetch=False)
         
-    def to_dict(self, fields=[], convert=True, manytomany=False):
+    def to_dict(self, fields=[], convert=True, manytomany=False, manytomany_fetch=True):
         d = {}
         for k, v in self.properties.items():
             if fields and not k in fields:
@@ -1519,34 +1537,22 @@ class Model(object):
         if self.id is None:
             d = {}
             for k, v in self.properties.items():
-                if not isinstance(v, ManyToMany):
-                    x = v.get_value_for_datastore(self)
-                    if isinstance(x, Model):
-                        x = x.id
-#                    if isinstance(v, DateTimeProperty) and v.auto_now_add:
-#                        d[k] = v.now()
-#                    elif x is not None:
-                    if x is not None:
-                        d[k] = x
-#                    else:
-#                        x = v.default_value(self)
-#                        if x:
-#                            d[k] = x
+                x = v.get_value_for_datastore(self)
+                if isinstance(x, Model):
+                    x = x.id
+                if x is not None:
+                    d[k] = x
         else:
             d = {}
             d['id'] = self.id
             for k, v in self.properties.items():
-                if not isinstance(v, ManyToMany):
-                    t = self._old_values.get(k, None)
-                    x = v.get_value_for_datastore(self)
-                    if isinstance(x, Model):
-                        x = x.id
-#                    if isinstance(v, DateTimeProperty) and v.auto_now:
-#                        d[k] = v.now()
-#                    elif (x is not None) and (t != self.field_str(x)):
-#                    if (x is not None) and (t != self.field_str(x)):
-                    if t != self.field_str(x):
-                        d[k] = x
+                t = self._old_values.get(k, None)
+                x = v.get_value_for_datastore(self)
+                #todo If need to support ManyToMany and Reference except id field?
+                if isinstance(x, Model):
+                    x = x.id
+                if t != self.field_str(x):
+                    d[k] = x
         
         return d
             
@@ -1579,11 +1585,22 @@ class Model(object):
                     dispatch.call(self.__class__, 'pre_save', instance=self, created=True, data=d, old_data=self._old_values)
                 
                 #process auto_now_add
+                _manytomany = {}
                 for k, v in self.properties.items():
-                    if isinstance(v, DateTimeProperty) and v.auto_now_add:
-                        d[k] = v.now()
-                obj = self.table.insert().execute(**d)
+                    if not isinstance(v, ManyToMany):
+                        if isinstance(v, DateTimeProperty) and v.auto_now_add:
+                            d[k] = v.now()
+                    else:
+                        if k in d:
+                            _manytomany[k] = d.pop(k)
+                if d:
+                    obj = self.table.insert().execute(**d)
                 setattr(self, 'id', obj.inserted_primary_key[0])
+                
+                if _manytomany:
+                    for k, v in _manytomany.iteritems():
+                        if v:
+                            getattr(self, k).add(v)
                 
                 saved = True
             else:
@@ -1595,10 +1612,20 @@ class Model(object):
                         dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d, old_data=self._old_values)
 
                     #process auto_now
+                    _manytomany = {}
                     for k, v in self.properties.items():
-                        if isinstance(v, DateTimeProperty) and v.auto_now:
-                            d[k] = v.now()
-                    self.table.update(self.table.c.id == self.id).execute(**d)
+                        if not isinstance(v, ManyToMany):
+                            if isinstance(v, DateTimeProperty) and v.auto_now:
+                                d[k] = v.now()
+                        else:
+                            if k in d:
+                                _manytomany[k] = d.pop(k)
+                    if d:
+                        self.table.update(self.table.c.id == self.id).execute(**d)
+                    if _manytomany:
+                        for k, v in _manytomany.iteritems():
+                            if v:
+                                getattr(self, k).update(v)
                     saved = True
             if saved:
                 for k, v in d.items():
