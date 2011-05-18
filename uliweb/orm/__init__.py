@@ -1126,7 +1126,9 @@ class ManyResult(Result):
             self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
         else:
             self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
-        
+       
+    remove = clear
+    
     def count(self):
         result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition).execute()
         count = 0
