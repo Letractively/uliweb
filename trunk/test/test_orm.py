@@ -229,8 +229,11 @@ def test_7():
     >>> g3.save()
     True
     >>> g1.users.add(a)
+    True
     >>> g1.users.add(b, 3) #add can support multiple object, and object can also int
+    True
     >>> g1.users.add(a, b)  #can has duplicated records
+    False
     >>> list(g1.users.all())
     [<User {'username':u'limodou','id':1}>, <User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
     >>> g1.users.clear(a)
@@ -238,7 +241,9 @@ def test_7():
     >>> g1.users.count()
     0
     >>> g1.users.add(a, b, c)
+    True
     >>> g1.users.add([a, b, c])
+    False
     >>> g1.to_dict()
     {'id': 1, 'name': 'python'}
     >>> g1.to_dict(manytomany=True)
@@ -250,9 +255,11 @@ def test_7():
     >>> g1.users.has(100)
     False
     >>> g2.users.add(a)
+    True
     >>> list(a.group_set.all())
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
     >>> a.group_set.add(g3)
+    True
     >>> list(a.group_set.all())
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
     >>> g1.users.clear(a)
@@ -267,9 +274,13 @@ def test_7():
     >>> list(g1.users.filter(User.c.id==3).all())
     [<User {'username':u'abc','id':3}>]
     >>> g2.users.add(c)
+    True
     >>> list(Group.filter(Group.users.in_(3)))
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
     >>> g1.update(users=[1,2])
+    <Group {'name':u'python','id':1}>
+    >>> g1.save()
+    True
     >>> g1.to_dict(manytomany=True)
     {'users': [1, 2], 'id': 1, 'name': 'python'}
     """
@@ -649,8 +660,11 @@ def test_many2many_reference_field():
     >>> print list(Group.all())
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
     >>> g1.users.add(a)
+    True
     >>> g1.users.add(b)
+    True
     >>> g2.users.add(a)
+    True
     >>> print list(g1.users.all())
     [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
     >>> print list(g1.users.all().order_by(User.c.year.desc()))
@@ -698,8 +712,11 @@ def test_many2many_reference_field_and_reversed_field():
     >>> print list(Group.all())
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
     >>> g1.users.add(a)
+    True
     >>> g1.users.add(b)
+    True
     >>> g2.users.add(a)
+    True
     >>> print list(g1.users.all())
     [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
     >>> print list(g1.users.all().order_by(User.c.year.desc()))
@@ -751,8 +768,11 @@ def test_many2many_through():
     >>> print list(Group.all())
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
     >>> g1.users.add(a)
+    True
     >>> g1.users.add(b)
+    True
     >>> g2.users.add(a)
+    True
     >>> print list(g1.users.all())
     [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
     >>> print list(g1.users.all().order_by(User.c.year.desc()))
@@ -915,6 +935,54 @@ def test_decimal_float():
     <Test {'float':200.02000000000001,'decimal':Decimal('10.2'),'id':1}>
     """
 
+def test_many2many_save_and_update():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> #db.echo = True
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     users = ManyToMany(User, reference_fieldname='username', reversed_fieldname='name')
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='test', year=3)
+    >>> b.save()
+    True
+    >>> c = User(username='user', year=3)
+    >>> c.save()
+    True
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> print g1.users.ids()
+    []
+    >>> g1.users = ['limodou', 'test']
+    >>> print Group.users.get_value_for_datastore(g1, cached=True)
+    ['limodou', 'test']
+    >>> g1.save()
+    True
+    >>> print Group.users.get_value_for_datastore(g1, cached=True)
+    ['limodou', 'test']
+    >>> g2 = Group(name='perl', users=['user'])
+    >>> g2.save()
+    True
+    >>> print Group.users.get_value_for_datastore(g2, cached=True)
+    ['user']
+    >>> g2.users = ['limodou']
+    >>> g2.save()
+    True
+    >>> print Group.users.get_value_for_datastore(g2, cached=True)
+    ['limodou']
+    >>> print g2.users.ids()
+    [u'limodou']
+    >>> print Group.users.get_value_for_datastore(g2)
+    [u'limodou']
+    """
 #if __name__ == '__main__':
 #    set_debug_query(True)
 #    db = get_connection('mysql://root:limodou@localhost/test')

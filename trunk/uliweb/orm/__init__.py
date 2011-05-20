@@ -1081,6 +1081,7 @@ class ManyResult(Result):
             else:
                 new_objs.append(x)
         
+        modified = False
         for o in new_objs:
             if not self.has(o):
                 if isinstance(o, Model):
@@ -1089,6 +1090,8 @@ class ManyResult(Result):
                     v = o
                 d = {self.fielda:self.valuea, self.fieldb:v}
                 self.table.insert().execute(**d)
+                modified = modified or True
+        return modified
          
     def ids(self):
         query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
@@ -1325,15 +1328,13 @@ class ManyToMany(ReferenceProperty):
             value = get_objs_columns(value, self.reference_fieldname)
         setattr(model_instance, self._attr_name(), value)
     
-    def get_value_for_datastore(self, model_instance):
+    def get_value_for_datastore(self, model_instance, cached=False):
         """Get key of reference rather than reference itself."""
-        return getattr(model_instance, self._attr_name(), None)
-#        if value:
-#            return value
-#        else:
-#            value = getattr(model_instance, self.property_name).ids()
-#            setattr(model_instance, self._attr_name(), value)
-#            return value
+        value = getattr(model_instance, self._attr_name(), None)
+        if not cached:
+            value = getattr(model_instance, self.property_name).ids()
+            setattr(model_instance, self._attr_name(), value)
+        return value
     
     def get_display_value(self, value):
         s = []
@@ -1498,9 +1499,13 @@ class Model(object):
             prop.__set__(self, value)
         
     def set_saved(self):
-        self._old_values = self.to_dict(manytomany=True, manytomany_fetch=False)
+        self._old_values = self.to_dict()
+        for k, v in self.properties.items():
+            if isinstance(v, ManyToMany):
+                t = v.get_value_for_datastore(self, cached=True)
+                self._old_values[k] = t
         
-    def to_dict(self, fields=[], convert=True, manytomany=False, manytomany_fetch=True):
+    def to_dict(self, fields=[], convert=True, manytomany=False):
         d = {}
         for k, v in self.properties.items():
             if fields and not k in fields:
@@ -1539,9 +1544,12 @@ class Model(object):
         if self.id is None:
             d = {}
             for k, v in self.properties.items():
-                x = v.get_value_for_datastore(self)
-                if isinstance(x, Model):
-                    x = x.id
+                if not isinstance(v, ManyToMany):
+                    x = v.get_value_for_datastore(self)
+                    if isinstance(x, Model):
+                        x = x.id
+                else:
+                    x = v.get_value_for_datastore(self, cached=True)
                 if x is not None:
                     d[k] = x
         else:
@@ -1549,10 +1557,13 @@ class Model(object):
             d['id'] = self.id
             for k, v in self.properties.items():
                 t = self._old_values.get(k, None)
-                x = v.get_value_for_datastore(self)
-                #todo If need to support ManyToMany and Reference except id field?
-                if isinstance(x, Model):
-                    x = x.id
+                if not isinstance(v, ManyToMany):
+                    x = v.get_value_for_datastore(self)
+                    #todo If need to support ManyToMany and Reference except id field?
+                    if isinstance(x, Model):
+                        x = x.id
+                else:
+                    x = v.get_value_for_datastore(self, cached=True)
                 if t != self.field_str(x):
                     d[k] = x
         
@@ -1569,7 +1580,9 @@ class Model(object):
                     if self.field_str(x) != self.field_str(v):
                         setattr(self, k, v)
                 else:
-                    getattr(self, k).update(*v)
+                    setattr(self, k, v)
+        return self
+#                    getattr(self, k).update(*v)
             
     def put(self, insert=False):
         """
@@ -1597,14 +1610,15 @@ class Model(object):
                             _manytomany[k] = d.pop(k)
                 if d:
                     obj = self.table.insert().execute(**d)
+                    saved = True
+                    
                 setattr(self, 'id', obj.inserted_primary_key[0])
                 
                 if _manytomany:
                     for k, v in _manytomany.iteritems():
                         if v:
-                            getattr(self, k).add(v)
+                            saved = saved or getattr(self, k).add(v)
                 
-                saved = True
             else:
                 _id = d.pop('id')
                 if d:
@@ -1624,11 +1638,11 @@ class Model(object):
                                 _manytomany[k] = d.pop(k)
                     if d:
                         self.table.update(self.table.c.id == self.id).execute(**d)
+                        saved = True
                     if _manytomany:
                         for k, v in _manytomany.iteritems():
                             if v:
-                                getattr(self, k).update(v)
-                    saved = True
+                                saved = saved or getattr(self, k).update(v)
             if saved:
                 for k, v in d.items():
                     x = self.properties[k].get_value_for_datastore(self)
