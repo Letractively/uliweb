@@ -33,3 +33,20 @@ def resize_image_string(buf, size=(50, 50)):
     f = StringIO(buf)
     return resize_image(f, size).getvalue()
     
+def image_size(filename):
+    import Image
+
+    image = Image.open(filename)
+    return image.size
+
+def crop_resize(fobj, outfile, x, y, w, h, size=(50, 50)):
+    import Image
+
+    image = Image.open(fobj)
+    if image.mode not in ('L', 'RGB'):
+        image = image.convert('RGB')
+    r = image.crop((x, y, x+w, y+h))
+    if size:
+        rm = r.resize(size, Image.ANTIALIAS)
+    rm.save(outfile, "JPEG")
+    
