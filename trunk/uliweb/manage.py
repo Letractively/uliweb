@@ -136,10 +136,11 @@ class MakeAppCommand(Command):
             appname = args[0]
         
         ans = '-1'
+        app_path = appname.replace('.', '//')
         if os.path.exists(apps_dir):
-            path = os.path.join(apps_dir, appname)
+            path = os.path.join(apps_dir, app_path)
         else:
-            path = appname
+            path = app_path
         
         if os.path.exists(path):
             while ans not in ('y', 'n'):
