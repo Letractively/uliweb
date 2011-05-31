@@ -46,6 +46,7 @@ def reindent(text):
     for raw_line in lines:
         line=raw_line.strip()
         if not line or line[0]=='#':
+            new_lines.append(line)
             continue
         if line[:5]=='elif ' or line[:5]=='else:' or    \
             line[:7]=='except:' or line[:7]=='except ' or \
