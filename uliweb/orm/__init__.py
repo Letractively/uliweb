@@ -1117,7 +1117,7 @@ class ManyResult(Result):
         if ids: #if there are still ids, so delete them
             self.clear(*ids)
             modified = True
-            
+          
         return modified
             
     def clear(self, *objs):
@@ -1617,7 +1617,7 @@ class Model(object):
                 if _manytomany:
                     for k, v in _manytomany.iteritems():
                         if v:
-                            saved = saved or getattr(self, k).add(v)
+                            saved = getattr(self, k).add(v) or saved
                 
             else:
                 _id = d.pop('id')
@@ -1641,8 +1641,8 @@ class Model(object):
                         saved = True
                     if _manytomany:
                         for k, v in _manytomany.iteritems():
-                            if v:
-                                saved = saved or getattr(self, k).update(v)
+                            if v is not None:
+                                saved = getattr(self, k).update(v) or saved
             if saved:
                 for k, v in d.items():
                     x = self.properties[k].get_value_for_datastore(self)

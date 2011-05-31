@@ -982,6 +982,18 @@ def test_many2many_save_and_update():
     [u'limodou']
     >>> print Group.users.get_value_for_datastore(g2)
     [u'limodou']
+    >>> g2.update(users=['limodou', 'test'])
+    <Group {'name':u'perl','id':2}>
+    >>> g2.save()
+    True
+    >>> print g2.users.ids()
+    [u'limodou', u'test']
+    >>> g2.update(name='new group', users=[])
+    <Group {'name':u'new group','id':2}>
+    >>> g2.save()
+    True
+    >>> print g2.users.ids()
+    []
     """
 #if __name__ == '__main__':
 #    set_debug_query(True)
