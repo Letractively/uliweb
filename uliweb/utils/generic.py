@@ -695,11 +695,12 @@ class DetailView(object):
         self.layout_class = layout_class or DetailLayout
         self.layout = layout
         self.template_data = template_data or {}
+        self.result_fields = {}
         
     def run(self):
         view_text = self.render(self.obj)
         result = self.template_data.copy()
-        result.update({'object':self.obj, 'view':''.join(view_text)})
+        result.update({'object':self.obj, 'view':''.join(view_text), 'view_obj':self})
         return result
     
     def query(self):
@@ -722,6 +723,7 @@ class DetailView(object):
             field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
             if field:
                 view_text.append('<tr><th align="right" width=150>%s</th><td>%s</td></tr>' % (field["label"], field["display"]))
+                self.result_fields[field_name] = field
                 
         view_text.append('</table>')
         return view_text
@@ -745,6 +747,8 @@ class DeleteView(object):
         self.post_delete = post_delete
         
     def run(self, json_result=False):
+        flash = function('flash')
+
         if self.validator:
             msg = self.validator(self.obj)
             if msg:
@@ -763,7 +767,6 @@ class DeleteView(object):
         if json_result:
             return to_json_result(True, self.success_msg)
         else:
-            flash = function('flash')
             flash(self.success_msg)
             return redirect(self.ok_url)
     
