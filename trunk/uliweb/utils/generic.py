@@ -1496,6 +1496,7 @@ class QueryView(object):
     def make_form(self):
         import uliweb.orm as orm
         import uliweb.form as form
+        from uliweb import request
         from uliweb.form.layout import QueryLayout
         
         if self.form:
@@ -1512,11 +1513,14 @@ class QueryView(object):
                 DummyForm.layout_class = QueryLayout
             if not hasattr(DummyForm, 'form_method'):
                 DummyForm.form_method = 'GET'
+#            if not hasattr(DummyForm, 'form_action') or not DummyForm.form_action:
+#                DummyForm.form_action = request.path
         else:
             class DummyForm(form.Form):
                 layout_class = QueryLayout
                 form_method = 'GET'
                 form_buttons = form.Submit(value=_('Query'), _class=".submit")
+#                form_action = request.path
             
         #add layout support
         layout = self.get_layout()
