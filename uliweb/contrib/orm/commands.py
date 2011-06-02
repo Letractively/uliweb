@@ -12,7 +12,7 @@ def get_engine(apps_dir):
     engine = app.settings.ORM.CONNECTION
     return engine
 
-def get_tables(apps_dir, apps=None, engine=None, import_models=False):
+def get_tables(apps_dir, apps=None, engine=None, import_models=False, settings_file='settings.ini', local_settings_file='local_settings.ini'):
     from uliweb.core.SimpleFrame import get_apps, get_app_dir
     from uliweb import orm
     from sqlalchemy import create_engine
@@ -29,7 +29,7 @@ def get_tables(apps_dir, apps=None, engine=None, import_models=False):
     db = orm.get_connection(con)
     
     if import_models:
-        apps = get_apps(apps_dir)
+        apps = get_apps(apps_dir, settings_file=settings_file, local_settings_file=local_settings_file)
         if apps:
             apps_list = apps
         else:
@@ -124,7 +124,7 @@ class SyncdbCommand(Command):
         engine = get_engine(global_options.project)
         con = create_engine(engine)
         
-        for name, t in get_tables(global_options.project).items():
+        for name, t in get_tables(global_options.project, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
                 print 'Creating %s...' % name
 
@@ -149,7 +149,7 @@ class ResetCommand(Command):
         engine = get_engine(global_options.project)
         con = create_engine(engine)
         
-        for name, t in get_tables(global_options.project, args).items():
+        for name, t in get_tables(global_options.project, args, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
                 print 'Resetting %s...' % name
             t.drop(con)
@@ -197,7 +197,7 @@ class SQLCommand(Command):
     def handle(self, options, global_options, *args):
         from sqlalchemy.schema import CreateTable
         
-        for name, t in sorted(get_tables(global_options.project, args).items()):
+        for name, t in sorted(get_tables(global_options.project, args, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items()):
             _t = CreateTable(t)
             print _t
             
@@ -221,7 +221,7 @@ class DumpCommand(Command):
         engine = get_engine(global_options.project)
         con = create_engine(engine)
 
-        for name, t in get_tables(global_options.project, args, engine=engine).items():
+        for name, t in get_tables(global_options.project, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
                 print 'Dumpping %s...' % name
             dump_table(name, t, options.output_dir, con)
@@ -292,7 +292,7 @@ are you sure to load data[Y/n]"""
         engine = get_engine(global_options.project)
         con = orm.get_connection(engine)
 
-        for name, t in get_tables(global_options.project, args, engine=engine).items():
+        for name, t in get_tables(global_options.project, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
                 print 'Loading %s...' % name
             try:
@@ -363,7 +363,7 @@ class DbinitdCommand(Command):
         app = Dispatcher(apps_dir=global_options.project, start=False)
 
         if not args:
-            apps_list = get_apps(global_options.project)
+            apps_list = get_apps(global_options.project, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         else:
             apps_list = args
         
@@ -397,10 +397,10 @@ class SqldotCommand(Command):
         if args:
             apps = args
         else:
-            apps = get_apps(global_options.project)
+            apps = get_apps(global_options.project, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         
         engine = get_engine(global_options.project)
         
-        tables = get_tables(global_options.project, None, engine=engine)
+        tables = get_tables(global_options.project, None, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         print generate_dot(tables, apps)
         

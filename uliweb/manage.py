@@ -277,7 +277,7 @@ class CallCommand(Command):
             
         if not options.appname:
             from uliweb import get_apps
-            apps = get_apps(apps_dir)
+            apps = get_apps(apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         else:
             apps = [options.appname]
         exe_flag = False
@@ -352,7 +352,7 @@ class RunserverCommand(Command):
         else:
             app = make_application(options.debug, global_options.project)
             include_apps = []
-        extra_files = collect_files(global_options.project, get_apps(global_options.project)+include_apps)
+        extra_files = collect_files(global_options.project, get_apps(global_options.project, settings_file=global_options.settings, local_settings_file=global_options.local_settings)+include_apps)
         run_simple(options.hostname, options.port, app, options.reload, False, True,
                    extra_files, 1, options.thread, options.processes)
 register_command(RunserverCommand)
