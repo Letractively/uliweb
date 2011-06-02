@@ -176,7 +176,7 @@ def get_app_dir(app):
         __app_dirs__[app] = path
         return path
 
-def get_apps(apps_dir, include_apps=None, settings_file='settings.ini'):
+def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
     include_apps = include_apps or []
     inifile = norm_path(os.path.join(apps_dir, settings_file))
     apps = []
@@ -186,6 +186,11 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini'):
         x = cache_get(inifile, lambda x:Ini(x), 'ini')
         if x:
             apps = x.GLOBAL.get('INSTALLED_APPS', [])
+    local_inifile = norm_path(os.path.join(apps_dir, local_settings_file))
+    if os.path.exists(local_inifile):
+        x = cache_get(local_inifile, lambda x:Ini(x), 'ini')
+        if x and 'GLOBAL' in x:
+            apps = x.GLOBAL.get('INSTALLED_APPS', apps)
     if not apps and os.path.exists(apps_dir):
         for p in os.listdir(apps_dir):
             if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
@@ -242,12 +247,13 @@ class Loader(object):
     
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir='apps', include_apps=None, start=True, default_settings=None, settings_file='settings.ini'):
+    def __init__(self, apps_dir='apps', include_apps=None, start=True, default_settings=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
         conf.application = self
         self.debug = False
         self.include_apps = include_apps or []
         self.default_settings = default_settings or {}
         self.settings_file = settings_file
+        self.local_settings_file = local_settings_file
         if not Dispatcher.installed:
             self.init(apps_dir)
             dispatch.call(self, 'startup_installed')
@@ -259,7 +265,7 @@ class Dispatcher(object):
     def init(self, apps_dir):
         conf.apps_dir = apps_dir
         Dispatcher.apps_dir = apps_dir
-        Dispatcher.apps = get_apps(self.apps_dir, self.include_apps)
+        Dispatcher.apps = get_apps(self.apps_dir, self.include_apps, self.settings_file, self.local_settings_file)
         Dispatcher.modules = self.collect_modules()
         self.install_settings(self.modules['settings'])
         Dispatcher.settings = conf.settings
@@ -581,6 +587,10 @@ class Dispatcher(object):
         set_ini = os.path.join(self.apps_dir, self.settings_file)
         if os.path.exists(set_ini):
             settings.append(set_ini)
+        
+        local_set_ini = os.path.join(self.apps_dir, self.local_settings_file)
+        if os.path.exists(local_set_ini):
+            settings.append(local_set_ini)
         
         modules['views'] = list(views)
         modules['settings'] = settings

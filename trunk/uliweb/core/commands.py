@@ -152,6 +152,8 @@ class ApplicationCommandManager(Command):
             help='Output the result in verbose mode.'),
         make_option('-s', '--settings', dest='settings', default='settings.ini',
             help='Settings file name. Default is "settings.ini".'),
+        make_option('-L', '--local_settings', dest='local_settings', default='local_settings.ini',
+            help='Local settings file name. Default is "local_settings.ini".'),
         make_option('--project', default='apps',
             help='Project "apps" directory.'),
         make_option('--pythonpath', default='',
