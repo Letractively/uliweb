@@ -22,6 +22,25 @@ def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
                 __default_fields_builds__[getattr(form, k)] = v
     return __default_fields_builds__
 
+def get_sort_field(model, sort_field='sort', order_name='asc'):
+    from uliweb import request
+    from uliweb.orm import get_model
+    
+    model = get_model(model)
+    if request.values.getlist('sort'):
+        sort_fields = request.values.getlist('sort')
+        order_by = []
+        orders = request.values.getlist('order')
+        for i, f in enumerate(sort_fields):
+            if orders[i] == 'asc':
+                order_by.append(model.c[f])
+            else:
+                order_by.append(model.c[f].desc())
+    else:
+        order_by = None
+        
+    return order_by
+    
 class ReferenceSelectField(SelectField):
     def __init__(self, model, group_field=None, value_field='id', condition=None, query=None, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', **kwargs):
         super(ReferenceSelectField, self).__init__(label=label, default=default, choices=None, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
@@ -1161,12 +1180,19 @@ class SimpleListView(object):
                     kwargs['align'] = 'center'
                 if field['rowspan'] > 1:
                     kwargs['rowspan'] = field['rowspan']
-                if field['width']:
-                    kwargs['width'] = field['width']
+                kwargs['width'] = field['width']
+                if not kwargs['width']:
+                    kwargs['width'] = self.default_column_width
+                _f = table['fields_list'][field['col']]
+                kwargs['field'] = _f['name']
+                if kwargs.get('rowspan', 1) + y != max_rowspan:
+                    kwargs.pop('width', None)
+                    kwargs.pop('field', None)
+                
 #                else:
 #                    kwargs['width'] = '100'
-                if kwargs.get('rowspan', 1) + y == max_rowspan:
-                    kwargs['title'] = field['title']
+#                if kwargs.get('rowspan', 1) + y == max_rowspan:
+#                    kwargs['title'] = field['title']
                 s.append(str(Tag('th', field['name'], **kwargs)))
                 
                 i = j
@@ -1370,7 +1396,7 @@ class ListView(SimpleListView):
                 return {'total':self.total, 'rows':s}
             else:
                 s.extend(self.render_total(table))
-                
+            
         if head:
             s.append('</tbody>')
             s.append('</table>')
