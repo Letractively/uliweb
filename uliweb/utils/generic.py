@@ -493,7 +493,7 @@ class AddView(object):
         obj = self.model(**data)
         obj.save()
         
-        self.save_manytomany(obj, data)
+#        self.save_manytomany(obj, data)
         return obj
         
     def save_manytomany(self, obj, data):
@@ -584,9 +584,9 @@ class EditView(AddView):
     def save(self, obj, data):
         obj.update(**data)
         r = obj.save()
-        
-        r1 = self.save_manytomany(obj, data)
-        return r or r1
+#        r1 = self.save_manytomany(obj, data)
+#        return r or r1
+        return r
         
     def save_manytomany(self, obj, data):
         #process manytomany property
@@ -596,7 +596,7 @@ class EditView(AddView):
                 field = getattr(obj, k)
                 value = data[k]
                 if value:
-                    r = r or getattr(obj, k).update(*value)
+                    r = getattr(obj, k).update(*value) or r
                 else:
                     getattr(obj, k).clear()
         return r

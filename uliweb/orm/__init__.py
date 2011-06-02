@@ -1117,7 +1117,7 @@ class ManyResult(Result):
         if ids: #if there are still ids, so delete them
             self.clear(*ids)
             modified = True
-          
+        print 'xxxxxx', modified  
         return modified
             
     def clear(self, *objs):
@@ -1608,9 +1608,11 @@ class Model(object):
                     else:
                         if k in d:
                             _manytomany[k] = d.pop(k)
+                            old.pop(k)
                 if d:
                     obj = self.table.insert().execute(**d)
-                    saved = True
+                    if old:
+                        saved = True
                     
                 setattr(self, 'id', obj.inserted_primary_key[0])
                 
@@ -1636,9 +1638,11 @@ class Model(object):
                         else:
                             if k in d:
                                 _manytomany[k] = d.pop(k)
+                                old.pop(k)
                     if d:
                         self.table.update(self.table.c.id == self.id).execute(**d)
-                        saved = True
+                        if old:
+                            saved = True
                     if _manytomany:
                         for k, v in _manytomany.iteritems():
                             if v is not None:
