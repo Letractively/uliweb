@@ -1254,7 +1254,7 @@ class SimpleListView(object):
                 kwargs = {}
                 kwargs['field'] = _f.pop('name')
                 _f.pop('verbose_name', None)
-                kwargs['title'] = field['name']
+                kwargs['title'] = simple_value(field['name'])
                 span = False
                 if field['colspan'] > 1:
                     kwargs['colspan'] = field['colspan']
