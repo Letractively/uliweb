@@ -115,7 +115,10 @@ def get_fields(model, fields, meta):
     fields_list = []
     for x in f:
         if isinstance(x, str):  #so x is field_name
-            fields_list.append((x, getattr(model, x)))
+            if hasattr(model, x):
+                fields_list.append((x, getattr(model, x)))
+            else:
+                fields_list.append((x, {'name':x}))
         elif isinstance(x, tuple):
             fields_list.append(x)   #x should be a tuple, just like (field_name, form_field_obj)
         elif isinstance(x, dict):
@@ -322,14 +325,14 @@ class AddView(object):
     success_msg = _('The information has been saved successfully!')
     fail_msg = _('There are somethings wrong.')
     builds_args_map = {}
-    meta = 'AddForm'
     
     def __init__(self, model, ok_url=None, ok_template=None, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
-        post_created_form=None, layout=None, file_replace=True, template_data=None, success_data=None):
+        post_created_form=None, layout=None, file_replace=True, template_data=None, success_data=None, meta='AddForm'):
 
         self.model = get_model(model)
+        self.meta = meta
         self.ok_url = ok_url
         self.ok_template = ok_template
         if success_msg:
@@ -508,14 +511,13 @@ class EditView(AddView):
     success_msg = _('The information has been saved successfully!')
     fail_msg = _('There are somethings wrong.')
     builds_args_map = {}
-    meta = 'EditForm'
     
-    def __init__(self, model, ok_url=None, condition=None, obj=None, **kwargs):
+    def __init__(self, model, ok_url=None, condition=None, obj=None, meta='EditForm', **kwargs):
         self.model = get_model(model)
         self.condition = condition
         self.obj = obj or self.query()
         
-        AddView.__init__(self, model, ok_url, **kwargs)
+        AddView.__init__(self, model, ok_url, meta=meta, **kwargs)
         
         #set obj to form.object
         self.form.object = obj
@@ -530,7 +532,8 @@ class EditView(AddView):
         
         flag = self.form.validate(request.values, request.files)
         if flag:
-            d = self.form.data.copy()
+            d = self.default_data.copy()
+            d.update(self.form.data)
             return self.on_success(d, json_result)
         else:
             d = self.template_data.copy()
@@ -695,12 +698,11 @@ class DetailLayout(object):
         return str(uaml.Parser(self.get_text(), self.writer))
     
 class DetailView(object):
-    meta = 'DetailView'
-    
     def __init__(self, model, condition=None, obj=None, fields=None, 
         types_convert_map=None, fields_convert_map=None, table_class_attr='table width100',
-        layout_class=None, layout=None, template_data=None):
+        layout_class=None, layout=None, template_data=None, meta='DetailView'):
         self.model = get_model(model)
+        self.meta = meta
         self.condition = condition
         if not obj:
             self.obj = self.query()
@@ -1297,11 +1299,12 @@ class ListView(SimpleListView):
     def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
-        total_fields=None, template_data=None, default_column_width=100):
+        total_fields=None, template_data=None, default_column_width=100, meta='Table'):
         """
         If pageno is None, then the ListView will not paginate 
         """
         self.model = get_model(model)
+        self.meta = meta
         self.condition = condition
         self.pageno = pageno
         self.order_by = order_by
@@ -1429,14 +1432,14 @@ class ListView(SimpleListView):
     
         if self.fields:
             fields = self.fields
-        elif hasattr(self.model, 'Table'):
-            fields = self.model.Table.fields
+        elif hasattr(self.model, self.meta):
+            fields = getattr(self.model, self.meta).fields
         else:
             fields = [x for x, y in self.model._fields_list]
             
         def get_table_meta_field(name):
-            if hasattr(self.model, 'Table'):
-                for f in self.model.Table.fields:
+            if hasattr(self.model, self.meta):
+                for f in getattr(self.model, self.meta).fields:
                     if isinstance(f, dict):
                         if name == f['name']:
                             return f

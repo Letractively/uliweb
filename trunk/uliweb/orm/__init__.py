@@ -281,12 +281,15 @@ class Property(object):
     creation_counter = 0
 
     def __init__(self, verbose_name=None, name=None, default=None,
-         required=False, validators=None, choices=None, max_length=None, hint='', **kwargs):
+        required=False, validators=None, choices=None, max_length=None, 
+        hint='', auto=None, auto_add=None, **kwargs):
         self.verbose_name = verbose_name
         self.property_name = None
         self.name = name
         self.default = default
         self.required = required
+        self.auto = auto
+        self.auto_add = auto_add
         self.validators = validators or []
         self.hint = hint
         if not isinstance(self.validators, (tuple, list)):
@@ -497,7 +500,7 @@ class DateTimeProperty(Property):
     
     def __init__(self, verbose_name=None, auto_now=False, auto_now_add=False,
             format=None, **kwds):
-        super(DateTimeProperty, self).__init__(verbose_name, **kwds)
+        super(DateTimeProperty, self).__init__(verbose_name, auto=auto_now, auto_add=auto_now_add, **kwds)
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
         self.format = format
@@ -1117,7 +1120,6 @@ class ManyResult(Result):
         if ids: #if there are still ids, so delete them
             self.clear(*ids)
             modified = True
-        print 'xxxxxx', modified  
         return modified
             
     def clear(self, *objs):
@@ -1524,6 +1526,8 @@ class Model(object):
         return d
     
     def field_str(self, v):
+        if not v:
+            return v
         if isinstance(v, datetime.datetime):
             return v.strftime('%Y-%m-%d %H:%M:%S')
         elif isinstance(v, datetime.date):
@@ -1605,6 +1609,8 @@ class Model(object):
                     if not isinstance(v, ManyToMany):
                         if isinstance(v, DateTimeProperty) and v.auto_now_add:
                             d[k] = v.now()
+                        elif (not k in d) and v.auto_add:
+                            d[k] = v.default_value()
                     else:
                         if k in d:
                             _manytomany[k] = d.pop(k)
@@ -1635,6 +1641,8 @@ class Model(object):
                         if not isinstance(v, ManyToMany):
                             if isinstance(v, DateTimeProperty) and v.auto_now:
                                 d[k] = v.now()
+                            elif (not k in d) and v.auto:
+                                d[k] = v.default_value()
                         else:
                             if k in d:
                                 _manytomany[k] = d.pop(k)
