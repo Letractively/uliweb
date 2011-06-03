@@ -995,6 +995,38 @@ def test_many2many_save_and_update():
     >>> print g2.users.ids()
     []
     """
+    
+def test_auto():
+    """
+    Test auto and auto_add parameter of property
+    
+    >>> db = get_connection('sqlite://')
+    >>> #db.echo = True
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20, auto=True, auto_add=True, default='limodou')
+    ...     year = Field(int)
+    >>> u = User(year=10)
+    >>> u.save()
+    True
+    >>> u
+    <User {'username':u'limodou','year':10,'id':1}>
+    >>> u.username = 'aaa'
+    >>> u.save()
+    True
+    >>> u
+    <User {'username':u'aaa','year':10,'id':1}>
+    >>> User.username.default = 'default'
+    >>> u.save()
+    False
+    >>> u.year = 20
+    >>> u.save()
+    True
+    >>> u
+    <User {'username':u'default','year':20,'id':1}>
+    """
+
 #if __name__ == '__main__':
 #    set_debug_query(True)
 #    db = get_connection('mysql://root:limodou@localhost/test')
