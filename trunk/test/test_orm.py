@@ -1025,6 +1025,28 @@ def test_auto():
     True
     >>> u
     <User {'username':u'default','year':20,'id':1}>
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20, auto_add=True, default='limodou')
+    ...     year = Field(int)
+    >>> u = User(year=10)
+    >>> u.save()
+    True
+    >>> u
+    <User {'username':u'limodou','year':10,'id':2}>
+    >>> u.username = 'aaa'
+    >>> u.save()
+    True
+    >>> u
+    <User {'username':u'aaa','year':10,'id':2}>
+    >>> User.username.default = 'default'
+    >>> u.save()
+    False
+    >>> u.year = 20
+    >>> u.save()
+    True
+    >>> u
+    <User {'username':u'aaa','year':20,'id':2}>
+    
     """
 
 #if __name__ == '__main__':
