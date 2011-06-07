@@ -1625,7 +1625,7 @@ class Model(object):
                 if _manytomany:
                     for k, v in _manytomany.iteritems():
                         if v:
-                            saved = getattr(self, k).add(v) or saved
+                            saved = getattr(self, k).update(v) or saved
                 
             else:
                 _id = d.pop('id')
