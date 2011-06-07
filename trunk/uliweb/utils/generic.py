@@ -114,17 +114,21 @@ def get_fields(model, fields, meta):
         
     fields_list = []
     for x in f:
+        field = {}
         if isinstance(x, str):  #so x is field_name
-            if hasattr(model, x):
-                fields_list.append((x, getattr(model, x)))
-            else:
-                fields_list.append((x, {'name':x}))
+            field['name'] = x
         elif isinstance(x, tuple):
-            fields_list.append(x)   #x should be a tuple, just like (field_name, form_field_obj)
+            field['name'] = x[0]
+            field['field'] = x[1]
         elif isinstance(x, dict):
-            fields_list.append((x['name'], x))
+            field = x.copy()
         else:
             raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
+        
+        if hasattr(model, field['name']) and ('prop' not in field):
+            field['prop'] = getattr(model, field['name'])
+        
+        fields_list.append((field['name'], field))
     return fields_list
 
 def get_url(ok_url, *args):
@@ -143,12 +147,14 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     import uliweb.form as form
     
     field_type = None
-    prop = field['prop']
-    if isinstance(prop, BaseField): #if the prop is already Form.BaseField, so just return it
-        return prop
+    if 'field' in field and isinstance(field['field'], BaseField): #if the prop is already Form.BaseField, so just return it
+        return field['field']
     
-    kwargs = dict(label=prop.verbose_name or prop.property_name, 
-        name=prop.property_name, required=prop.required, help_string=prop.hint)
+    prop = field['prop']
+    label = field.get('verbose_name', None) or prop.verbose_name or prop.property_name
+    hint = field.get('hint', '') or prop.hint
+    kwargs = dict(label=label, name=prop.property_name, 
+        required=prop.required, help_string=hint)
     
     v = prop.default_value()
 #    if v is not None:
@@ -234,7 +240,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     
         return f
 
-def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
+def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None):
     import uliweb.orm as orm
     from uliweb.utils.textconvert import text2html
     from uliweb.core.html import Tag
@@ -244,6 +250,11 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
     fields_convert_map = fields_convert_map or {}
     default_convert_map = {orm.TextProperty:lambda v,o:text2html(v)}
     
+    if isinstance(field, dict) and 'prop' in field and field.get('prop'):
+        prop = field['prop']
+    else:
+        prop = field
+
     #not real Property instance, then return itself, so if should return
     #just like {'label':xxx, 'value':xxx, 'display':xxx}
     if not isinstance(prop, orm.Property):  
@@ -256,7 +267,11 @@ def make_view_field(prop, obj, types_convert_map=None, fields_convert_map=None):
         value = prop.get_value_for_datastore(obj)
         display = value
         name = prop.property_name
-        label = prop.verbose_name or prop.property_name
+        if isinstance(field, dict):
+            initial = field.get('verbose_name', None)
+        else:
+            initial = ''
+        label = initial or prop.verbose_name or prop.property_name
         
     if name in fields_convert_map:
         convert = fields_convert_map.get(name, None)
@@ -360,10 +375,9 @@ class AddView(object):
     def get_fields(self):
         f = []
         for field_name, prop in get_fields(self.model, self.fields, self.meta):
-            d = {'name':field_name, 
-                'prop':prop, 
-                'static':field_name in self.static_fields,
-                'hidden':field_name in self.hidden_fields}
+            d = prop.copy()
+            d['static'] = field_name in self.static_fields
+            d['hidden'] = field_name in self.hidden_fields
             f.append(d)
             
         return f
@@ -1506,11 +1520,10 @@ class QueryView(object):
     def get_fields(self):
         f = []
         for field_name, prop in get_fields(self.model, self.fields, self.meta):
-            d = {'name':field_name, 
-                'prop':prop, 
-                'static':field_name in self.static_fields,
-                'hidden':field_name in self.hidden_fields,
-                'required':False}
+            d = prop.copy()
+            d['static'] = field_name in self.static_fields
+            d['hidden'] = field_name in self.hidden_fields
+            d['required'] = False
             f.append(d)
         return f
     
