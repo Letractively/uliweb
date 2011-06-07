@@ -534,7 +534,7 @@ class EditView(AddView):
         AddView.__init__(self, model, ok_url, meta=meta, **kwargs)
         
         #set obj to form.object
-        self.form.object = obj
+        self.form.object = self.obj
         
     def display(self, json_result=False):
         d = self.template_data.copy()

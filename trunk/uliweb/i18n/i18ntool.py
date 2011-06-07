@@ -36,6 +36,7 @@ def _process(path, locale):
  
 class I18nCommand(Command):
     name = 'i18n'
+    check_apps_dirs = False
     args = '<appname, appname, ...>'
     help = 'Extract i18n message catalog form app or all apps. Please notice that you can not set -p, -d, --uliweb, --apps and <appname, ...> at the same time.'
     has_options = True
