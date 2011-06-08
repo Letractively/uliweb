@@ -205,7 +205,7 @@ register_command(MakeProjectCommand)
 class SupportCommand(Command):
     name = 'support'
     help = 'Add special support to existed project, such as: gae, dotcloud'
-    args = 'supported type'
+    args = 'supported_type'
     check_apps_dirs = True
 
     def handle(self, options, global_options, *args):
