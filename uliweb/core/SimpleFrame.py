@@ -622,7 +622,8 @@ class Dispatcher(object):
                 log.exception(e)
             
     def install_settings(self, s):
-        env = dispatch.get(self, 'init_settings_env')
+        from uliweb.i18n import gettext_lazy
+        env = {'_':gettext_lazy, 'gettext_lazy':gettext_lazy}
         conf.settings = Ini(env=env)
         for v in s:
             conf.settings.read(v)
