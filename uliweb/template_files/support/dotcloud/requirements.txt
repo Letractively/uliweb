@@ -1,1 +1,1 @@
--e svn+http://uliweb.googlecode.com/svn/trunk#egg=uliweb
+Uliweb
