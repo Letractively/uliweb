@@ -18,11 +18,14 @@ def startup(sender):
     import os
     from uliweb.core.SimpleFrame import get_app_dir
     from uliweb.i18n import install, set_default_language
-    from uliweb.utils.common import pkg
+    from uliweb.utils.common import pkg, expand_path
     
     path = pkg.resource_filename('uliweb', '')
+    _dirs = []
+    for d in sender.settings.get_var('I18N/LOCALE_DIRS', []):
+        _dirs.append(expand_path(d))
     localedir = ([os.path.normpath(sender.apps_dir + '/..')] + 
-        [get_app_dir(appname) for appname in sender.apps] + [path] + sender.settings.get_var('I18N/LOCALE_DIRS', []))
+        [get_app_dir(appname) for appname in sender.apps] + [path] + _dirs)
     install('uliweb', localedir)
     set_default_language(sender.settings.I18N.LANGUAGE_CODE)
     
