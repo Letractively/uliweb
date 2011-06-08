@@ -151,7 +151,7 @@ class MakeAppCommand(Command):
             ans = 'y'
         if ans == 'y':
             from uliweb.utils.common import extract_dirs
-            extract_dirs('uliweb', 'template_files/app', path)
+            extract_dirs('uliweb', 'template_files/app', path, verbose=global_options.verbose)
 register_command(MakeAppCommand)
 
 class MakePkgCommand(Command):
@@ -199,8 +199,28 @@ class MakeProjectCommand(Command):
         else:
             ans = 'y'
         if ans == 'y':
-            extract_dirs('uliweb', 'template_files/project', project_name)
+            extract_dirs('uliweb', 'template_files/project', project_name, verbose=global_options.verbose)
 register_command(MakeProjectCommand)
+
+class SupportCommand(Command):
+    name = 'support'
+    help = 'Add special support to existed project, such as: gae, dotcloud'
+    args = 'supported type'
+    check_apps_dirs = True
+
+    def handle(self, options, global_options, *args):
+        from uliweb.utils.common import extract_dirs
+        
+        _types = ['gae', 'dotcloud']
+        if not args:
+            support_type = ''
+            while not support_type in _types:
+                support_type = raw_input('Please enter support type[gae/dotcloud]:')
+        else:
+            support_type = args[0]
+        
+        extract_dirs('uliweb', 'template_files/support/%s' % support_type, '.', verbose=global_options.verbose)
+register_command(SupportCommand)
 
 class ExportStaticCommand(Command):
     name = 'exportstatic'

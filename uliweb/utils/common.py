@@ -1,4 +1,5 @@
 import os, sys
+import re
 
 def safe_import(path):
     module = path.split('.')
@@ -309,6 +310,26 @@ def cache_get(key, func, _type='default'):
     
 def norm_path(path):
     return os.path.normcase(os.path.abspath(path))
+
+r_expand_path = re.compile('\$\{(\w+)\}')
+def expand_path(path):
+    """
+    Auto search some variables defined in path string, such as:
+        ${PROJECT}/files
+        ${app_name}/files
+    for ${PROJECT} will be replaced with uliweb application apps_dir directory
+    and others will be treated as a normal python package, so uliweb will
+    use pkg_resources to get the path of the package
+    """
+    from uliweb import application
+    
+    def replace(m):
+        txt = m.groups()[0]
+        if txt == 'PROJECT':
+            return application.apps_dir
+        else:
+            return pkg.resource_filename(txt, '')
+    return re.sub(r_expand_path, replace, path)
 
 if __name__ == '__main__':
     log.info('Info: info')
