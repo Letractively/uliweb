@@ -125,8 +125,11 @@ def get_fields(model, fields, meta):
         else:
             raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
         
-        if hasattr(model, field['name']) and ('prop' not in field):
-            field['prop'] = getattr(model, field['name'])
+        if 'prop' not in field:
+            if hasattr(model, field['name']):
+                field['prop'] = getattr(model, field['name'])
+            else:
+                field['prop'] = None
         
         fields_list.append((field['name'], field))
     return fields_list
