@@ -1432,10 +1432,11 @@ class ListView(SimpleListView):
             query = self._query.filter(condition)
         else:
             query = model.filter(condition)
-        if offset is not None:
-            query.offset(int(offset))
-        if limit is not None:
-            query.limit(int(limit))
+        if self.pagination:
+            if offset is not None:
+                query.offset(int(offset))
+            if limit is not None:
+                query.limit(int(limit))
         if order_by is not None:
             if isinstance(order_by, (tuple, list)):
                 for order in order_by:
