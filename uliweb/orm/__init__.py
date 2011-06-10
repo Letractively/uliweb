@@ -1526,7 +1526,7 @@ class Model(object):
         return d
     
     def field_str(self, v):
-        if not v:
+        if v is None:
             return v
         if isinstance(v, datetime.datetime):
             return v.strftime('%Y-%m-%d %H:%M:%S')
