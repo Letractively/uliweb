@@ -774,7 +774,7 @@ class ReferenceProperty(Property):
                 d = self.reference_class.c[self.reference_fieldname]
                 instance = self.reference_class.get(d==reference_id)
                 if instance is None:
-                    raise Error('ReferenceProperty failed to be resolved')
+                    raise Error('ReferenceProperty %s failed to be resolved' % self.reference_fieldname)
                 setattr(model_instance, self._resolved_attr_name(), instance)
                 return instance
         else:

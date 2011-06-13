@@ -26,7 +26,54 @@ def simple_value(v):
     else:
         return v
 
+def _encode(encoding='utf-8'):
+    def _f(v, encoding='utf-8'):
+        if isinstance(v, unicode):
+            _v = v.encode(encoding)
+        else:
+            _v = v
+        return JSON.encoder.encode_basestring(_v)
+    return _f
+    
 class ComplexEncoder(JSON.JSONEncoder):
+    def _iterencode(self, o, markers=None):
+        if isinstance(o, basestring):
+            if self.ensure_ascii:
+                encoder = JSON.encoder.encode_basestring_ascii
+            else:
+                encoder = _encode(self.encoding)
+            _encoding = self.encoding
+            if (_encoding is not None and isinstance(o, str)
+                    and not (_encoding == 'utf-8')):
+                o = o.decode(_encoding)
+            yield encoder(o)
+        elif o is None:
+            yield 'null'
+        elif o is True:
+            yield 'true'
+        elif o is False:
+            yield 'false'
+        elif isinstance(o, (int, long)):
+            yield str(o)
+        elif isinstance(o, float):
+            yield floatstr(o, self.allow_nan)
+        elif isinstance(o, (list, tuple)):
+            for chunk in self._iterencode_list(o, markers):
+                yield chunk
+        elif isinstance(o, dict):
+            for chunk in self._iterencode_dict(o, markers):
+                yield chunk
+        else:
+            if markers is not None:
+                markerid = id(o)
+                if markerid in markers:
+                    raise ValueError("Circular reference detected")
+                markers[markerid] = o
+            for chunk in self._iterencode_default(o, markers):
+                yield chunk
+            if markers is not None:
+                del markers[markerid]
+    
     def default(self, obj):
         return simple_value(obj)
     
