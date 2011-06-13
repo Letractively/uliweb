@@ -1607,7 +1607,7 @@ class Model(object):
                 _manytomany = {}
                 for k, v in self.properties.items():
                     if not isinstance(v, ManyToMany):
-                        if isinstance(v, DateTimeProperty) and v.auto_now_add:
+                        if isinstance(v, DateTimeProperty) and v.auto_now_add and k not in d:
                             d[k] = v.now()
                         elif (not k in d) and v.auto_add:
                             d[k] = v.default_value()
@@ -1639,7 +1639,7 @@ class Model(object):
                     _manytomany = {}
                     for k, v in self.properties.items():
                         if not isinstance(v, ManyToMany):
-                            if isinstance(v, DateTimeProperty) and v.auto_now:
+                            if isinstance(v, DateTimeProperty) and v.auto_now and k not in d:
                                 d[k] = v.now()
                             elif (not k in d) and v.auto:
                                 d[k] = v.default_value()
