@@ -56,7 +56,7 @@ class ComplexEncoder(JSON.JSONEncoder):
         elif isinstance(o, (int, long)):
             yield str(o)
         elif isinstance(o, float):
-            yield floatstr(o, self.allow_nan)
+            yield JSON.encoder.floatstr(o, self.allow_nan)
         elif isinstance(o, (list, tuple)):
             for chunk in self._iterencode_list(o, markers):
                 yield chunk
