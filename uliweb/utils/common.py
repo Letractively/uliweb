@@ -331,6 +331,18 @@ def expand_path(path):
             return pkg.resource_filename(txt, '')
     return re.sub(r_expand_path, replace, path)
 
+def date_in(d, dates):
+    """
+    compare if d in dates. dates should be a tuple or a list, for example:
+        date_in(d, [d1, d2])
+    and this function will execute:
+        d1 <= d <= d2
+    and if d is None, then return False
+    """
+    if not d:
+        return False
+    return dates[0] <= d <= dates[1]
+
 if __name__ == '__main__':
     log.info('Info: info')
     try:
