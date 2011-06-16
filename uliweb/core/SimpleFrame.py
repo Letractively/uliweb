@@ -444,8 +444,9 @@ class Dispatcher(object):
             request.view_class = None
         return mod, _klass, handler
     
-    def call_view(self, mod, cls, handler, request, response=None, **values):
+    def call_view(self, mod, cls, handler, request, response=None, wrap_result=None, *args, **kwargs):
         #get env
+        wrap = wrap_result or self.wrap_result
         env = self.get_view_env()
         
         #if there is __begin__ then invoke it, if __begin__ return None, it'll
@@ -454,29 +455,29 @@ class Dispatcher(object):
             f = getattr(mod, '__begin__')
             result = self._call_function(f, request, response, env)
             if result is not None:
-                return self.wrap_result(result, request, response, env)
+                return wrap(result, request, response, env)
         
         if hasattr(cls, '__begin__'):
             f = getattr(cls, '__begin__')
             result = self._call_function(f, request, response, env)
             if result is not None:
-                return self.wrap_result(result, request, response, env)
+                return wrap(result, request, response, env)
         
-        result = self.call_handler(handler, request, response, env, **values)
+        result = self.call_handler(handler, request, response, env, wrap, *args, **kwargs)
 
         result1 = None
         if hasattr(mod, '__end__'):
             f = getattr(mod, '__end__')
             result1, env = self._call_function(f, request, response, env)
             if result1 is not None:
-                return self.wrap_result(result1, request, response, env)
+                return wrap(result1, request, response, env)
         
         result1 = None
         if hasattr(cls, '__end__'):
             f = getattr(cls, '__end__')
             result1, env = self._call_function(f, request, response, env)
             if result1 is not None:
-                return self.wrap_result(result1, request, response, env)
+                return wrap(result1, request, response, env)
 
         return result
         
@@ -532,21 +533,22 @@ class Dispatcher(object):
         
         return self.get_env(local_env)
        
-    def _call_function(self, handler, request, response, env, **values):
+    def _call_function(self, handler, request, response, env, *args, **kwargs):
         
         for k, v in env.iteritems():
             handler.func_globals[k] = v
         
         handler.func_globals['env'] = env
         
-        result = handler(**values)
+        result = handler(*args, **kwargs)
         if isinstance(result, ResponseProxy):
             result = local.response
         return result
     
-    def call_handler(self, handler, request, response, env, **values):
-        result = self._call_function(handler, request, response, env, **values)
-        return self.wrap_result(result, request, response, env)
+    def call_handler(self, handler, request, response, env, wrap_result=None, *args, **kwargs):
+        wrap = wrap_result or self.wrap_result
+        result = self._call_function(handler, request, response, env, *args, **kwargs)
+        return wrap(result, request, response, env)
             
     def collect_modules(self, check_view=True):
         modules = {}
