@@ -263,7 +263,7 @@ def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None)
     if not isinstance(prop, orm.Property):  
         value = prop.get('value', '')
         display = prop.get('display', '')
-        label = prop.get('label', '')
+        label = prop.get('label', '') or prop.get('verbose_name', '')
         name = prop.get('name', '')
         convert = prop.get('convert', None)
     else:
