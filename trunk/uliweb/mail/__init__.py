@@ -29,7 +29,7 @@ class BaseMailConnection(object):
         pass
    
 class EmailMessage(object):
-    def __init__(self, from_, to_, subject, message, html=False, encoding='utf-8', *attachments):
+    def __init__(self, from_, to_, subject, message, html=False, encoding='utf-8', attachments=None):
         from uliweb.utils.common import simple_value
         
         self.from_ = from_
@@ -37,7 +37,7 @@ class EmailMessage(object):
         self.encoding = encoding
         self.subject = simple_value(subject, encoding)
         self.message = simple_value(message, encoding)
-        self.attachments = attachments
+        self.attachments = attachments or []
         self.html = html
         
         self.msg = msg = MIMEMultipart()
@@ -45,7 +45,7 @@ class EmailMessage(object):
         msg['To'] = to_
         msg['Subject'] = Header(self.subject, self.encoding)
         if html:
-            conent_type = 'html'
+            content_type = 'html'
         else:
             content_type = 'plain'
         msg.attach(MIMEText(self.message, content_type, self.encoding))
@@ -56,7 +56,7 @@ class EmailMessage(object):
     def attach(self, filename):
         self.msg.attach(self.getAttachment(filename))
         
-    def getAttachment(attachmentFilePath):
+    def getAttachment(self, attachmentFilePath):
         contentType, encoding = mimetypes.guess_type(attachmentFilePath)
         if contentType is None or encoding is not None:
             contentType = 'application/octet-stream'
@@ -64,8 +64,8 @@ class EmailMessage(object):
         file = open(attachmentFilePath, 'rb')
         if mainType == 'text':
             attachment = MIMEText(file.read())
-        elif mainType == 'html':
-            attachment = MIMEText(file.read(), 'html')
+#        elif mainType == 'html':
+#            attachment = MIMEText(file.read(), 'html')
         elif mainType == 'message':
             attachment = email.message_from_file(file)
         elif mainType == 'image':
@@ -74,8 +74,8 @@ class EmailMessage(object):
             attachment = MIMEAudio(file.read(),_subType=subType)
         else:
             attachment = MIMEBase(mainType, subType)
-        attachment.set_payload(file.read())
-        encode_base64(attachment)
+            attachment.set_payload(file.read())
+            encode_base64(attachment)
         file.close()
         attachment.add_header('Content-Disposition', 'attachment',   filename=os.path.basename(attachmentFilePath))
         return attachment
@@ -96,8 +96,8 @@ class Mail(object):
         cls = import_attr(self.backend + '.MailConnection')
         self.con = cls(self)
         
-    def send_mail(self, from_, to_, subject, message, html=False, *attachments):
-        email = EmailMessage(from_, to_, subject, message, html=html, *attachments)
+    def send_mail(self, from_, to_, subject, message, html=False, attachments=None):
+        email = EmailMessage(from_, to_, subject, message, html=html, attachments=attachments)
         self.con.get_connection()
         self.con.send_mail(from_, to_, email)
         self.con.close()
