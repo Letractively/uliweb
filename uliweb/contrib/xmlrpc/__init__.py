@@ -16,15 +16,18 @@ def xmlrpc(func, name=None):
         __xmlrpc_functions__[f_name] = endpoint = '.'.join([func.__module__, func.__name__])
         func.xmlrpc_endpoint = (f_name, endpoint)
     elif inspect.isclass(func):
+        if not name:
+            name = func.__name__
         for _name in dir(func):
             f = getattr(func, _name)
             if (inspect.ismethod(f) or inspect.isfunction(f)) and not _name.startswith('_'):
-                f_name = func.__name__ + '.' + f.__name__
+                f_name = name + '.' + f.__name__
                 endpoint = '.'.join([func.__module__, func.__name__, _name])
                 if hasattr(f, 'xmlrpc_endpoint'):
                     #the method has already been decorate by xmlrpc 
                     _n, _e = f.xmlrpc_endpoint
-                    __xmlrpc_functions__[_n] = endpoint
+                    __xmlrpc_functions__[name + '.' + _n] = endpoint
+                    del __xmlrpc_functions__[_n]
                 else:
                     __xmlrpc_functions__[f_name] = endpoint
     else:
@@ -38,7 +41,7 @@ if __name__ == '__main__':
         
     print __xmlrpc_functions__
     
-    @xmlrpc
+    @xmlrpc('B')
     class A(object):
         def p(self):
             print 'ppp'
