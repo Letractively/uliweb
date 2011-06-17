@@ -44,7 +44,13 @@ except:
     defaultencoding = 'UTF-8'
 
 r_encoding = re.compile(r'\s*coding\s*[=:]\s*([-\w.]+)')
+__default_env__ = {}
 
+def set_env(env=None):
+    global __default_env__
+    
+    __default_env__.update(env or {})
+    
 def _uni_prt(a, encoding, beautiful=False, indent=0):
     escapechars = [("\\", "\\\\"), ("'", r"\'"), ('\"', r'\"'), ('\b', r'\b'),
         ('\t', r"\t"), ('\r', r"\r"), ('\n', r"\n")]
@@ -196,7 +202,8 @@ class Ini(SortedDict):
 #        self.value = value
         self._commentchar = commentchar
         self._encoding = 'utf-8'
-        self._env = env or {}
+        self._env = __default_env__.copy()
+        self._env.update(env or {})
         
         if self._inifile:
             self.read(self._inifile)
@@ -304,7 +311,7 @@ class Ini(SortedDict):
                         else:
                             v = eval(value, self._env, section)
                     except Exception, e:
-                        raise Exception, "Converting value (%s) error in line %d" % (value, lineno)
+                        raise Exception, "Converting value (%s) error in line %d:%s" % (value, lineno, line)
                     
                     section.add(keyname, v, comments, replace=replace_flag)
                     comments = []
