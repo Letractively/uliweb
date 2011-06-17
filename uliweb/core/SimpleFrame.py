@@ -16,8 +16,10 @@ from storage import Storage
 import dispatch
 from uliweb.utils.common import (pkg, log, sort_list, import_attr, 
     myimport, wraps, norm_path, cache_get)
-from uliweb.utils.pyini import Ini
+import uliweb.utils.pyini as pyini
 import uliweb as conf
+from uliweb.i18n import gettext_lazy
+
 #from rules import Mapping, add_rule
 import rules
 
@@ -30,6 +32,9 @@ conf.local = local = Local()
 local_manager = LocalManager([local])
 conf.url_map = Map()
 __app_dirs__ = {}
+
+#Initialize pyini env
+pyini.set_env({'_':gettext_lazy, 'gettext_lazy':gettext_lazy})
 
 class Request(OriginalRequest):
     GET = OriginalRequest.args
@@ -183,12 +188,12 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
     if not os.path.exists(apps_dir):
         return apps
     if os.path.exists(inifile):
-        x = cache_get(inifile, lambda x:Ini(x), 'ini')
+        x = cache_get(inifile, lambda x:pyini.Ini(x), 'ini')
         if x:
             apps = x.GLOBAL.get('INSTALLED_APPS', [])
     local_inifile = norm_path(os.path.join(apps_dir, local_settings_file))
     if os.path.exists(local_inifile):
-        x = cache_get(local_inifile, lambda x:Ini(x), 'ini')
+        x = cache_get(local_inifile, lambda x:pyini.Ini(x), 'ini')
         if x and 'GLOBAL' in x:
             apps = x.GLOBAL.get('INSTALLED_APPS', apps)
     if not apps and os.path.exists(apps_dir):
@@ -208,7 +213,7 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
             configfile = os.path.join(get_app_dir(p), 'config.ini')
             
             if os.path.exists(configfile):
-                x = Ini(configfile)
+                x = pyini.Ini(configfile)
                 for i in x.get_var('DEFAULT/REQUIRED_APPS', []):
                     if i not in apps:
                         apps.append(i)
@@ -624,9 +629,7 @@ class Dispatcher(object):
                 log.exception(e)
             
     def install_settings(self, s):
-        from uliweb.i18n import gettext_lazy
-        env = {'_':gettext_lazy, 'gettext_lazy':gettext_lazy}
-        conf.settings = Ini(env=env)
+        conf.settings = pyini.Ini()
         for v in s:
             conf.settings.read(v)
         conf.settings.update(self.default_settings)
