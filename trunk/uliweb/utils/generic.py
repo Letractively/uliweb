@@ -927,7 +927,10 @@ class SimpleListView(object):
     def query_all(self):
         return self.query(pagination=False)
     
-    def query(self, pageno=0, pagination=True):
+    def query(self):
+        return self.query_range(self.pageno, self.pagination)
+    
+    def query_range(self, pageno=0, pagination=True):
         if callable(self._query):
             query_result = self._query()
         else:
@@ -1046,7 +1049,7 @@ class SimpleListView(object):
         #create table header
         table = self.table_info()
             
-        query = self.query(self.pageno, self.pagination)
+        query = self.query()
         result = self.template_data.copy()
         if head:
             result.update(self.render(table, head=head, body=body, query=query))
@@ -1340,32 +1343,47 @@ class ListView(SimpleListView):
         self.template_data = template_data or {}
         self.default_column_width = default_column_width
         
-    def run(self, head=True, body=True, json_body=False):
-        import uliweb.orm as orm
+        self.init()
         
+    def init(self):
         if not self.id:
             self.id = self.model.tablename
         
         #create table header
-        table = self.table_info()
-            
+        self.table = self.table_info()
+        
+    def run(self, head=True, body=True, json_body=False):
+        query = self.query()
+        result = self.template_data.copy()
+        if head:
+            result.update(self.render(self.table, query, head=head, body=body))
+        else:
+            result.update(self.render(self.table, query, head=head, body=body, json_body=json_body))
+        return result
+    
+    def query(self):
         if not self._query or isinstance(self._query, orm.Result): #query result
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
             self.total = query.count()
         else:
-            query = self.query(self.pageno, self.pagination)
-        result = self.template_data.copy()
-        if head:
-            result.update(self.render(table, query, head=head, body=body))
-        else:
-            result.update(self.render(table, query, head=head, body=body, json_body=json_body))
-        return result
+            query = self.query_range(self.pageno, self.pagination)
+        return query
     
     def json(self):
         return self.run(head=False, body=True, json_body=True)
 
+    def get_field_display(self, record, field_name):
+        if hasattr(self.model, field_name):
+            field = getattr(self.model, field_name)
+        else:
+            for x in table['fields_list']:
+                if x['name'] == field_name:
+                    field = x
+        v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
+        return v
+    
     def render(self, table, query, head=True, body=True, json_body=False):
         """
         table is a dict, just like
