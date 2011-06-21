@@ -1362,6 +1362,8 @@ class ListView(SimpleListView):
         return result
     
     def query(self):
+        import uliweb.orm as orm
+        
         if not self._query or isinstance(self._query, orm.Result): #query result
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
