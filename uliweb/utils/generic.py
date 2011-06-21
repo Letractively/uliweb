@@ -925,7 +925,7 @@ class SimpleListView(object):
         return s
     
     def query_all(self):
-        return self.query(pagination=False)
+        return self.query_range(0, pagination=False)
     
     def query(self):
         return self.query_range(self.pageno, self.pagination)
