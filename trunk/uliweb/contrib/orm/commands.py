@@ -4,6 +4,7 @@ from decimal import Decimal
 from uliweb.core.commands import Command
 from optparse import make_option
 from uliweb.utils.common import log, is_pyfile_exist
+from sqlalchemy.types import *
 
 def get_engine(apps_dir):
     from uliweb.core.SimpleFrame import Dispatcher
@@ -67,9 +68,13 @@ def get_tables(apps_dir, apps=None, engine=None, import_models=False, settings_f
                 
     return tables
 
-def dump_table(name, table, dir, con, std=None):
+def dump_table(table, filename, con, std=None, delimiter=',', format=None, encoding='utf-8'):
+    from uliweb.utils.common import str_value
+    from StringIO import StringIO
+    import csv
+    
     if not std:
-        std = open(os.path.join(dir, name+'.txt'), 'w')
+        std = open(filename, 'w')
     else:
         std = sys.stdout
     result = con.execute(table.select())
@@ -78,34 +83,57 @@ def dump_table(name, table, dir, con, std=None):
         print >>std, c.name,
     print >>std
     for r in result:
-        print >>std, r
-        
-def load_table(name, table, dir, con):
+        if not format:
+            print >>std, r
+        elif format == 'txt':
+            buf = StringIO()
+            fw = csv.writer(buf, delimiter=delimiter)
+            fw.writerow([str_value(x, encoding=encoding) for x in r])
+            print >>std, buf.getvalue().rstrip()
+        else:
+            raise Exception, "Can't support the text format %s" % format
+  
+def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8'):
+    import csv
+    from uliweb.utils.date import to_date, to_datetime
+    
     con.execute(table.delete())
-    filename = os.path.join(dir, name+'.txt')
     
     if not os.path.exists(filename):
         log.info("The table [%s] data is not existed." % name)
         return 
     
-    f = open(filename)
+    f = fin = open(filename, 'rb')
     try:
         first_line = f.readline()
         fields = first_line[1:].strip().split()
         n = 1
-        for line in f:
+        if format:
+            fin = csv.reader(f, delimiter=delimiter)
+            
+        for line in fin:
             try:
                 n += 1
-                r = eval(line)
-                record = dict(zip(fields, r))
+                if not format:
+                    line = eval(line)
+                record = dict(zip(fields, line))
                 params = {}
                 for c in table.c:
                     if c.name in record:
-                        params[c.name] = record[c.name]
-    #                else:
-    #                    params[c.name] = c.default
-    #                    print c.name, c.default
-                
+                        if not format:
+                            params[c.name] = record[c.name]
+                        else:
+                            if record[c.name] == 'NULL':
+                                params[c.name] = None
+                            else:
+                                if isinstance(c.type, String):
+                                    params[c.name] = unicode(record[c.name], encoding)
+                                elif isinstance(c.type, Date):
+                                    params[c.name] = to_date(to_datetime(record[c.name]))
+                                elif isinstance(c.type, DateTime):
+                                    params[c.name] = to_datetime(record[c.name])
+                                else:
+                                    params[c.name] = record[c.name]
                 ins = table.insert().values(**params)
                 con.execute(ins)
             except:
@@ -188,6 +216,38 @@ class ResetTableCommand(Command):
             t.drop(con)
             t.create(con)
 
+class DropTableCommand(Command):
+    name = 'droptable'
+    args = '<tablename, tablename, ...>'
+    help = 'Drop the tables. If no tables, then will do nothing.'
+    
+    def handle(self, options, global_options, *args):
+        from sqlalchemy import create_engine
+        from uliweb import orm
+
+        if not args:
+            print "Failed! You should pass one or more tables name."
+            sys.exit(1)
+
+        message = """This command will drop all tables [%s], are you sure to reset[Y/n]""" % ','.join(args)
+        ans = raw_input(message)
+        if ans and ans.upper() != 'Y':
+            print "Command be cancelled!"
+            return
+        
+        engine = get_engine(global_options.project)
+        con = create_engine(engine)
+        
+        for name in args:
+            m = orm.get_model(name)
+            if not m:
+                print "Error! Can't find the table %s...Skipped!" % name
+                continue
+            t = m.table
+            if global_options.verbose:
+                print 'Dropping %s...' % name
+            t.drop(con)
+
 class SQLCommand(Command):
     name = 'sql'
     args = '<appname, appname, ...>'
@@ -208,6 +268,12 @@ class DumpCommand(Command):
     option_list = (
         make_option('-o', dest='output_dir', default='./data',
             help='Output the data files to this directory.'),
+        make_option('-t', '--text', dest='text', action='store_true', default=False,
+            help='Dump files in text format.'),
+        make_option('--delimiter', dest='delimiter', default=',',
+            help='delimiter character used in text file. Default is ",".'),
+        make_option('--encoding', dest='encoding', default='utf-8',
+            help='Character encoding used in text file. Default is "utf-8".'),
     )
     has_options = True
     check_apps = True
@@ -224,7 +290,13 @@ class DumpCommand(Command):
         for name, t in get_tables(global_options.project, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
                 print 'Dumpping %s...' % name
-            dump_table(name, t, options.output_dir, con)
+            filename = os.path.join(options.output_dir, name+'.txt')
+            if options.text:
+                format = 'txt'
+            else:
+                format = None
+            dump_table(t, filename, con, delimiter=options.delimiter, 
+                format=format, encoding=options.encoding)
 
 class DumpTableCommand(Command):
     name = 'dumptable'
@@ -233,7 +305,13 @@ class DumpTableCommand(Command):
     option_list = (
         make_option('-o', dest='output_dir', default='./data',
             help='Output the data files to this directory.'),
-    )
+        make_option('-t', '--text', dest='text', action='store_true', default=False,
+            help='Dump files in text format.'),
+        make_option('--delimiter', dest='delimiter', default=',',
+            help='delimiter character used in text file. Default is ",".'),
+        make_option('--encoding', dest='encoding', default='utf-8',
+            help='Character encoding used in text file. Default is "utf-8".'),
+   )
     has_options = True
     
     def handle(self, options, global_options, *args):
@@ -258,7 +336,52 @@ class DumpTableCommand(Command):
             t = m.table
             if global_options.verbose:
                 print 'Dumpping %s...' % name
-            dump_table(name, t, options.output_dir, con)
+            filename = os.path.join(options.output_dir, name+'.txt')
+            if options.text:
+                format = 'txt'
+            else:
+                format = None
+            dump_table(t, filename, con, delimiter=options.delimiter, 
+                format=format, encoding=options.encoding)
+
+class DumpTableFileCommand(Command):
+    name = 'dumptablefile'
+    args = 'tablename text_filename'
+    help = 'Dump the table records to a text file. '
+    option_list = (
+        make_option('-t', '--text', dest='text', action='store_true', default=False,
+            help='Dump files in text format.'),
+        make_option('--delimiter', dest='delimiter', default=',',
+            help='delimiter character used in text file. Default is ",".'),
+        make_option('--encoding', dest='encoding', default='utf-8',
+            help='Character encoding used in text file. Default is "utf-8".'),
+    )
+    has_options = True
+    
+    def handle(self, options, global_options, *args):
+        from sqlalchemy import create_engine
+        from uliweb import orm
+        
+        engine = get_engine(global_options.project)
+        con = create_engine(engine)
+
+        if len(args) != 2:
+            print self.print_help(self.prog_name, 'loadtablefile')
+            sys.exit(1)
+            
+        name = args[0]
+        m = orm.get_model(name)
+        if not m:
+            print "Error! Can't find the table %s...Skipped!" % name
+        t = m.table
+        if global_options.verbose:
+            print 'Dumpping %s...' % name
+        if options.text:
+            format = 'txt'
+        else:
+            format = None
+        dump_table(t, args[1], con, delimiter=options.delimiter, 
+            format=format, encoding=options.encoding)
 
 class LoadCommand(Command):
     name = 'load'
@@ -267,6 +390,12 @@ class LoadCommand(Command):
     option_list = (
         make_option('-d', dest='dir', default='./data',
             help='Directory of data files.'),
+        make_option('-t', '--text', dest='text', action='store_true', default=False,
+            help='Load files in text format.'),
+        make_option('--delimiter', dest='delimiter', default=',',
+            help='delimiter character used in text file. Default is ",".'),
+        make_option('--encoding', dest='encoding', default='utf-8',
+            help='Character encoding used in text file. Default is "utf-8".'),
     )
     has_options = True
     check_apps = True
@@ -297,7 +426,13 @@ are you sure to load data[Y/n]"""
                 print 'Loading %s...' % name
             try:
                 con.begin()
-                load_table(name, t, options.dir, con)
+                filename = os.path.join(options.dir, name+'.txt')
+                if options.text:
+                    format = 'txt'
+                else:
+                    format = None
+                load_table(t, filename, con, delimiter=options.delimiter, 
+                    format=format, encoding=options.encoding)
                 con.commit()
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
@@ -310,6 +445,12 @@ class LoadTableCommand(Command):
     option_list = (
         make_option('-d', dest='dir', default='./data',
             help='Directory of data files.'),
+        make_option('-t', '--text', dest='text', action='store_true', default=False,
+            help='Load files in text format.'),
+        make_option('--delimiter', dest='delimiter', default=',',
+            help='delimiter character used in text file. Default is ",".'),
+        make_option('--encoding', dest='encoding', default='utf-8',
+            help='Character encoding used in text file. Default is "utf-8".'),
     )
     has_options = True
     
@@ -344,11 +485,74 @@ are you sure to load data[Y/n]""" % ','.join(args)
                 print 'Loading %s...' % name
             try:
                 con.begin()
-                load_table(name, t, options.dir, con)
+                filename = os.path.join(options.dir, name+'.txt')
+                if options.text:
+                    format = 'txt'
+                else:
+                    format = None
+                load_table(t, filename, con, delimiter=options.delimiter, 
+                    format=format, encoding=options.encoding)
                 con.commit()
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
                 con.rollback()
+
+class LoadTableFileCommand(Command):
+    name = 'loadtablefile'
+    args = 'tablename text_filename'
+    help = 'Load table data from text file. If no tables, then will no nothing.'
+    option_list = (
+        make_option('-t', '--text', dest='text', action='store_true', default=False,
+            help='Load files in text format.'),
+        make_option('--delimiter', dest='delimiter', default=',',
+            help='delimiter character used in text file. Default is ",".'),
+        make_option('--encoding', dest='encoding', default='utf-8',
+            help='Character encoding used in text file. Default is "utf-8".'),
+    )
+    has_options = True
+    
+    def handle(self, options, global_options, *args):
+        from uliweb import orm
+        
+        if len(args) != 2:
+            print self.usage('loadtablefile')
+            sys.exit(1)
+            
+        if args:
+            message = """This command will delete all data of [%s] before loading, 
+are you sure to load data[Y/n]""" % args[0]
+        else:
+            print "Failed! You should pass one or more tables name."
+            sys.exit(1)
+
+        ans = raw_input(message)
+        if ans and ans.upper() != 'Y':
+            print "Command be cancelled!"
+            return
+
+        engine = get_engine(global_options.project)
+        con = orm.get_connection(engine)
+
+        name = args[0]
+        m = orm.get_model(name)
+        if not m:
+            print "Error! Can't find the table %s...Skipped!" % name
+
+        t = m.table
+        if global_options.verbose:
+            print 'Loading %s...' % name
+        try:
+            con.begin()
+            if options.text:
+                format = 'txt'
+            else:
+                format = None
+            load_table(t, args[1], con, delimiter=options.delimiter, 
+                format=format, encoding=options.encoding)
+            con.commit()
+        except:
+            log.exception("There are something wrong when loading table [%s]" % name)
+            con.rollback()
 
 class DbinitdCommand(Command):
     name = 'dbinit'

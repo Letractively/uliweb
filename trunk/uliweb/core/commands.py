@@ -82,6 +82,7 @@ class Command(object):
         Set up any environment changes requested, then run this command.
     
         """
+        self.prog_name = prog
         parser = self.create_parser(prog, subcommand)
         options, args = parser.parse_args(argv)
         self.execute(args, options, global_options)

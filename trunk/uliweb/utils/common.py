@@ -309,6 +309,35 @@ def simple_value(v, encoding='utf-8', none=False):
     else:
         return v
     
+def str_value(v, encoding='utf-8', bool_int=True, none='NULL'):
+    import datetime
+    import decimal
+    
+    if callable(v):
+        v = v()
+    if isinstance(v, datetime.datetime):
+        return v.strftime('%Y-%m-%d %H:%M:%S')
+    elif isinstance(v, datetime.date):
+        return v.strftime('%Y-%m-%d')
+    elif isinstance(v, datetime.time):
+        return v.strftime('%H:%M:%S')
+    elif isinstance(v, decimal.Decimal):
+        return str(v)
+    elif isinstance(v, unicode):
+        return v.encode(encoding)
+    elif v is None:
+        return none
+    elif isinstance(v, bool):
+        if bool_int:
+            if v:
+                return '1'
+            else:
+                return '0'
+        else:
+            return str(v)
+    else:
+        return str(v)
+
 __caches__ = {}
 def cache_get(key, func, _type='default'):
     global __caches__
