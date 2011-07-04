@@ -6,6 +6,7 @@ import os, sys
 import time
 from uliweb.orm import get_model
 from uliweb import function, redirect, json
+from uliweb.core.storage import Storage
 
 __default_fields_builds__ = {}
 
@@ -108,7 +109,11 @@ def get_fields(model, fields, meta):
     if fields is not None:
         f = fields
     elif hasattr(model, meta):
-        f = getattr(model, meta).fields
+        m = getattr(model, meta)
+        if hasattr(m, 'fields'):
+            f = m.fields
+        else:
+            f = model._fields_list
     else:
         f = model._fields_list
         
@@ -134,11 +139,19 @@ def get_fields(model, fields, meta):
         fields_list.append((field['name'], field))
     return fields_list
 
-def get_url(ok_url, *args):
+def get_layout(model, meta):
+    f = None
+    if hasattr(model, meta):
+        m = getattr(model, meta)
+        if hasattr(m, 'layout'):
+            f = m.layout
+    return f
+
+def get_url(ok_url, *args, **kwargs):
     if callable(ok_url):
-        return ok_url(*args)
+        return ok_url(*args, **kwargs)
     else:
-        return ok_url
+        return ok_url.format(*args, **kwargs)
 
 def to_json_result(success, msg='', d=None, **kwargs):
     t = {'success':success, 'message':str(msg), 'data':d}
@@ -337,7 +350,7 @@ def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None)
     if display is None:
         display = '&nbsp;'
         
-    return {'label':label, 'value':value, 'display':display}
+    return Storage({'label':label, 'value':value, 'display':display})
 
 class AddView(object):
     success_msg = _('The information has been saved successfully!')
@@ -466,7 +479,7 @@ class AddView(object):
             flash = function('flash')
             flash(self.success_msg)
             if self.ok_url:
-                return redirect(get_url(self.ok_url, obj.id))
+                return redirect(get_url(self.ok_url, id=obj.id))
             else:
                 response.template = self.ok_template
                 return d
@@ -700,9 +713,10 @@ class DetailWriter(uaml.Writer):
         
         
 class DetailLayout(object):
-    def __init__(self, layout_file, get_field, writer=None):
+    def __init__(self, layout_file, get_field, model=None, writer=None):
         self.layout_file = layout_file
         self.writer = writer or DetailWriter(get_field)
+        self.model = model
         
     def get_text(self):
         from uliweb import application
@@ -713,6 +727,102 @@ class DetailLayout(object):
     
     def __str__(self):
         return str(uaml.Parser(self.get_text(), self.writer))
+
+class DetailTableLayout(object):
+    def __init__(self, layout, get_field, model=None):
+        self.layout = layout
+        self.get_field = get_field
+        self.model = model
+        
+    def line(self, fields, n):
+        from uliweb.core.html import Tag
+        
+        _x = 0
+        for _f in fields:
+            if isinstance(_f, (str, unicode)):
+                _x += 1
+            elif isinstance(_f, dict):
+                _x += _f.get('colspan', 1)
+            else:
+                raise Exception, 'Colume definition is not right, only support string or dict'
+        
+        tr = Tag('tr')
+        with tr:
+            for x in fields:
+                _span = n / _x
+                if isinstance(x, (str, unicode)):
+                    f = self.get_field(x)
+                elif isinstance(x, dict):
+                    f = self.get_field(x['name'])
+                    _span = _span * x.get('colspan', 1)
+                
+                with tr.td(colspan=_span, width='%d%%' % (100*_span/n,)):
+                    with tr.div:
+                        with tr.span(_class='view-label'):
+                            tr << '<b>' + f['label'] + ': </b>'
+                        with tr.span(_class='view-content'):
+                            tr << f['display']
+                
+        return tr
+        
+    def render(self):
+        from uliweb.core.html import Buf, Tag
+        from uliweb.form.layout import min_times
+
+        m = []
+        for line in self.layout:
+            if isinstance(line, (tuple, list)):
+                _x = 0
+                for f in line:
+                    if isinstance(f, (str, unicode)):
+                        _x += 1
+                    elif isinstance(f, dict):
+                        _x += f.get('colspan', 1)
+                    else:
+                        raise Exception, 'Colume definition is not right, only support string or dict'
+                m.append(_x)
+            else:
+                m.append(1)
+        n = min_times(m)
+        
+        buf = Buf()
+        table = None
+        fieldset = None
+        first = False
+        for fields in self.layout:
+            if not isinstance(fields, (tuple, list)):
+                if fields.startswith('--') and fields.endswith('--'):
+                    #THis is a group line
+                    if table:
+                        buf << '</tbody></table>'
+                    if fieldset:
+                        buf << '</fieldset>'
+                    title = fields[2:-2].strip()
+                    if title:
+                        fieldset = True
+                        buf << '<fieldset><legend>%s</legend>' % title
+                    
+                    buf << '<table class="table width100"><tbody>'
+                    table = True
+                    first = True
+                    continue
+                else:
+                    fields = [fields]
+            if first:
+                first = False
+                buf << '<table class="table width100"><tbody>'
+                table = True
+            buf << self.line(fields, n)
+        #close the tags
+        if table:
+            buf << '</tbody></table>'
+        if fieldset:
+            buf << '</fieldset>'
+            
+        return buf
+    
+    def __str__(self):
+        return str(self.render())
     
 class DetailView(object):
     def __init__(self, model, condition=None, obj=None, fields=None, 
@@ -730,10 +840,14 @@ class DetailView(object):
         self.types_convert_map = types_convert_map or {}
         self.fields_convert_map = fields_convert_map or {}
         self.table_class_attr = table_class_attr
-        self.layout_class = layout_class or DetailLayout
-        self.layout = layout
+        self.layout = layout or get_layout(model, meta)
+        if isinstance(self.layout, (str, unicode)):
+            self.layout_class = layout_class or DetailLayout
+        else:
+            self.layout_class = layout_class or DetailTableLayout
         self.template_data = template_data or {}
-        self.result_fields = {}
+        self.result_fields = Storage({})
+        self.r = self.result_fields
         
     def run(self):
         view_text = self.render(self.obj)
@@ -751,7 +865,7 @@ class DetailView(object):
                 prop = fields[name]
                 return make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
             
-            return str(self.layout_class(self.layout, get_field))
+            return str(self.layout_class(self.layout, get_field, self.model))
         else:
             return self._render(obj)
         
@@ -1444,10 +1558,35 @@ class ListView(SimpleListView):
         result['table'] = '\n'.join(s)
         return result
     
+    def objects(self):
+        """
+        Return a generator of all processed data, it just like render
+        but it'll not return a table or json format data but just
+        data. And the data will be processed by fields_convert_map if passed.
+        """
+        query = self.query()
+        for record in query:
+            self.rows_num += 1
+            r = {}
+            for i, x in enumerate(self.table['fields_list']):
+                if hasattr(self.model, x['name']):
+                    field = getattr(self.model, x['name'])
+                else:
+                    field = x
+                v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
+                r[x['name']] = v['display']
+            yield r
+        
     def query_all(self):
+        """
+        Query all records without limit and offset.
+        """
         return self.query_model(self.model, self.condition, order_by=self.order_by)
     
     def query_model(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
+        """
+        Query all records with limit and offset, it's used for pagination query.
+        """
         if self._query:
             query = self._query.filter(condition)
         else:

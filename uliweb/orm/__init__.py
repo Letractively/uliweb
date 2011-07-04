@@ -1285,7 +1285,7 @@ class ManyToMany(ReferenceProperty):
             if appname.endswith('.models'):
                 self.table.__appname__ = appname[:-7]
             self.model_class.manytomany.append(self.table)
-            Index('%s_manytomany_indx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
+            Index('%s_mindx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
     
     def __property_config__(self, model_class, property_name):
         """Loads all of the references that point to this model.
@@ -1525,8 +1525,10 @@ class Model(object):
                     d[k] = getattr(self, k).ids()
         return d
     
-    def field_str(self, v):
+    def field_str(self, v, strict=False):
         if v is None:
+            if strict:
+                return ''
             return v
         if isinstance(v, datetime.datetime):
             return v.strftime('%Y-%m-%d %H:%M:%S')
@@ -1539,6 +1541,8 @@ class Model(object):
         elif isinstance(v, unicode):
             return v.encode(__default_encoding__)
         else:
+            if strict:
+                return str(v)
             return v
            
     def _get_data(self):
