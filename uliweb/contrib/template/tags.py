@@ -28,9 +28,14 @@ class LinkNode(Node):
         return '{{link %s}}' % self.value
     
     @staticmethod
-    def link(env, links, toplinks=True):
+    def link(env, links, media=None, toplinks=True):
         if not isinstance(links, (tuple, list)):
             links = [links]
+        if media:
+            new_links = []
+            for x in links:
+                new_links.append({'value':x, 'media':media})
+            links = new_links
         if toplinks:
             env['__links__']['toplinks'].extend(links)
         else:
@@ -164,13 +169,20 @@ class HtmlMerge(object):
         toplinks = ['']
         bottomlinks = ['']
         for _type, result in [('toplinks', toplinks), ('bottomlinks', bottomlinks)]:
-            for link in links[_type]:
+            for x in links[_type]:
+                if isinstance(x, dict):
+                    link, media = x['value'], x['media']
+                else:
+                    link, media = x, None
                 if link.endswith('.js'):
                     link = url_for_static(link)
                     result.append('<script type="text/javascript" src="%s"></script>' % link)
                 elif link.endswith('.css'):
                     link = url_for_static(link)
-                    result.append('<link rel="stylesheet" type="text/css" href="%s"/>' % link)
+                    if media:
+                        result.append('<link rel="stylesheet" type="text/css" href="%s" media="%s"/>' % (link, media))
+                    else:
+                        result.append('<link rel="stylesheet" type="text/css" href="%s"/>' % link)
                 else:
                     result.append(link)
         return {'toplinks':'\n'.join(toplinks), 'bottomlinks':'\n'.join(bottomlinks)}
