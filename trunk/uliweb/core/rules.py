@@ -41,7 +41,8 @@ def expose(rule=None, **kwargs):
         return e
     
 class Expose(object):
-    def __init__(self, rule=None, **kwargs):
+    def __init__(self, rule=None, restful=False, **kwargs):
+        self.restful = restful
         if inspect.isfunction(rule) or inspect.isclass(rule):
             self.parse_level = 1
             self.rule = None
@@ -85,6 +86,7 @@ class Expose(object):
             prefix = self.rule
         else:
             prefix = '/' + '/'.join([path, clsname])
+        f.__exposed_url__ = prefix
         for name in dir(f):
             func = getattr(f, name)
             if (inspect.ismethod(func) or inspect.isfunction(func)) and not name.startswith('_'):
@@ -115,7 +117,10 @@ class Expose(object):
         if f.__name__ in reserved_keys:
             raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
         prefix = prefix.rstrip('/')
-        rule = self._fix_url(appname, '/'.join([prefix, f.__name__] +args))
+        if self.restful:
+            rule = self._fix_url(appname, '/'.join([prefix] + args[:1] + [f.__name__] +args[1:]))
+        else:
+            rule = self._fix_url(appname, '/'.join([prefix, f.__name__] +args))
         return rule
     
     def parse_function(self, f):
@@ -126,7 +131,10 @@ class Expose(object):
             raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
         appname, path = self._get_path(f)
         if not self.rule:
-            rule = '/' + '/'.join([path, f.__name__] + args)
+            if self.restful:
+                rule = '/' + '/'.join([path] + args[:1] + [f.__name__] + args[1:])
+            else:
+                rule = '/' + '/'.join([path, f.__name__] + args)
         else:
             rule = self.rule
         rule = self._fix_url(appname, rule)

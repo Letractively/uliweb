@@ -5,6 +5,19 @@ __all__ = ['Layout', 'TableLayout', 'CSSLayout', 'YamlLayout']
 
 from uliweb.core.html import Buf, Tag
 
+def min_times(num):
+    def _f(m, n):
+        r = m*n
+        while 1:
+            if m==n:
+                return r/m
+            elif m>n:
+                m -= n
+            else:
+                n -= m
+    num = set(num)
+    return reduce(_f, num)
+
 class Layout(object):
     def __init__(self, form, layout=None):
         self.form = form
@@ -23,52 +36,155 @@ class Layout(object):
         return self.get_widget_name(f) == 'Hidden'
     
 class TableLayout(Layout):
-    def line(self, label, input, help_string='', error=None):
+#    def line(self, label, input, help_string='', error=None):
+    field_classes = {
+        ('Text', 'Password', 'TextArea'):'type-text',
+        ('Button', 'Submit', 'Reset'):'type-button',
+        ('Select', 'RadioSelect'):'type-select',
+        ('Radio', 'Checkbox'):'type-check',
+        }
+    
+    def get_class(self, f):
+        name = f.build.__name__
+        _class = 'type-text'
+        for k, v in self.field_classes.items():
+            if name in k:
+                _class = v
+                break
+        return _class
+
+    def line(self, fields, n):
+        _x = 0
+        for _f in fields:
+            if isinstance(_f, (str, unicode)):
+                _x += 1
+            elif isinstance(_f, dict):
+                _x += _f.get('colspan', 1)
+            else:
+                raise Exception, 'Colume definition is not right, only support string or dict'
+
         tr = Tag('tr')
-        tr << Tag('td', label)
-        td = tr << Tag('td', input)
-        if error:
-            td << Tag('br/')
-            td << Tag('span', error, _class='error')
-        td = tr << Tag('td', help_string)
+        with tr:
+            for x in fields:
+                _span = n / _x
+                if isinstance(x, (str, unicode)):
+                    name = x
+                elif isinstance(x, dict):
+                    name = x['name']
+                    _span = _span * x.get('colspan', 1)
+
+                f = getattr(self.form, name)
+                obj = self.form.fields[name]
+                _class = self.get_class(obj)
+                if f.error:
+                    _class = _class + ' error'
+                
+                with tr.td(colspan=_span, width='%d%%' % (100*_span/n,), valign='top'):
+                    with tr.div(_class=_class):
+                        if f.error:
+                            tr.strong(f.error, _class="message")
+                        if self.get_widget_name(obj) == 'Checkbox':
+                            tr << f
+                            tr << f.label
+                            tr << f.help_string or '&nbsp;'
+                        else:
+                            tr << f.label
+                            tr << f
+                            tr << f.help_string or '&nbsp;'
+                
         return tr
 
     def single_line(self, element):
-        tr = Tag('tr')
-        tr << Tag('td', element, colspan=3)
+        with tr:
+            with tr.td(colspan=3):
+                tr << element
         return tr
 
-    def buttons_line(self, buttons):
+    def buttons_line(self, buttons, n):
         tr = Tag('tr', align='center', _class="buttons")
-        td = tr << Tag('td', Tag('label', '&nbsp;', _class='field'), colspan=3)
-        td << buttons
+        with tr:
+            with tr.td(colspan=n, align='left'):
+                tr << Tag('label', '&nbsp;', _class='field')
+                tr << buttons
         return tr
         
     def html(self):
-        buf = Buf()
-        buf << self.form.form_begin
-        
-        if self.form.fieldset:
-            p = buf << Tag('fieldset')
-            if self.form.form_title:
-                p << Tag('legend', self.form.form_title)
+        if 'tform' not in self.form.html_attrs['_class']:
+            self.form.html_attrs['_class'] = 'tform'
+        if self.layout:
+            m = []
+            for line in self.layout:
+                if isinstance(line, (tuple, list)):
+                    _x = 0
+                    for f in line:
+                        if isinstance(f, (str, unicode)):
+                            _x += 1
+                        elif isinstance(f, dict):
+                            _x += f.get('colspan', 1)
+                        else:
+                            raise Exception, 'Colume definition is not right, only support string or dict'
+                    m.append(_x)
+                else:
+                    m.append(1)
+            n = min_times(m)
         else:
-            form = buf
-                 
+            self.layout = [name for name, obj in self.form.fields_list]
+            n = 1
+            
+        buf = Buf()
+        table = None
+        fieldset = None
+        first = True
+        buf << self.form.form_begin
+        cls = 'width100'
+        for fields in self.layout:
+            if not isinstance(fields, (tuple, list)):
+                if fields.startswith('--') and fields.endswith('--'):
+                    #THis is a group line
+                    if table:
+                        buf << '</tbody></table>'
+                    if fieldset:
+                        buf << '</fieldset>'
+                    title = fields[2:-2].strip()
+                    if title:
+                        fieldset = True
+                        buf << '<fieldset><legend>%s</legend>' % title
+                    
+                    buf << '<table class="%s"><tbody>' % cls
+                    table = True
+                    first = True
+                    continue
+                else:
+                    fields = [fields]
+            if first:
+                first = False
+                buf << '<table class="%s"><tbody>' % cls
+                table = True
+            buf << self.line(fields, n)
+            
+        buf << self.buttons_line(self.form.get_buttons(), n)
         
-        table = p << Tag('table')
-        tbody = table << Tag('tbody')
-
-        for name, obj in self.form.fields_list:
-            f = getattr(self.form, name)
-            if self.is_hidden(obj):
-                tbody << f
-            else:
-                tbody << self.line(f.label, f, f.help_string, f.error)
+        #close the tags
+        if table:
+            buf << '</tbody></table>'
+        if fieldset:
+            buf << '</fieldset>'
         
-        tbody << self.buttons_line(self.form.get_buttons())
         buf << self.form.form_end
         return str(buf)
+        
+#        with buf.table(_class='table'):
+#            with buf.tbody:
+#
+#                for fields in self.layout:
+#                    if not isinstance(fields, (tuple, list)):
+#                        fields = [fields]
+#                    buf << self.line(fields, n)
+#        
+#                buf << self.buttons_line(self.form.get_buttons(), n)
+#                
+#            buf << self.form.form_end
+#        return str(buf)
     
 class CSSLayout(Layout):
     def line(self, obj, label, input, help_string='', error=None):
@@ -285,3 +401,4 @@ class YamlLayout(Layout):
                     buf << f
                 else:
                     buf << self.line(obj, f.label, f, f.help_string, f.error)
+                    
