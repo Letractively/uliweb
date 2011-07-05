@@ -75,7 +75,7 @@ def extract_dirs(mod, path, dst, verbose=False):
     if not os.path.exists(dst):
         os.makedirs(dst)
         if verbose:
-            log.info('Info : Make directory', dst)
+            log.info('Make directory', dst)
     for r in pkg.resource_listdir(mod, path):
         if r in ['.svn', '_svn']:
             continue
@@ -88,7 +88,7 @@ def extract_dirs(mod, path, dst, verbose=False):
                 continue
             extract_file(mod, fpath, dst, verbose)
 
-def copy_dir(src, dst, verbose=False, check=False):
+def copy_dir(src, dst, verbose=False, check=False, processor=None):
     import shutil
 
     def _md5(filename):
@@ -106,14 +106,14 @@ def copy_dir(src, dst, verbose=False, check=False):
         os.makedirs(dst)
 
     if verbose:
-        log.info("Info : Processing %s" % src)
+        log.info("Processing %s" % src)
         
     for r in os.listdir(src):
-        if r in ['.svn', '_svn']:
+        if r in ['.svn', '_svn', '.git']:
             continue
         fpath = os.path.join(src, r)
         if os.path.isdir(fpath):
-            copy_dir(fpath, os.path.join(dst, r), verbose, check)
+            copy_dir(fpath, os.path.join(dst, r), verbose, check, processor)
         else:
             ext = os.path.splitext(fpath)[1]
             if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
@@ -127,23 +127,29 @@ def copy_dir(src, dst, verbose=False, check=False):
                         log.error("Target file %s is already existed, and "
                             "it not same as source one %s, so copy failed" % (fpath, dst))
                 else:
+                    if processor:
+                        if processor(fpath, dst):
+                            continue
                     shutil.copy2(fpath, dst)
                     if verbose:
                         log.info("Copy [%s] to [%s]" % (fpath, dst))
                     
             else:
+                if processor:
+                    if processor(fpath, dst):
+                        continue
                 shutil.copy2(fpath, dst)
                 if verbose:
                     log.info("Copy [%s] to [%s]" % (fpath, dst))
 
-def copy_dir_with_check(dirs, dst, verbose=False, check=True):
+def copy_dir_with_check(dirs, dst, verbose=False, check=True, processor=None):
     for d in dirs:
         if not os.path.exists(d):
             if verbose:
                 log.warn("%s does not exist, SKIP" % d)
             continue
 
-        copy_dir(d, dst, verbose, check)
+        copy_dir(d, dst, verbose, check, processor)
 
 log = None
 FORMAT = "%(levelname)-8s %(asctime)-15s %(filename)s,%(lineno)d] %(message)s"
