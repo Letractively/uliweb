@@ -935,7 +935,7 @@ class SimpleListView(object):
     def __init__(self, fields=None, query=None, cache_file=None, 
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
         table_class_attr='table', table_width=False, pagination=True, total_fields=None, 
-        template_data=None, default_column_width=100):
+        template_data=None, default_column_width=100, total=None, manual=False):
         """
         Pass a data structure to fields just like:
             [
@@ -959,12 +959,13 @@ class SimpleListView(object):
         self.table_class_attr = table_class_attr
         self.fields_convert_map = fields_convert_map
         self.cache_file = cache_file
-        self.total = 0
+        self.total = total or 0
         self.table_width = table_width
         self.pagination = pagination
         self.create_total_infos(total_fields)
         self.template_data = template_data or {}
         self.default_column_width = default_column_width
+        self.manual = manual
         
     def create_total_infos(self, total_fields):
         if total_fields:
@@ -1064,34 +1065,45 @@ class SimpleListView(object):
                     break
             return no_data_flag, n, result
         
-        self.total = 0
-        if pagination:
+        if self.manual:
             if isinstance(query_result, (list, tuple)):
-                self.total = len(query_result)
-                result = query_result[pageno*self.rows_per_page : (pageno+1)*self.rows_per_page]
-                return result
-            else:
-                #first step, skip records before pageno*self.rows_per_page
-                flag, self.total, result = repeat(query_result, pageno*self.rows_per_page, self.total)
-                if flag:
-                    return []
-                
-                #second step, get the records
-                flag, self.total, result = repeat(query_result, self.rows_per_page, self.total)
-                if flag:
-                    return result
-                
-                #third step, skip the rest records, and get the really total
-                flag, self.total, r = repeat(query_result, -1, self.total)
-                return result
-        else:
-            if isinstance(query_result, (list, tuple)):
-                self.total = len(query_result)
+                if not self.total:
+                    self.total = len(query_result)
                 return query_result
             else:
-                flag, self.total, result = repeat(query_result, -1, self.total)
+                if not self.total:
+                    flag, self.total, result = repeat(query_result, -1, self.total)
+                else:
+                    result = query_result
                 return result
-                
+        else:
+            self.total = 0
+            if pagination:
+                if isinstance(query_result, (list, tuple)):
+                    self.total = len(query_result)
+                    result = query_result[pageno*self.rows_per_page : (pageno+1)*self.rows_per_page]
+                    return result
+                else:
+                    #first step, skip records before pageno*self.rows_per_page
+                    flag, self.total, result = repeat(query_result, pageno*self.rows_per_page, self.total)
+                    if flag:
+                        return []
+                    
+                    #second step, get the records
+                    flag, self.total, result = repeat(query_result, self.rows_per_page, self.total)
+                    if flag:
+                        return result
+                    
+                    #third step, skip the rest records, and get the really total
+                    flag, self.total, r = repeat(query_result, -1, self.total)
+                    return result
+            else:
+                if isinstance(query_result, (list, tuple)):
+                    self.total = len(query_result)
+                    return query_result
+                else:
+                    flag, self.total, result = repeat(query_result, -1, self.total)
+                    return result
         
     def download(self, filename, timeout=3600, inline=False, download=False, query=None, fields_convert_map=None):
         from uliweb.utils.filedown import filedown
