@@ -35,6 +35,8 @@ class CreateSuperUserCommand(Command):
             print "The password is not matched, can't create super user!"
             return
         
+        orm.set_dispatch_send(False)
+        
         User = orm.get_model('user')
         user = User(username=username, email=email)
         user.set_password(password)

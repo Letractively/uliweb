@@ -366,7 +366,7 @@ class DumpTableFileCommand(Command):
         con = create_engine(engine)
 
         if len(args) != 2:
-            print self.print_help(self.prog_name, 'loadtablefile')
+            print self.print_help(self.prog_name, 'dumptablefile')
             sys.exit(1)
             
         name = args[0]
@@ -515,7 +515,7 @@ class LoadTableFileCommand(Command):
         from uliweb import orm
         
         if len(args) != 2:
-            print self.usage('loadtablefile')
+            print self.print_help(self.prog_name, 'loadtablefile')
             sys.exit(1)
             
         if args:

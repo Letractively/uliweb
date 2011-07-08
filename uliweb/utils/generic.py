@@ -1,7 +1,7 @@
 #coding=utf-8
 from __future__ import with_statement
 from uliweb.i18n import gettext_lazy as _
-from uliweb.form import SelectField, BaseField
+from uliweb.form import SelectField, BaseField, StringField
 import os, sys
 import time
 from uliweb.orm import get_model
@@ -104,6 +104,15 @@ class ManyToManySelectField(ReferenceSelectField):
             default=default, required=required, validators=validators, name=name, 
             html_attrs=html_attrs, help_string=help_string, build=build, 
             empty=None, multiple=True, **kwargs)
+            
+class RemoteField(StringField):
+    """
+    Fetch remote data
+    """
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, alt='', url='', **kwargs):
+        _attrs = {'url':url, 'alt':alt, '_class':'rselect'}
+        _attrs.update(html_attrs or {})
+        StringField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=_attrs, help_string=help_string, build=build, **kwargs)
             
 def get_fields(model, fields, meta):
     if fields is not None:
@@ -360,7 +369,8 @@ class AddView(object):
     def __init__(self, model, ok_url=None, ok_template=None, form=None, success_msg=None, fail_msg=None, 
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
-        post_created_form=None, layout=None, file_replace=True, template_data=None, success_data=None, meta='AddForm'):
+        post_created_form=None, layout=None, file_replace=True, template_data=None, 
+        success_data=None, meta='AddForm', get_form_field=None):
 
         self.model = get_model(model)
         self.meta = meta
@@ -375,6 +385,7 @@ class AddView(object):
         
         #default_data used for create object
         self.default_data = default_data or {}
+        self.get_form_field = get_form_field
         self.layout = layout
         self.fields = fields
         self.form_cls = form_cls
@@ -426,7 +437,13 @@ class AddView(object):
         DummyForm.layout = layout
         
         for f in self.get_fields():
-            field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
+            flag = False
+            if self.get_form_field:
+                field = self.get_form_field(f['name'])
+                if field:
+                    flag = True
+            if not flag:
+                field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
             
             if field:
                 DummyForm.add_field(f['name'], field, True)
@@ -467,7 +484,6 @@ class AddView(object):
             self.pre_save(d)
             
         r = self.process_files(d)
-        
         obj = self.save(d)
         
         if self.post_save:
@@ -669,7 +685,13 @@ class EditView(AddView):
             elif isinstance(f['prop'], orm.IntegerProperty) and 'autoincrement' in f['prop'].kwargs:
                 f['hidden'] = True
                 
-            field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
+            flag = False
+            if self.get_form_field:
+                field = self.get_form_field(f['name'], self.obj)
+                if field:
+                    flag = True
+            if not flag:
+                field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
             
             if field:
                 DummyForm.add_field(f['name'], field, True)
