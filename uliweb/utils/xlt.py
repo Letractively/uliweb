@@ -15,11 +15,12 @@ from xlwt import Style, Formula
 
 easyxf = xlwt.easyxf
 
-re_link = re.compile('^<a.*?href=\"([^\"]+)\">(.*?)</a>', re.DOTALL)
+re_link = re.compile('^<a.*?href=\"([^\"]+)\".*?>(.*?)</a>', re.DOTALL)
 
 class ExcelWriter(object):
     def __init__(self, header=None, data=None, title=None, template=None, 
-        index=0, begin_x=0, begin_y=0, hbegin_x=0, hbegin_y=0, encoding='utf-8'):
+        index=0, begin_x=0, begin_y=0, hbegin_x=0, hbegin_y=0, 
+        encoding='utf-8', domain=None):
         self.header = header
         self.data = data
         self.template = template
@@ -30,6 +31,7 @@ class ExcelWriter(object):
         self.begin_y = begin_y
         self.hbegin_y = hbegin_y
         self.encoding = encoding
+        self.domain = domain
         self.fields_list = []
         self.fields = {}
         self.field_names = []
@@ -123,7 +125,7 @@ class ExcelWriter(object):
                 x1 = self.hbegin_x + i + posx
                 x2 = x1 + field['colspan'] - 1
                 self.sh.write_merge(y1, y2, x1, x2, safe_unicode(field['title']), 
-                    self.style(style=_f['head_style'] or 'align: vert center,horz center'))
+                    self.style(style=_f['head_style'] or 'font: bold on;align: vert center,horz center; pattern: pattern solid, fore-colour pale_blue;borders:left thin, right thin, top thin, bottom thin;'))
                 width = _f['width']
                 if width and x1 == x2:
                     self.sh.col(x1).width = width*36.5
@@ -143,7 +145,7 @@ class ExcelWriter(object):
         for i, field in enumerate(self.header):
             f = {'row':None, 'col':None, 'width':None, 
                 'title':None, 'head_style':None, 'cell_style':None, 
-                'name':None, 'align':'general'}
+                'name':None, 'align':'general', 'num_format':None}
             if isinstance(field, dict):
                 f.update(field)
                 if 'verbose_name' in field:
@@ -185,7 +187,7 @@ class ExcelWriter(object):
                         continue
                 self.sh.write(col_y, col_x, col_txt, col_style)
          
-    def style(self, value=None, style=None, align=None):
+    def style(self, value=None, style=None, align=None, num_format=None):
         if isinstance(style, str):
             if style not in self.styles:
                 s = easyxf(style)
@@ -212,24 +214,32 @@ class ExcelWriter(object):
                 s.alignment = self.style_right
             else:
                 s.alignment = self.style_general
+        if num_format:
+            s.num_format_str = num_format
         return s
     
-    def cell_style(self, col=None, value=None, style=None, align=None):
+    def cell_style(self, col=None, value=None, style=None, align=None, num_format=None):
         if style:
-            return self.style(style=style, align=align)
+            return self.style(style=style, align=align, num_format=num_format)
         
         s = self.style(value=value)
         if self.header:
             f = self.fields.get(col)
-            s = self.style(value=value, style=f['cell_style'], align=f['align'])
+            s = self.style(value=value, style=f['cell_style'], align=f['align'], num_format=f['num_format'])
         return s
         
     def save(self, filename):
         self.wb.save(filename)
         
     def hyperlink(self, row, col, title, link, style=None):
+        import urlparse
+        
         style = style or 'font: underline single,color 4'
         style = self.style(style=style)
+        
+        r = urlparse.urlparse(link)
+        if not r.scheme and self.domain:
+            link = self.domain + link
         self.sh.write(row, col, Formula('HYPERLINK("%s";"%s")' % (link, title)), style)
         
 if __name__ == '__main__':
@@ -246,6 +256,6 @@ if __name__ == '__main__':
     ]
     def get_data():
         for i in range(1000):
-            yield ('中文', i, 12.3, datetime.datetime(2011, 7, 11), '<a href="http://google.com">google.com</a>')
+            yield ('中文', i, 12.3, datetime.datetime(2011, 7, 11), '<a href="http://google.com?id=1" target="_blank">google.com</a>')
     w = ExcelWriter(header=header, data=get_data())
     w.save('c.xls')
