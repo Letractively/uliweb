@@ -25,7 +25,6 @@ def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
 
 def get_sort_field(model, sort_field='sort', order_name='asc'):
     from uliweb import request
-    from uliweb.orm import get_model
     
     model = get_model(model)
     if request.values.getlist('sort'):
@@ -788,7 +787,7 @@ class DetailTableLayout(object):
         return tr
         
     def render(self):
-        from uliweb.core.html import Buf, Tag
+        from uliweb.core.html import Buf
         from uliweb.form.layout import min_times
 
         m = []
@@ -1127,13 +1126,9 @@ class SimpleListView(object):
                     flag, self.total, result = repeat(query_result, -1, self.total)
                     return result
         
-    def download(self, filename, timeout=3600, inline=False, download=False, query=None, fields_convert_map=None):
+    def download(self, filename, timeout=3600, inline=False, download=False, query=None, fields_convert_map=None, type=None):
         from uliweb.utils.filedown import filedown
-        from uliweb import request, settings
-        from uliweb.utils.common import simple_value, safe_unicode
-        from uliweb.orm import Model
-        import tempfile
-        import csv
+        from uliweb import request
         fields_convert_map = fields_convert_map or {}
         
         if os.path.exists(filename):
@@ -1143,6 +1138,81 @@ class SimpleListView(object):
         table = self.table_info()
         if not query:
             query = self.query_all()
+        if not type:
+            type = os.path.splitext(filename)[1]
+            if type:
+                type = type[1:]
+            else:
+                type = 'csv'
+        if type == 'xlt':
+            return self.download_xlt(filename, query, table, inline, download, fields_convert_map)
+        else:
+            return self.download_csv(filename, query, table, inline, download, fields_convert_map)
+       
+    def get_data(self, query, table, fields_convert_map, encoding='utf-8'):
+        from uliweb.orm import Model
+        from uliweb.utils.common import safe_unicode
+
+        fields_convert_map = fields_convert_map or {}
+        for record in query:
+            self.cal_total(table, record)
+            row = []
+            if isinstance(record, dict):
+                for x in table['fields']:
+                    row.append(record[x]) 
+            elif isinstance(record, Model):
+                row = []
+                for x in table['fields']:
+                    if hasattr(record, x):
+                        row.append(safe_unicode(record.get_display_value(x), encoding))
+                    else:
+                        row.append('')
+            elif not isinstance(record, (tuple, list)):
+                row = list(record)
+            else:
+                row = record
+            if fields_convert_map:
+                for i, x in enumerate(table['fields_list']):
+                    convert = fields_convert_map.get(x['name'])
+                    if convert:
+                        row[i] = convert(row[i], record)
+            yield row
+        total = self.get_total(table)
+        if total:
+            row = []
+            for x in total:
+                v = x
+                if isinstance(x, str):
+                    v = safe_unicode(x, default_encoding)
+                row.append(v)
+            yield row
+
+    def download_xlt(self, filename, data, table, inline, download, fields_convert_map=None):
+        from uliweb.utils.xlt import ExcelWriter
+        from uliweb import request, settings
+        from uliweb.utils.filedown import filedown
+        
+        fields_convert_map = fields_convert_map or {}
+        path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
+        default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
+        t_filename = os.path.join(path, filename)
+        r_filename = os.path.basename(filename)
+        dirname = os.path.dirname(t_filename)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        w = ExcelWriter(header=table['fields_list'], data=self.get_data(data, table, fields_convert_map, default_encoding), encoding=default_encoding)
+        w.save(t_filename)
+        return filedown(request.environ, r_filename, real_filename=t_filename, inline=inline, download=download)
+        
+    def download_csv(self, filename, data, table, inline, download, fields_convert_map=None):
+        from uliweb.utils.filedown import filedown
+        from uliweb import request, settings
+        from uliweb.utils.common import simple_value, safe_unicode
+        from uliweb.orm import Model
+        import tempfile
+        import csv
+        
+        fields_convert_map = fields_convert_map or {}
         path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
         encoding = settings.get_var('GENERIC/CSV_ENCODING', sys.getfilesystemencoding() or 'utf-8')
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
@@ -1156,37 +1226,7 @@ class SimpleListView(object):
             w = csv.writer(f)
             row = [safe_unicode(x, default_encoding) for x in table['fields_name']]
             w.writerow(simple_value(row, encoding))
-            for record in query:
-                self.cal_total(table, record)
-                row = []
-                if isinstance(record, dict):
-                    for x in table['fields']:
-                        row.append(record[x]) 
-                elif isinstance(record, Model):
-                    row = []
-                    for x in table['fields']:
-                        if hasattr(record, x):
-                            row.append(safe_unicode(record.get_display_value(x), default_encoding))
-                        else:
-                            row.append('')
-                elif not isinstance(record, (tuple, list)):
-                    row = list(record)
-                else:
-                    row = record
-                if fields_convert_map:
-                    for i, x in enumerate(table['fields']):
-                        convert = fields_convert_map.get(x)
-                        if convert:
-                            row[i] = convert(row[i], record)
-                w.writerow(simple_value(row[:len(table['fields'])], encoding))
-            total = self.get_total(table)
-            if total:
-                row = []
-                for x in total:
-                    v = x
-                    if isinstance(x, str):
-                        v = safe_unicode(x, default_encoding)
-                    row.append(v)
+            for row in self.get_data(data, table, fields_convert_map, default_encoding):
                 w.writerow(simple_value(row, encoding))
         return filedown(request.environ, r_filename, real_filename=t_filename, inline=inline, download=download)
         
