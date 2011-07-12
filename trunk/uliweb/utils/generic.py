@@ -978,7 +978,7 @@ class SimpleListView(object):
         self.rows_num = 0
         self.id = id
         self.table_class_attr = table_class_attr
-        self.fields_convert_map = fields_convert_map
+        self.fields_convert_map = fields_convert_map or {}
         self.cache_file = cache_file
         self.total = total or 0
         self.table_width = table_width
@@ -1126,10 +1126,10 @@ class SimpleListView(object):
                     flag, self.total, result = repeat(query_result, -1, self.total)
                     return result
         
-    def download(self, filename, timeout=3600, inline=False, download=False, query=None, fields_convert_map=None, type=None):
+    def download(self, filename, timeout=3600, inline=False, download=False, query=None, fields_convert_map=None, type=None, domain=None):
         from uliweb.utils.filedown import filedown
         from uliweb import request
-        fields_convert_map = fields_convert_map or {}
+        fields_convert_map = fields_convert_map or self.fields_convert_map
         
         if os.path.exists(filename):
             if timeout and os.path.getmtime(filename) + timeout > time.time():
@@ -1145,7 +1145,7 @@ class SimpleListView(object):
             else:
                 type = 'csv'
         if type == 'xlt':
-            return self.download_xlt(filename, query, table, inline, download, fields_convert_map)
+            return self.download_xlt(filename, query, table, inline, download, fields_convert_map, domain)
         else:
             return self.download_csv(filename, query, table, inline, download, fields_convert_map)
        
@@ -1183,11 +1183,11 @@ class SimpleListView(object):
             for x in total:
                 v = x
                 if isinstance(x, str):
-                    v = safe_unicode(x, default_encoding)
+                    v = safe_unicode(x, encoding)
                 row.append(v)
             yield row
 
-    def download_xlt(self, filename, data, table, inline, download, fields_convert_map=None):
+    def download_xlt(self, filename, data, table, inline, download, fields_convert_map=None, domain=None):
         from uliweb.utils.xlt import ExcelWriter
         from uliweb import request, settings
         from uliweb.utils.filedown import filedown
@@ -1200,7 +1200,7 @@ class SimpleListView(object):
         dirname = os.path.dirname(t_filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        w = ExcelWriter(header=table['fields_list'], data=self.get_data(data, table, fields_convert_map, default_encoding), encoding=default_encoding)
+        w = ExcelWriter(header=table['fields_list'], data=self.get_data(data, table, fields_convert_map, default_encoding), encoding=default_encoding, domain=domain)
         w.save(t_filename)
         return filedown(request.environ, r_filename, real_filename=t_filename, inline=inline, download=download)
         
