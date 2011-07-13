@@ -269,6 +269,12 @@ def safe_unicode(s, encoding='utf-8'):
     else:
         return unicode(s, encoding)
 
+def safe_str(s, encoding='utf-8'):
+    if isinstance(s, unicode):
+        return s.encode(encoding)
+    else:
+        return s
+
 def get_var(key):
     def f():
         from uliweb import settings
