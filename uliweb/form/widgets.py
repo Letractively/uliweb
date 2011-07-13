@@ -66,7 +66,7 @@ class Select(Build):
         from itertools import groupby
         
         def _make(v, caption):
-            v = str(v)
+            v = safe_str(v)
             args = {'value': v}
             if isinstance(self.value, (tuple, list)) and v in [safe_str(x) for x in self.value]:
                 args['selected'] = None

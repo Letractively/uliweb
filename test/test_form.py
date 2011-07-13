@@ -1,3 +1,4 @@
+#coding=utf-8
 # How to test it?
 # easy_install nose
 # cd test
@@ -65,18 +66,6 @@ def test_1():
     <BLANKLINE>
     """
 
-def test_2():
-    """
-    >>> buf = Buf()
-    >>> a = buf << Tag('div') << Tag('p', 'hello')
-    >>> print buf
-    <BLANKLINE>
-    <p>hello</p>
-    <BLANKLINE>
-    <BLANKLINE>
-    
-    """
-    
 def test_IS_PAST_DATE():
     """
     >>> date = datetime.datetime(2011, 10, 12)
@@ -87,6 +76,22 @@ def test_IS_PAST_DATE():
     'The date can not be greater than 2011-10-12 00:00:00'
     >>> f(datetime.datetime(2011, 10, 11))
     """
+    
+def test_select():
+    """
+    >>> from uliweb.form.widgets import Select
+    >>> a = unicode('男', 'utf8')
+    >>> b = unicode('女', 'utf8')
+    >>> s = Select([(a, a), (b, b)], value=a, multiple=True)
+    >>> print s
+    <select multiple size="10"><option selected value="男">男</option>
+    <BLANKLINE>
+    <option value="女">女</option>
+    </select>
+    <BLANKLINE>
+    
+    """
+    
 #def test_3():
 #    class F(Form):
 #        title = StringField(label='Title:', required=True, help_string='Title help string')
