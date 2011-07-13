@@ -1,5 +1,11 @@
 from uliweb.core.html import Tag, begin_tag, end_tag
 
+def safe_str(s, encoding='utf-8'):
+    if isinstance(s, unicode):
+        return s.encode(encoding)
+    else:
+        return s
+
 class Build(object):
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -62,11 +68,11 @@ class Select(Build):
         def _make(v, caption):
             v = str(v)
             args = {'value': v}
-            if isinstance(self.value, (tuple, list)) and v in [str(x) for x in self.value]:
+            if isinstance(self.value, (tuple, list)) and v in [safe_str(x) for x in self.value]:
                 args['selected'] = None
-            elif v == str(self.value):
+            elif v == safe_str(self.value):
                 args['selected'] = None
-            return str(Tag('option', caption, **args))
+            return str(Tag('option', safe_str(caption), **args))
             
         s = []
         #if the choices is 3-elements, then will do the group process
