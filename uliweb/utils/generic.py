@@ -1129,7 +1129,10 @@ class SimpleListView(object):
     def download(self, filename, timeout=3600, inline=False, download=False, query=None, fields_convert_map=None, type=None, domain=None):
         from uliweb.utils.filedown import filedown
         from uliweb import request
-        fields_convert_map = fields_convert_map or self.fields_convert_map
+        if fields_convert_map is not None:
+            fields_convert_map = fields_convert_map 
+        else:
+            fields_convert_map = self.fields_convert_map
         
         if os.path.exists(filename):
             if timeout and os.path.getmtime(filename) + timeout > time.time():
@@ -1194,6 +1197,8 @@ class SimpleListView(object):
         
         fields_convert_map = fields_convert_map or {}
         path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
+        if not domain:
+            domain = settings.get_var('GENERIC/DOWNLOAD_DOMAIN', request.host_url)
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
         t_filename = os.path.join(path, filename)
         r_filename = os.path.basename(filename)
