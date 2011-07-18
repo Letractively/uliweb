@@ -1573,7 +1573,7 @@ class ListView(SimpleListView):
         if hasattr(self.model, field_name):
             field = getattr(self.model, field_name)
         else:
-            for x in table['fields_list']:
+            for x in self.table['fields_list']:
                 if x['name'] == field_name:
                     field = x
         v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
@@ -1834,7 +1834,7 @@ class QueryView(object):
         flag = self.form.validate(request.values)
         if flag:
 #            d = self.default_data.copy()
-            if not self.data:
+            if self.data:
                 for k, v in self.data.iteritems():
                     if not self.form.data.get(k):
                         self.form.data[k] = v
