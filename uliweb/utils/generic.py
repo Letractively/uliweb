@@ -383,7 +383,7 @@ class AddView(object):
         self.template_data = template_data or {}
         
         #default_data used for create object
-#        self.default_data = default_data or {}
+        self.default_data = default_data or {}
         self.get_form_field = get_form_field
         self.layout = layout
         self.fields = fields

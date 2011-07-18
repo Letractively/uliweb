@@ -8,10 +8,12 @@
 __all__ = ['Field', 'get_connection', 'Model', 'create_all',
     'set_debug_query', 'set_auto_create', 'set_connection', 'get_model',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
+    'PICKLE', 
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
+    'PickleType',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError',
@@ -492,7 +494,20 @@ class BlobProperty(StringProperty):
     data_type = str
     
     def __init__(self, verbose_name=None, default='', **kwds):
-        super(BlobProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
+        super(BlobProperty, self).__init__(verbose_name, default=default, **kwds)
+    
+class PickleProperty(BlobProperty):
+    field_class = PickleType
+    data_type = None
+    
+    def __init__(self, verbose_name=None, default='', **kwds):
+        super(PickleProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
+
+    def convert(self, value):
+        return value
+    
+    def validate(self, value):
+        return value
     
 class DateTimeProperty(Property):
     data_type = datetime.datetime
@@ -1462,6 +1477,7 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
 
 
 FILE = FileProperty
+PICKLE = PickleProperty
 
 _fields_mapping = {
     str:StringProperty,
@@ -1478,6 +1494,7 @@ _fields_mapping = {
     datetime.time:TimeProperty,
     decimal.Decimal:DecimalProperty,
     DECIMAL:DecimalProperty,
+    PICKLE:PickleProperty,
 }
 def Field(type, **kwargs):
     t = _fields_mapping.get(type, type)
