@@ -383,7 +383,7 @@ class AddView(object):
         self.template_data = template_data or {}
         
         #default_data used for create object
-        self.default_data = default_data or {}
+#        self.default_data = default_data or {}
         self.get_form_field = get_form_field
         self.layout = layout
         self.fields = fields
@@ -1734,7 +1734,7 @@ class QueryView(object):
     meta = 'QueryForm'
     
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
-        data=None, default_data=None, fields=None, form_cls=None, form_args=None,
+        data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, post_created_form=None, layout=None):
 
         self.model = model
@@ -1833,9 +1833,12 @@ class QueryView(object):
         
         flag = self.form.validate(request.values)
         if flag:
-            d = self.default_data.copy()
-            d.update(self.form.data)
-            return d
+#            d = self.default_data.copy()
+            if not self.data:
+                for k, v in self.data.iteritems():
+                    if not self.form.data.get(k):
+                        self.form.data[k] = v
+            return self.form.data.copy()
         else:
             return {}
         
