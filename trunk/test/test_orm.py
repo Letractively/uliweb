@@ -1049,6 +1049,27 @@ def test_auto():
     
     """
 
+def test_pickle():
+    """
+    Test auto and auto_add parameter of property
+    
+    >>> db = get_connection('sqlite://')
+    >>> #db.echo = True
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(str, max_length=40)
+    ...     memo = Field(PICKLE)
+    >>> a = User(username='limodou', memo={'age':30})
+    >>> a.save()
+    True
+    >>> print a.memo
+    {'age': 30}
+    >>> b = User.get(1)
+    >>> print b.memo
+    {'age': 30}
+    """
+    
 #if __name__ == '__main__':
 #    set_debug_query(True)
 #    db = get_connection('mysql://root:limodou@localhost/test')
