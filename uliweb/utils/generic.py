@@ -1747,7 +1747,7 @@ class QueryView(object):
         self.data = data or {}
         
         #default_data used for create object
-        self.default_data = default_data or {}
+#        self.default_data = default_data or {}
         
         self.fields = fields or []
         self.form_cls = form_cls
