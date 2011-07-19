@@ -11,30 +11,31 @@ def test_1():
     >>> class Test(Model):
     ...     username = Field(unicode)
     ...     year = Field(int, default=0)
-    >>> a = Test(username='limodou')
+    ...     birth = Field(datetime.date)
+    >>> a = Test(username='limodou', birth='2011-03-04')
     >>> a.save()
     True
     >>> a
-    <Test {'username':u'limodou','year':0,'id':1}>
+    <Test {'username':u'limodou','year':0,'birth':datetime.date(2011, 3, 4),'id':1}>
     >>> b = Test(username=u'limodou1')
     >>> b.save()
     True
     >>> b
-    <Test {'username':u'limodou1','year':0,'id':2}>
+    <Test {'username':u'limodou1','year':0,'birth':None,'id':2}>
     >>> print list(Test.all())
-    [<Test {'username':u'limodou','year':0,'id':1}>, <Test {'username':u'limodou1','year':0,'id':2}>]
+    [<Test {'username':u'limodou','year':0,'birth':datetime.date(2011, 3, 4),'id':1}>, <Test {'username':u'limodou1','year':0,'birth':None,'id':2}>]
     >>> print Test.count()
     2
     >>> a.username
     u'limodou'
     >>> list(Test.filter(Test.c.username==u'limodou'))
-    [<Test {'username':u'limodou','year':0,'id':1}>]
+    [<Test {'username':u'limodou','year':0,'birth':datetime.date(2011, 3, 4),'id':1}>]
     >>> c = Test.get(1)
     >>> c
-    <Test {'username':u'limodou','year':0,'id':1}>
+    <Test {'username':u'limodou','year':0,'birth':datetime.date(2011, 3, 4),'id':1}>
     >>> c = Test.get(Test.c.id==1)
     >>> c
-    <Test {'username':u'limodou','year':0,'id':1}>
+    <Test {'username':u'limodou','year':0,'birth':datetime.date(2011, 3, 4),'id':1}>
     >>> Test.remove(1)
     >>> Test.count()
     1
@@ -846,7 +847,10 @@ def test_many2many_through_alone():
     [<User {'username':u'limodou','year':5,'id':1}>]
     >>> print list(a.group_set.filter(Relation.c.year>5))
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
-    
+    >>> #Test with_relation function
+    >>> u = g1.users.all().with_relation().one()
+    >>> print u.relation.year
+    10
     """
 
 def test_many2many_through_alone_condition():
