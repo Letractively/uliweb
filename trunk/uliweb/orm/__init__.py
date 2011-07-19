@@ -494,14 +494,14 @@ class BlobProperty(StringProperty):
     data_type = str
     
     def __init__(self, verbose_name=None, default='', **kwds):
-        super(BlobProperty, self).__init__(verbose_name, default=default, **kwds)
+        super(BlobProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
     
 class PickleProperty(BlobProperty):
     field_class = PickleType
     data_type = None
     
     def __init__(self, verbose_name=None, default='', **kwds):
-        super(PickleProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
+        super(PickleProperty, self).__init__(verbose_name, default=default, **kwds)
 
     def convert(self, value):
         return value
@@ -1084,6 +1084,7 @@ class ManyResult(Result):
         self.condition = None
         self.funcs = []
         self.result = None
+        self.with_relation = None
         
     def get(self, condition=None):
         if not isinstance(condition, ColumnElement):
@@ -1176,8 +1177,20 @@ class ManyResult(Result):
             count = 0
         return count > 0
         
+    def with_relation(self, relation_name=None):
+        """
+        if relation is not None, when fetch manytomany result, also
+        fetch relation record and saved them to manytomany object,
+        and named them as relation.
+        """
+        self.with_relation = relation_name
+        
     def run(self, limit=0):
-        query = select(self.columns, (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition)
+        if self.with_relation:
+            columns = [self.table] + self.columns
+        else:
+            columns = self.columns
+        query = select(columns, (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         if limit > 0:
