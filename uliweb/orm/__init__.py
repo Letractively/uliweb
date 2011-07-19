@@ -988,9 +988,12 @@ class Result(object):
     
     def one(self):
         self.run(1)
+        if not self.result:
+            return
+        
         result = self.result.fetchone()
         if result:
-            d = self.model._data_prepare(result)
+            d = self.model._data_prepare(result.items())
             o = self.model(**d)
             o.set_saved()
             return o
@@ -1009,10 +1012,10 @@ class Result(object):
     def __iter__(self):
         self.result = self.run()
         while 1:
-            obj = self.result.fetchone()
-            if not obj:
+            result = self.result.fetchone()
+            if not result:
                 raise StopIteration
-            d = self.model._data_prepare(obj)
+            d = self.model._data_prepare(result.items())
             o = self.model(**d)
             o.set_saved()
             yield o
@@ -1065,7 +1068,8 @@ class ReverseResult(Result):
     remove = clear
     
 class ManyResult(Result):
-    def __init__(self, modela, instance, property_name, modelb, table, fielda, fieldb, realfielda, realfieldb, valuea):
+    def __init__(self, modela, instance, property_name, modelb, 
+        table, fielda, fieldb, realfielda, realfieldb, valuea, through_model=None):
         """
         modela will define property_name = ManyToMany(modelb) relationship.
         instance will be modela instance
@@ -1084,7 +1088,8 @@ class ManyResult(Result):
         self.condition = None
         self.funcs = []
         self.result = None
-        self.with_relation = None
+        self.with_relation_name = None
+        self.through_model = through_model
         
     def get(self, condition=None):
         if not isinstance(condition, ColumnElement):
@@ -1182,11 +1187,20 @@ class ManyResult(Result):
         if relation is not None, when fetch manytomany result, also
         fetch relation record and saved them to manytomany object,
         and named them as relation.
+        
+        If relation_name is not given, then default value is 'relation'
         """
-        self.with_relation = relation_name
+        if not relation_name:
+            relation_name = 'relation'
+        if hasattr(self.modelb, relation_name):
+            raise Error, "The attribute name %s has already existed in Model %s!" % (relation_name, self.modelb.__name__)
+        if not self.through_model:
+            raise Error, "Only with through style in ManyToMany supports with_relation function of Model %s!" % self.modelb.__name__
+        self.with_relation_name = relation_name
+        return self
         
     def run(self, limit=0):
-        if self.with_relation:
+        if self.with_relation_name:
             columns = [self.table] + self.columns
         else:
             columns = self.columns
@@ -1204,9 +1218,20 @@ class ManyResult(Result):
             return
         result = self.result.fetchone()
         if result:
-            d = self.modelb._data_prepare(result)
+            offset = 0
+            if self.with_relation_name:
+                offset = len(self.table.columns)
+                
+            d = self.modelb._data_prepare(zip(result.keys()[offset:], result.values()[offset:]))
             o = self.modelb(**d)
             o.set_saved()
+            
+            if self.with_relation_name:
+                d_ = self.through_model._data_prepare(zip(result.keys()[:offset], result.values()[:offset]))
+                r = self.through_model(**d_)
+                r.set_saved()
+                setattr(o, self.with_relation_name, r)
+                
             return o
 
     def __del__(self):
@@ -1217,13 +1242,26 @@ class ManyResult(Result):
         self.run()
         if not self.result:
             raise StopIteration
+
+        offset = 0
+        if self.with_relation_name:
+            offset = len(self.table.columns)
+        
         while 1:
-            obj = self.result.fetchone()
-            if not obj:
+            result = self.result.fetchone()
+            if not result:
                 raise StopIteration
-            d = self.modelb._data_prepare(obj)
+           
+            d = self.modelb._data_prepare(zip(result.keys()[offset:], result.values()[offset:]))
             o = self.modelb(**d)
             o.set_saved()
+            
+            if self.with_relation_name:
+                d_ = self.through_model._data_prepare(zip(result.keys()[:offset], result.values()[:offset]))
+                r = self.through_model(**d_)
+                r.set_saved()
+                setattr(o, self.with_relation_name, r)
+                
             yield o
         
 class ManyToMany(ReferenceProperty):
@@ -1345,7 +1383,7 @@ class ManyToMany(ReferenceProperty):
             reference_id = getattr(model_instance, self.reversed_fieldname, None)
             x = ManyResult(self.model_class, model_instance, self.property_name, self.reference_class, self.table,
                 self.fielda, self.fieldb, self.reversed_fieldname,
-                self.reference_fieldname, reference_id)
+                self.reference_fieldname, reference_id, through_model=self.through)
             return x
         else:
             return self
@@ -1483,7 +1521,8 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
                 self.reference_property.model_class, self.reference_property.table,
                 self.reference_property.fieldb, self.reference_property.fielda, 
                 self.reference_property.reference_fieldname,
-                self.reference_property.reversed_fieldname, reference_id)
+                self.reference_property.reversed_fieldname, reference_id, 
+                through_model=self.reference_property.through)
             return x
         else:
             return self
@@ -1812,7 +1851,7 @@ class Model(object):
     @classmethod
     def _data_prepare(cls, record):
         d = {}
-        for k, v in record.items():
+        for k, v in record:
             p = cls.properties.get(k)
             if p and not isinstance(p, ManyToMany):
                 d[str(k)] = p.make_value_from_datastore(v)
