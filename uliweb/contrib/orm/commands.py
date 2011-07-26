@@ -115,7 +115,7 @@ def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8
             try:
                 n += 1
                 if not format:
-                    line = eval(line)
+                    line = eval(line.strip())
                 record = dict(zip(fields, line))
                 params = {}
                 for c in table.c:

@@ -678,6 +678,10 @@ class EditView(AddView):
         data = self.obj.to_dict(fields_name, convert=False).copy()
         data.update(self.data)
         
+        #add layout support
+        layout = self.get_layout()
+        DummyForm.layout = layout
+
         for f in fields_list:
             if f['name'] == 'id':
                 f['hidden'] = True
@@ -701,7 +705,7 @@ class EditView(AddView):
         
         if self.post_created_form:
             self.post_created_form(DummyForm, self.model, self.obj)
-            
+          
         return DummyForm(data=data, **self.form_args)
 
 from uliweb.core import uaml
@@ -1735,7 +1739,8 @@ class QueryView(object):
     
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
         data=None, fields=None, form_cls=None, form_args=None,
-        static_fields=None, hidden_fields=None, post_created_form=None, layout=None):
+        static_fields=None, hidden_fields=None, post_created_form=None, 
+        layout=None, get_form_field=None):
 
         self.model = model
         self.ok_url = ok_url
@@ -1745,6 +1750,7 @@ class QueryView(object):
         if fail_msg:
             self.fail_msg = fail_msg
         self.data = data or {}
+        self.get_form_field = get_form_field
         
         #default_data used for create object
 #        self.default_data = default_data or {}
@@ -1811,7 +1817,13 @@ class QueryView(object):
         DummyForm.layout = layout
         
         for f in self.get_fields():
-            field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
+            flag = False
+            if self.get_form_field:
+                field = self.get_form_field(f['name'])
+                if field:
+                    flag = True
+            if not flag:
+                field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
             if field:
                 DummyForm.add_field(f['name'], field, True)
         
