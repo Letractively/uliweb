@@ -38,12 +38,12 @@ def add_role_func(name, func):
     __role_funcs__[name] = func
     
 def has_role(user, role, **kwargs):
+    Role = get_model('role')
     if isinstance(user, (unicode, str)):
         User = get_model('user')
         user = User.get(User.c.username==user)
         
     if isinstance(role, (str, unicode)):
-        Role = get_model('role')
         role = Role.get(Role.c.name==role)
     name = role.name
     
@@ -62,13 +62,19 @@ def has_role(user, role, **kwargs):
         return role.users.has(user)
     
 def has_permission(user, permission, **role_kwargs):
+    Role = get_model('role')
+    Perm = get_model('permission')
     if isinstance(user, (unicode, str)):
         User = get_model('user')
         user = User.get(User.c.username==user)
+        
+    perm = Perm.get(Perm.c.name==permission)
+    if not perm:
+        return False
     
     flag = False
     for role in user.user_roles.all():
-        if role.users.has(user):
+        if role.permissions.has(perm):
             flag = True
             break
     return flag
