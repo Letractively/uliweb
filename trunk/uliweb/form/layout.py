@@ -139,7 +139,7 @@ class TableLayout(Layout):
         cls = 'width100'
         for fields in self.layout:
             if not isinstance(fields, (tuple, list)):
-                if fields.startswith('--') and fields.endswith('--'):
+                if isinstance(fields, (str, unicode)) and fields.startswith('--') and fields.endswith('--'):
                     #THis is a group line
                     if table:
                         buf << '</tbody></table>'
