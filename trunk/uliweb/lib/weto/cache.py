@@ -13,9 +13,11 @@ except ImportError:
 
 def _get_key(key):
     if isinstance(key, unicode):
-        key = key.encode('ascii', 'backslashreplace')
+#        key = key.encode('ascii', 'backslashreplace')
+        key = key.encode('utf-8')
     
-    return md5(key).hexdigest()
+#    return md5(key).hexdigest()
+    return key
 
 def wrap_func(des, src):
     des.__name__ = src.__name__
@@ -72,9 +74,14 @@ class Cache(object):
             self.storage.acquire_read_lock(lock)
             ret = self.storage.load(key)
             if ret:
-                stored_time, expiry_time, value = ret
-                if self._is_not_expiry(stored_time, expiry_time):
-                    return value
+                #if ret is tuple or list, then just if the value is expired
+                if isinstance(ret, (tuple, list)):
+                    stored_time, expiry_time, value = ret
+                    if self._is_not_expiry(stored_time, expiry_time):
+                        return value
+                #or simple consider the value is not expired
+                else:
+                    return ret
         except:
             self.storage.release_read_lock(lock, False)
         else:
@@ -86,7 +93,7 @@ class Cache(object):
     def _is_not_expiry(self, accessed_time, expiry_time):
         return time.time() < accessed_time + expiry_time
         
-    def put(self, key, value=None, expire=None):
+    def set(self, key, value=None, expire=None):
         if value is None:
             return True
         key = _get_key(key)
@@ -120,7 +127,7 @@ class Cache(object):
         return self.get(key)
     
     def __setitem__(self, key, value):
-        return self.put(key, value)
+        return self.set(key, value)
     
     def __delitem__(self, key):
         self.delete(key)
@@ -130,7 +137,7 @@ class Cache(object):
             v = self.get(key)
             return v
         except CacheKeyException:
-            self.put(key, defaultvalue, expire=expire)
+            self.set(key, defaultvalue, expire=expire)
             return defaultvalue
         
     def cache(self, k=None, expire=None):
@@ -146,7 +153,7 @@ class Cache(object):
                     return ret
                 except CacheKeyException:
                     ret = func(*args, **kwargs)
-                    self.put(key, ret, expire=expire)
+                    self.set(key, ret, expire=expire)
                     return ret
             
             wrap_func(f, func)

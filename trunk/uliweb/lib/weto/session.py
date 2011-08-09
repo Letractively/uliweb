@@ -105,9 +105,14 @@ class Session(dict):
             self.storage.acquire_read_lock(lock)
             ret = self.storage.load(key)
             if ret:
-                stored_time, expiry_time, value = ret
-                if self._is_not_expiry(stored_time, expiry_time):
-                    self.update(value)
+                #if ret is tuple or list, then just if the value is expired
+                if isinstance(ret, (tuple, list)):
+                    stored_time, expiry_time, value = ret
+                    if self._is_not_expiry(stored_time, expiry_time):
+                        self.update(value)
+                #or simple consider the value is not expired
+                else:
+                    self.update(ret)
         except:
             self.storage.release_read_lock(lock, False)
         else:
