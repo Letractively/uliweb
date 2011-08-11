@@ -9,6 +9,7 @@ from uliweb import function, redirect, json
 from uliweb.core.storage import Storage
 
 __default_fields_builds__ = {}
+class __default_value__(object):pass
 
 def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
     if not __default_fields_builds__:
@@ -264,11 +265,13 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     
         return f
 
-def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None):
+def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None, value=__default_value__):
     import uliweb.orm as orm
     from uliweb.utils.textconvert import text2html
     from uliweb.core.html import Tag
     from uliweb import settings
+    
+    old_value = value
 
     types_convert_map = types_convert_map or {}
     fields_convert_map = fields_convert_map or {}
@@ -278,18 +281,20 @@ def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None)
         prop = field['prop']
     else:
         prop = field
-
+        
     #not real Property instance, then return itself, so if should return
     #just like {'label':xxx, 'value':xxx, 'display':xxx}
     if not isinstance(prop, orm.Property):  
-        value = prop.get('value', '')
+        if old_value is __default_value__:
+            value = prop.get('value', '')
         display = prop.get('display', '')
         label = prop.get('label', '') or prop.get('verbose_name', '')
         name = prop.get('name', '')
         convert = prop.get('convert', None)
     else:
-        value = prop.get_value_for_datastore(obj)
-        display = value
+        if old_value is __default_value__:
+            value = prop.get_value_for_datastore(obj)
+        display = prop.get_display_value(value)
         name = prop.property_name
         if isinstance(field, dict):
             initial = field.get('verbose_name', None)
@@ -311,7 +316,12 @@ def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None)
         if value is not None:
             if isinstance(prop, orm.ManyToMany):
                 s = []
-                for x in getattr(obj, prop.property_name).all():
+                #support value parameter, the old value is already stored in "old_value" variable
+                if old_value is not __default_value__:
+                    query = prop.reference_class.filter(prop.reference_class.c[prop.reversed_fieldname].in_(old_value))
+                else:
+                    query = getattr(obj, prop.property_name).all()
+                for x in query:
                     if hasattr(x, 'get_url'):
                         s.append(x.get_url())
                     else:
@@ -325,7 +335,11 @@ def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None)
                 display = ' '.join(s)
             elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOne):
                 try:
-                    v = getattr(obj, prop.property_name)
+                    if old_value is not __default_value__:
+                        d = prop.reference_class.c[prop.reference_fieldname]
+                        v = prop.reference_class.get(d==old_value)
+                    else:
+                        v = getattr(obj, prop.property_name)
                 except orm.Error:
                     display = obj.get_datastore_value(prop.property_name)
                     v = None
@@ -342,14 +356,13 @@ def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None)
                             display = unicode(v)
             elif isinstance(prop, orm.FileProperty):
                 from uliweb.contrib.upload import get_url
-                filename = getattr(obj, prop.property_name)
-                url = get_url(filename)
+                url = get_url(value)
                 if url:
-                    display = str(Tag('a', filename, href=url))
+                    display = str(Tag('a', value, href=url))
                 else:
                     display = ''
-            if isinstance(prop, orm.Property) and prop.choices is not None:
-                display = prop.get_display_value(value)
+#            if isinstance(prop, orm.Property) and prop.choices is not None:
+#                display = prop.get_display_value(value)
             if prop.__class__ is orm.TextProperty:
                 display = text2html(value)
         
@@ -358,7 +371,7 @@ def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None)
     if display is None:
         display = '&nbsp;'
         
-    return Storage({'label':label, 'value':value, 'display':display})
+    return Storage({'label':label, 'value':value, 'display':display, 'name':name})
 
 class AddView(object):
     success_msg = _('The information has been saved successfully!')
