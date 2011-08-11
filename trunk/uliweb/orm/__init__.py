@@ -375,10 +375,8 @@ class Property(object):
         else:
             if isinstance(value, Model):
                 return unicode(value)
-            if isinstance(value, (str, unicode)):
-                return value
             else:
-                return self.to_str(value)
+                return self.to_unicode(value)
 
     def validate(self, value):
         if self.empty(value):
@@ -450,7 +448,20 @@ class Property(object):
         return '_' + self.name + '_'
     
     def to_str(self, v):
-        return str(v)
+        if isinstance(v, unicode):
+            return v.encode(__default_encoding__)
+        elif isinstance(v, str):
+            return v
+        else:
+            return str(v)
+        
+    def to_unicode(self, v):
+        if isinstance(v, str):
+            return unicode(v, __default_encoding__)
+        elif isinstance(v, unicode):
+            return v
+        else:
+            return unicode(v)
     
 class CharProperty(Property):
     data_type = unicode
@@ -501,6 +512,9 @@ class BlobProperty(StringProperty):
     def __init__(self, verbose_name=None, default='', **kwds):
         super(BlobProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
     
+    def get_display_value(self, value):
+        return repr(value)
+    
 class PickleProperty(BlobProperty):
     field_class = PickleType
     data_type = None
@@ -543,7 +557,16 @@ class DateTimeProperty(Property):
         raise BadValueError('The datetime value is not a valid format')
     
     def to_str(self, v):
-        return v.strftime('%Y-%m-%d %H:%M:%S')
+        if isinstance(v, datetime.datetime):
+            return v.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            return str(v)
+    
+    def to_unicode(self, v):
+        if isinstance(v, datetime.datetime):
+            return unicode(v.strftime(u'%Y-%m-%d %H:%M:%S'))
+        else:
+            return unicode(v)
     
 class DateProperty(DateTimeProperty):
     data_type = datetime.date
@@ -576,8 +599,17 @@ class DateProperty(DateTimeProperty):
             raise BadValueError('The date value is not a valid format')
     
     def to_str(self, v):
-        return v.strftime('%Y-%m-%d')
+        if isinstance(v, datetime.date):
+            return v.strftime('%Y-%m-%d')
+        else:
+            return str(v)
         
+    def to_unicode(self, v):
+        if isinstance(v, datetime.date):
+            return unicode(v.strftime('%Y-%m-%d'))
+        else:
+            return unicode(v)
+
 class TimeProperty(DateTimeProperty):
     """A time property, which stores a time without a date."""
 
@@ -602,8 +634,17 @@ class TimeProperty(DateTimeProperty):
             raise BadValueError('The time value is not a valid format')
     
     def to_str(self, v):
-        return v.strftime('%H:%M:%S')
-        
+        if isinstance(v, datetime.time):
+            return v.strftime('%H:%M:%S')
+        else:
+            return str(v)
+
+    def to_unicode(self, v):
+        if isinstance(v, datetime.time):
+            return unicode(v.strftime('%H:%M:%S'))
+        else:
+            return unicode(v)
+    
 class IntegerProperty(Property):
     """An integer property."""
 
