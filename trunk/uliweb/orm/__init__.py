@@ -373,9 +373,9 @@ class Property(object):
                 v = unicode(v, __default_encoding__)
             return v
         else:
-            if isinstance(value, str):
-                return unicode(value, __default_encoding__)
-            elif isinstance(value, unicode):
+            if isinstance(value, Model):
+                return unicode(value)
+            if isinstance(value, (str, unicode)):
                 return value
             else:
                 return self.to_str(value)
