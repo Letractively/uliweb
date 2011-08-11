@@ -5,6 +5,16 @@ class Permission(Model):
     description = Field(str, max_length=255)
     props = Field(PICKLE)
     
+    def get_users(self):
+        for role in self.perm_roles.all():
+            for u in role.users.all():
+                yield u
+                
+    def get_users_ids(self):
+        for role in self.perm_roles.all():
+            for u in role.users.ids():
+                yield u
+    
 class Role(Model):
     name = Field(str, max_length=80, required=True)
     description = Field(str, max_length=255)
