@@ -93,11 +93,12 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
         else:
             raise Exception, "Can't support the text format %s" % format
   
-def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8'):
+def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8', delete=True):
     import csv
     from uliweb.utils.date import to_date, to_datetime
     
-    con.execute(table.delete())
+    if delete:
+        con.execute(table.delete())
     
     if not os.path.exists(filename):
         log.info("The table [%s] data is not existed." % name)
@@ -404,16 +405,16 @@ class LoadCommand(Command):
         from uliweb import orm
         
         if args:
-            message = """This command will delete all data of [%s] before loading, 
-are you sure to load data[Y/n]""" % ','.join(args)
+            message = """Do you want to delete all data of [%s] before loading[Y/n/q]""" % ','.join(args)
         else:
-            message = """This command will delete whole database before loading, 
-are you sure to load data[Y/n]"""
+            message = """Do you want to delete whole data of database before loading[Y/n/q]"""
 
-        ans = raw_input(message)
-        if ans and ans.upper() != 'Y':
+        ans = raw_input(message).upper()
+        while ans not in ['Y', 'N', 'Q']:
+            ans = raw_input(message)
+        if ans == 'Q':
             print "Command be cancelled!"
-            return
+            sys.exit(1)
 
         if not os.path.exists(options.dir):
             os.makedirs(options.dir)
@@ -432,7 +433,7 @@ are you sure to load data[Y/n]"""
                 else:
                     format = None
                 load_table(t, filename, con, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding)
+                    format=format, encoding=options.encoding, delete=ans=='Y')
                 con.commit()
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
@@ -458,16 +459,17 @@ class LoadTableCommand(Command):
         from uliweb import orm
         
         if args:
-            message = """This command will delete all data of [%s] before loading, 
-are you sure to load data[Y/n]""" % ','.join(args)
+            message = """Do you want to delete all data of [%s] before loading[Y/n/q]""" % ','.join(args)
         else:
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
-        ans = raw_input(message)
-        if ans and ans.upper() != 'Y':
+        ans = raw_input(message).upper()
+        while ans not in ['Y', 'N', 'Q']:
+            ans = raw_input(message).upper()
+        if ans == 'Q':
             print "Command be cancelled!"
-            return
+            sys.exit(1)
 
         if not os.path.exists(options.dir):
             os.makedirs(options.dir)
@@ -491,7 +493,7 @@ are you sure to load data[Y/n]""" % ','.join(args)
                 else:
                     format = None
                 load_table(t, filename, con, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding)
+                    format=format, encoding=options.encoding, delete=ans=='Y')
                 con.commit()
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
@@ -519,16 +521,17 @@ class LoadTableFileCommand(Command):
             sys.exit(1)
             
         if args:
-            message = """This command will delete all data of [%s] before loading, 
-are you sure to load data[Y/n]""" % args[0]
+            message = """Do you want to delete all data of [%s] before loading[Y/n/q]""" % args[0]
         else:
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
-        ans = raw_input(message)
-        if ans and ans.upper() != 'Y':
+        ans = raw_input(message).upper()
+        while ans not in ['Y', 'N', 'Q']:
+            ans = raw_input(message).upper()
+        if ans == 'Q':
             print "Command be cancelled!"
-            return
+            sys.exit(1)
 
         engine = get_engine(global_options.project)
         con = orm.get_connection(engine)
@@ -548,7 +551,7 @@ are you sure to load data[Y/n]""" % args[0]
             else:
                 format = None
             load_table(t, args[1], con, delimiter=options.delimiter, 
-                format=format, encoding=options.encoding)
+                format=format, encoding=options.encoding, delete=ans=='Y')
             con.commit()
         except:
             log.exception("There are something wrong when loading table [%s]" % name)
