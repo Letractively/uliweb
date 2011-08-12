@@ -1,7 +1,7 @@
 import os, sys
 import datetime
 from decimal import Decimal
-from uliweb.core.commands import Command
+from uliweb.core.commands import Command, get_answer
 from optparse import make_option
 from uliweb.utils.common import log, is_pyfile_exist
 from sqlalchemy.types import *
@@ -167,13 +167,10 @@ class ResetCommand(Command):
         from sqlalchemy import create_engine
 
         if args:
-            message = """This command will drop all tables of app [%s], are you sure to reset[Y/n]""" % ','.join(args)
+            message = """This command will drop all tables of app [%s], are you sure to reset""" % ','.join(args)
         else:
-            message = """This command will drop whole database, are you sure to reset[Y/n]"""
-        ans = raw_input(message)
-        if ans and ans.upper() != 'Y':
-            print "Command be cancelled!"
-            return
+            message = """This command will drop whole database, are you sure to reset"""
+        get_answer(message)
         
         engine = get_engine(global_options.project)
         con = create_engine(engine)
@@ -197,11 +194,8 @@ class ResetTableCommand(Command):
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
-        message = """This command will drop all tables [%s], are you sure to reset[Y/n]""" % ','.join(args)
-        ans = raw_input(message)
-        if ans and ans.upper() != 'Y':
-            print "Command be cancelled!"
-            return
+        message = """This command will drop all tables [%s], are you sure to reset""" % ','.join(args)
+        get_answer(message)
         
         engine = get_engine(global_options.project)
         con = create_engine(engine)
@@ -230,11 +224,8 @@ class DropTableCommand(Command):
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
-        message = """This command will drop all tables [%s], are you sure to reset[Y/n]""" % ','.join(args)
-        ans = raw_input(message)
-        if ans and ans.upper() != 'Y':
-            print "Command be cancelled!"
-            return
+        message = """This command will drop all tables [%s], are you sure to drop""" % ','.join(args)
+        get_answer(message)
         
         engine = get_engine(global_options.project)
         con = create_engine(engine)
@@ -405,16 +396,13 @@ class LoadCommand(Command):
         from uliweb import orm
         
         if args:
-            message = """Do you want to delete all data of [%s] before loading[Y/n/q]""" % ','.join(args)
+            message = """This command will delete all data of [%s] before loading, 
+are you sure to load data""" % ','.join(args)
         else:
-            message = """Do you want to delete whole data of database before loading[Y/n/q]"""
+            message = """This command will delete whole database before loading, 
+are you sure to load data"""
 
-        ans = raw_input(message).upper()
-        while ans not in ['Y', 'N', 'Q']:
-            ans = raw_input(message)
-        if ans == 'Q':
-            print "Command be cancelled!"
-            sys.exit(1)
+        get_answer(message)
 
         if not os.path.exists(options.dir):
             os.makedirs(options.dir)
@@ -433,7 +421,7 @@ class LoadCommand(Command):
                 else:
                     format = None
                 load_table(t, filename, con, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding, delete=ans=='Y')
+                    format=format, encoding=options.encoding)
                 con.commit()
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
@@ -442,7 +430,7 @@ class LoadCommand(Command):
 class LoadTableCommand(Command):
     name = 'loadtable'
     args = '<tablename, tablename, ...>'
-    help = 'Load all tables records according all available tables. If no tables, then will no nothing.'
+    help = 'Load all tables records according all available tables. If no tables, then will do nothing.'
     option_list = (
         make_option('-d', dest='dir', default='./data',
             help='Directory of data files.'),
@@ -459,17 +447,13 @@ class LoadTableCommand(Command):
         from uliweb import orm
         
         if args:
-            message = """Do you want to delete all data of [%s] before loading[Y/n/q]""" % ','.join(args)
+            message = """This command will delete all data of [%s] before loading, 
+are you sure to load data""" % ','.join(args)
         else:
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
-        ans = raw_input(message).upper()
-        while ans not in ['Y', 'N', 'Q']:
-            ans = raw_input(message).upper()
-        if ans == 'Q':
-            print "Command be cancelled!"
-            sys.exit(1)
+        get_answer(message)
 
         if not os.path.exists(options.dir):
             os.makedirs(options.dir)
@@ -493,7 +477,7 @@ class LoadTableCommand(Command):
                 else:
                     format = None
                 load_table(t, filename, con, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding, delete=ans=='Y')
+                    format=format, encoding=options.encoding)
                 con.commit()
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
@@ -502,7 +486,7 @@ class LoadTableCommand(Command):
 class LoadTableFileCommand(Command):
     name = 'loadtablefile'
     args = 'tablename text_filename'
-    help = 'Load table data from text file. If no tables, then will no nothing.'
+    help = 'Load table data from text file. If no tables, then will do nothing.'
     option_list = (
         make_option('-t', '--text', dest='text', action='store_true', default=False,
             help='Load files in text format.'),
@@ -521,17 +505,12 @@ class LoadTableFileCommand(Command):
             sys.exit(1)
             
         if args:
-            message = """Do you want to delete all data of [%s] before loading[Y/n/q]""" % args[0]
+            message = """Do you want to delete all data of [%s] before loading, if you choose N, the data will not be deleted""" % args[0]
         else:
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
-        ans = raw_input(message).upper()
-        while ans not in ['Y', 'N', 'Q']:
-            ans = raw_input(message).upper()
-        if ans == 'Q':
-            print "Command be cancelled!"
-            sys.exit(1)
+        ans = get_answer(message, answers='Yn', quit='q')
 
         engine = get_engine(global_options.project)
         con = orm.get_connection(engine)

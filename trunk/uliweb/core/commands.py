@@ -31,6 +31,25 @@ class CommandError(Exception):
     """
     pass
 
+def get_answer(message, answers='Yn', default='Y', quit='n'):
+    """
+    Get an answer from stdin, the answers should be 'Y/n' etc.
+    If you don't want the user can quit in the loop, then quit should be None.
+    """
+    if quit and quit not in answers:
+        answers = answers + quit
+        
+    message = message + '[' + '/'.join(answers) + ']'
+    ans = raw_input(message).strip().upper()
+    if default and not ans:
+        ans = default.upper()
+    while ans not in answers.upper():
+        ans = raw_input(message).strip().upper()
+    if quit and ans == quit.upper():
+        print "Command be cancelled!"
+        sys.exit(1)
+    return ans
+        
 class Command(object):
     option_list = ()
     help = ''
