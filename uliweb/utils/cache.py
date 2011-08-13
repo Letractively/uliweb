@@ -1,5 +1,5 @@
 import uliweb
-from weto.cache import Cache as CacheCls, CacheKeyException
+from weto.cache import Cache as CacheCls, KeyError
 from uliweb import Response
 from uliweb.core.SimpleFrame import ResponseProxy
 from uliweb.utils.common import wraps

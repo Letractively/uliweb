@@ -46,7 +46,7 @@ class Cache(object):
         self.expiry_time = expiry_time
      
     def __get_storage(self):
-        modname = 'backends.%s_storage' % self._storage_type
+        modname = 'weto.backends.%s_storage' % self._storage_type
         if modname in __modules__:
             return __modules__[modname]
         else:
