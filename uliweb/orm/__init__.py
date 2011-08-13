@@ -1890,9 +1890,18 @@ class Model(object):
         if condition is None:
             return None
         if isinstance(condition, (int, long)):
-            return cls.filter(cls.c.id==condition).one()
+            _cond = cls.c.id==condition
         else:
-            return cls.filter(condition).one()
+            _cond = condition
+        #send 'get_object' topic to get cached object
+        obj = dispatch.get(cls, 'get_object', condition=_cond)
+        if obj:
+            return obj
+        #if there is no cached object, then just fetch from database
+        obj = cls.filter(_cond).one()
+        #send 'set_object' topic to stored the object to cache
+        dispatch.call(cls, 'set_object', condition=_cond, instance=obj)
+        return obj
     
     @classmethod
     def _data_prepare(cls, record):
