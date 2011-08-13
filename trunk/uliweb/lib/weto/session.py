@@ -46,10 +46,6 @@ class SessionCookie(object):
 from cache import Serial, Empty
 
 class Session(dict):
-#    default_options = {'table_name':'uliweb_session', 'data_dir':'./sessions',
-#        'file_dir':'./sessions/session_files',
-#        'lock_dir':'./sessions/session_files_lock'}
-#    
     def __init__(self, key=None, storage_type='file', options=None, expiry_time=3600*24*365,
         serial_cls=Serial):
         """
@@ -72,7 +68,7 @@ class Session(dict):
         self.load(self.key)
         
     def __get_storage(self):
-        modname = 'backends.%s_storage' % self._storage_type
+        modname = 'weto.backends.%s_storage' % self._storage_type
         mod = __import__(modname, {}, {}, [''])
         _class = getattr(mod, 'Storage', None)
         return _class
