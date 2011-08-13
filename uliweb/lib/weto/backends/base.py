@@ -1,62 +1,25 @@
-__all__ = ['verify_path', 'encoded_path', 'BaseStorage', 'StorageError']
+__all__ = ['BaseStorage', 'KeyError']
 
 import os
 
-try:
-    from hashlib import sha1
-except ImportError:
-    from sha import sha as sha1
-    
-class StorageError(Exception):
-    pass
-
-def verify_path(path):
-    dir = os.path.dirname(path)
-    if dir and not os.path.exists(dir):
-        os.makedirs(dir)
-    
-def encoded_path(root, key, extension = ".enc", depth = 2):
-    ident = sha1(key).hexdigest()
-    
-    tokens = []
-    for d in range(0, depth):
-        tokens.append(ident[d])
-    
-    dir = os.path.join(root, *tokens)
-    
-    return os.path.join(dir, ident + extension)
+class KeyError(Exception):pass
 
 class BaseStorage(object):
-    def __init__(self, options):
+    def __init__(self, cache_manager, options):
+        self.cache_manager = cache_manager
         self.options = options
         
-    def load(self, key):
+    def get(self, key):
         raise NotImplementedError()
     
-    def save(self, key, store_time, expiry_time, value, modified):
+    def set(self, key, value):
         raise NotImplementedError()
     
     def delete(self, key):
         raise NotImplementedError()
     
-    def read_ready(self, key):
-        raise NotImplementedError()
+    def _load(self, v):
+        return self.cache_manager.serial_obj.load(v)
     
-    def get_lock(self, key):
-        raise NotImplementedError()
-    
-    def acquire_read_lock(self, lock):
-        raise NotImplementedError()
-        
-    def release_read_lock(self, lock, success):
-        raise NotImplementedError()
-        
-    def acquire_write_lock(self, lock):
-        raise NotImplementedError()
-        
-    def release_write_lock(self, lock, success):
-        raise NotImplementedError()
-    
-    def delete_lock(self, lock):
-        raise NotImplementedError()
-    
+    def _dump(self, v):
+        return self.cache_manager.serial_obj.dump(v)

@@ -12,9 +12,10 @@ try:
     from hashlib import md5
 except ImportError:
     from md5 import md5
-    
+ 
+from backends.base import KeyError
+
 class SessionException(Exception):pass
-class SessionKeyException(Exception):pass
 
 getpid = hasattr(os, 'getpid') and os.getpid or (lambda : '')
 
@@ -41,36 +42,37 @@ class SessionCookie(object):
         
     def save(self):
         self.expiry_time =  self.expiry_time or self.default_expiry_time or self.session.expiry_time
-        
+   
+from cache import Serial, Empty
+
 class Session(dict):
-    default_expiry_time = 3600*24*365
-    default_storage_type = 'file'
-    default_options = {'table_name':'uliweb_session', 'data_dir':'./sessions',
-        'file_dir':'./sessions/session_files',
-        'lock_dir':'./sessions/session_files_lock'}
-    
-    def __init__(self, key=None, storage_type=None, options=None, expiry_time=None):
+#    default_options = {'table_name':'uliweb_session', 'data_dir':'./sessions',
+#        'file_dir':'./sessions/session_files',
+#        'lock_dir':'./sessions/session_files_lock'}
+#    
+    def __init__(self, key=None, storage_type='file', options=None, expiry_time=3600*24*365,
+        serial_cls=Serial):
         """
         expiry_time is just like max_age, the unit is second
         """
         dict.__init__(self)
         self._old_value = {}
-        self._storage_type = storage_type or self.default_storage_type
-        self._options = self.default_options
-        if options:
-            self._options.update(options.copy())
+        self._storage_type = storage_type
+        self._options = options or {}
         self._storage_cls = self.__get_storage()
         self._storage = None
         self._accessed_time = None
-        self.expiry_time = expiry_time or self.default_expiry_time
+        self.expiry_time = expiry_time
         self.key = key
         self.deleted = False
         self.cookie = SessionCookie(self)
+        self._serial_cls = serial_cls
+        self.serial_obj = serial_cls()
         
         self.load(self.key)
         
     def __get_storage(self):
-        modname = 'weto.backends.%s_storage' % self._storage_type
+        modname = 'backends.%s_storage' % self._storage_type
         mod = __import__(modname, {}, {}, [''])
         _class = getattr(mod, 'Storage', None)
         return _class
@@ -86,7 +88,7 @@ class Session(dict):
     @property
     def storage(self):
         if not self._storage:
-            self._storage = self._storage_cls(self._options)
+            self._storage = self._storage_cls(self, self._options)
         return self._storage
     
     def load(self, key=None):
@@ -97,67 +99,30 @@ class Session(dict):
         if not self.key:
             return
         
-        if not self.storage.read_ready(key):
-            return
-            
-        lock = self.storage.get_lock(key)
         try:
-            self.storage.acquire_read_lock(lock)
-            ret = self.storage.load(key)
-            if ret:
-                #if ret is tuple or list, then just if the value is expired
-                if isinstance(ret, (tuple, list)):
-                    stored_time, expiry_time, value = ret
-                    if self._is_not_expiry(stored_time, expiry_time):
-                        self.update(value)
-                #or simple consider the value is not expired
-                else:
-                    self.update(ret)
-        except:
-            self.storage.release_read_lock(lock, False)
-        else:
-            self.storage.release_read_lock(lock, True)
+            value = self.storage.get(key)
+        except KeyError, e:
+            value = {}
+        self.update(value)
         self._old_value = self.copy()
             
     def _is_modified(self):
         return self._old_value != dict(self)
     
-    def _is_not_expiry(self, accessed_time, expiry_time):
-        return time.time() < accessed_time + expiry_time
-        
     def save(self):
         if not self.deleted and (bool(self) or (not bool(self) and self._is_modified())):
             self.key = self.key or _get_id()
-            now = time.time()
-
-            lock = self.storage.get_lock(self.key)
-            try:
-                self.storage.acquire_write_lock(lock)
-                self.storage.save(self.key, now, self.expiry_time, dict(self), self._is_modified())
-                self.cookie.save()
-            except:
-                self.storage.release_write_lock(lock, False)
-                raise
-            else:
-                self.storage.release_write_lock(lock, True)
-                return True
+            self.storage.set(self.key, dict(self), self.expiry_time)
+            self.cookie.save()
+            return True
         else:
             return False
         
     def delete(self):
         if self.key:
-            lock = self.storage.get_lock(self.key)
-            try:
-                self.storage.acquire_write_lock(lock)
-                self.storage.delete(self.key)
-                self.clear()
-                self._old_value = self.copy()
-            except:
-                self.storage.release_write_lock(lock, False)
-                raise
-            else:
-                self.storage.release_write_lock(lock, True)
-                self.storage.delete_lock(lock)
+            self.storage.delete(self.key)
+            self.clear()
+            self._old_value = self.copy()
                 
         self.deleted = True
          
