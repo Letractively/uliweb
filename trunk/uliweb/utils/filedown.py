@@ -3,8 +3,7 @@ from time import time, mktime
 from datetime import datetime
 from zlib import adler32
 import mimetypes
-from werkzeug.utils import http_date
-from werkzeug.http import is_resource_modified
+from werkzeug.http import http_date, is_resource_modified
 from werkzeug import Response, wrap_file
 
 def _opener(filename):
