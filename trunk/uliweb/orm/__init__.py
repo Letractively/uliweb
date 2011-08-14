@@ -1900,7 +1900,8 @@ class Model(object):
         #if there is no cached object, then just fetch from database
         obj = cls.filter(_cond).one()
         #send 'set_object' topic to stored the object to cache
-        dispatch.call(cls, 'set_object', condition=_cond, instance=obj)
+        if obj:
+            dispatch.call(cls, 'set_object', condition=_cond, instance=obj)
         return obj
     
     @classmethod
