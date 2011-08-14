@@ -77,7 +77,7 @@ def set_log(app):
     set_log_handers(log, [handler])
     log.setLevel(getattr(logging, level, logging.INFO))
 
-def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True, settings_file='settings.ini'):
+def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True, settings_file='settings.ini', start=True):
     from uliweb.utils.common import sort_list
     
     if apps_dir not in sys.path:
@@ -85,7 +85,7 @@ def make_application(debug=None, apps_dir='apps', include_apps=None, debug_conso
         
     install_config(apps_dir)
     
-    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps, settings_file=settings_file)
+    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps, settings_file=settings_file, start=start)
     
     #settings global application object
     uliweb.application = app
