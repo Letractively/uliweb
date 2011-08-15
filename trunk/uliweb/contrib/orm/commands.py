@@ -101,7 +101,7 @@ def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8
         con.execute(table.delete())
     
     if not os.path.exists(filename):
-        log.info("The table [%s] data is not existed." % name)
+        log.info("The table [%s] data is not existed." % table.name)
         return 
     
     f = fin = open(filename, 'rb')
