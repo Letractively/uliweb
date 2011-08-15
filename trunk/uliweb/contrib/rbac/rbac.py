@@ -73,8 +73,8 @@ def has_permission(user, permission, **role_kwargs):
         return False
     
     flag = False
-    for role in user.user_roles.all():
-        if role.permissions.has(perm):
+    for role in perm.perm_roles.all():
+        if has_role(user, role, **role_kwargs):
             flag = True
             break
     return flag
