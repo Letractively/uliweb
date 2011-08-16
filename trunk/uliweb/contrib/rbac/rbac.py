@@ -2,7 +2,7 @@ from uliweb.orm import get_model
 from uliweb.utils.common import import_attr
 
 __all__ = ['add_role_func', 'register_role_method',
-    'superuser', 'trusted', 'anonymous']
+    'superuser', 'trusted', 'anonymous', 'has_role', 'has_permission']
 
 def call_func(func, kwargs):
     import inspect
@@ -38,6 +38,10 @@ def add_role_func(name, func):
     __role_funcs__[name] = func
     
 def has_role(user, role, **kwargs):
+    """
+    Judge is the user belongs to the role, and if does, then return the role object
+    if not then return False. kwargs will be passed to role_func.
+    """
     Role = get_model('role')
     if isinstance(user, (unicode, str)):
         User = get_model('user')
@@ -49,7 +53,6 @@ def has_role(user, role, **kwargs):
     
     func = __role_funcs__.get(name, None)
     if func:
-        
         if isinstance(func, (unicode, str)):
             func = import_attr(func)
             
@@ -57,11 +60,20 @@ def has_role(user, role, **kwargs):
         
         para = kwargs.copy()
         para['user'] = user
-        return call_func(func, para)
-    else:
-        return role.users.has(user)
-    
+        flag = call_func(func, para)
+        if flag:
+            return role
+    flag = role.users.has(user)
+    if flag:
+        return role
+    return False
+
 def has_permission(user, permission, **role_kwargs):
+    """
+    Judge if an user has permission, and if it does return role object, and if it doesn't
+    return False. role_kwargs will be passed to role functions.
+    With role object, you can use role.relation to get Role_Perm_Rel object.
+    """
     Role = get_model('role')
     Perm = get_model('permission')
     if isinstance(user, (unicode, str)):
@@ -72,10 +84,9 @@ def has_permission(user, permission, **role_kwargs):
     if not perm:
         return False
     
-    flag = False
-    for role in perm.perm_roles.all():
-        if has_role(user, role, **role_kwargs):
-            flag = True
-            break
-    return flag
+    for role in perm.perm_roles.with_relation().all():
+        flag = has_role(user, role, **role_kwargs)
+        if flag:
+            return flag
+    return False
 
