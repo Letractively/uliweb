@@ -46,7 +46,7 @@ class User(Model):
     is_superuser = Field(bool, verbose_name=_('Is Superuser'))
     last_login = Field(datetime.datetime, verbose_name=_('Last Login'))
     date_join = Field(datetime.datetime, verbose_name=_('Joined Date'), auto_now_add=True)
-    image = Field(FILE, verbose_name=_('Portrait'), max_length=128)
+    image = Field(FILE, verbose_name=_('Portrait'), max_length=256)
     active = Field(bool, verbose_name=_('Active Status'))
     locked = Field(bool, verbose_name=_('Lock Status'))
     

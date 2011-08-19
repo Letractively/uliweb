@@ -1019,6 +1019,16 @@ class Result(object):
         self.funcs.append(('offset', args, kwargs))
         return self
     
+    def update(self, **kwargs):
+        """
+        Execute update table set field = field+1 like statement
+        """
+        if self.condition is not None:
+            self.result = self.model.table.update().where(self.condition).values(**kwargs).execute()
+        else:
+            self.result = self.model.table.update().values(**kwargs).execute()
+        return self.result
+    
     def run(self, limit=0):
         if self.condition is not None:
             query = select(self.columns, self.condition)

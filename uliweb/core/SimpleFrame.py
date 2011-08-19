@@ -535,6 +535,7 @@ class Dispatcher(object):
         local_env['error'] = error
         local_env['settings'] = conf.settings
         local_env['json'] = json
+        local_env['function'] = function
         
         return self.get_env(local_env)
        
