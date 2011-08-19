@@ -31,7 +31,10 @@ class ExcelWriter(object):
         self.begin_y = begin_y
         self.hbegin_y = hbegin_y
         self.encoding = encoding
-        self.domain = domain.rstrip('/')
+        if domain:
+            self.domain = domain.rstrip('/')
+        else:
+            self.domain = domain
         self.fields_list = []
         self.fields = {}
         self.field_names = []
