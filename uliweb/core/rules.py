@@ -97,7 +97,10 @@ class Expose(object):
                             if func.__no_rule__:
                                 rule = self._get_url(appname, prefix, func)
                             else:
-                                rule = os.path.join(prefix, func.__old_rule__).replace('\\', '/')
+                                if func.__old_rule__:
+                                    rule = os.path.join(prefix, func.__old_rule__).replace('\\', '/')
+                                else:
+                                    rule = prefix
                                 rule = self._fix_url(appname, rule)
                             __no_need_exposed__.append((v[0], new_endpoint, rule, v[3]))
                             for k in __url_names__.iterkeys():
@@ -130,7 +133,7 @@ class Expose(object):
         if f.__name__ in reserved_keys:
             raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
         appname, path = self._get_path(f)
-        if not self.rule:
+        if self.rule is None:
             if self.restful:
                 rule = '/' + '/'.join([path] + args[:1] + [f.__name__] + args[1:])
             else:
@@ -140,7 +143,7 @@ class Expose(object):
         rule = self._fix_url(appname, rule)
         endpoint = '.'.join([f.__module__, f.__name__])
         f.__exposed__ = True
-        f.__no_rule__ = (self.parse_level == 1) or (self.parse_level == 2 and not self.rule)
+        f.__no_rule__ = (self.parse_level == 1) or (self.parse_level == 2 and (self.rule is None))
         f.__old_rule__ = self.rule
         
         #add name parameter process
