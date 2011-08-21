@@ -382,7 +382,7 @@ class AddView(object):
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None, file_replace=True, template_data=None, 
-        success_data=None, meta='AddForm', get_form_field=None):
+        success_data=None, meta='AddForm', get_form_field=None, post_fail=None):
 
         self.model = get_model(model)
         self.meta = meta
@@ -407,6 +407,7 @@ class AddView(object):
         self.pre_save = pre_save
         self.post_save = post_save
         self.post_created_form = post_created_form
+        self.post_fail = post_fail
         self.file_replace = file_replace
         self.success_data = success_data
         self.form = self.make_form(form)
@@ -540,6 +541,8 @@ class AddView(object):
         else:
             d = self.template_data.copy()
             d.update({'form':self.form})
+            if self.post_fail:
+                self.post_fail(d)
             return self.on_fail(d, json_result)
         
     def run(self, json_result=False):
@@ -596,6 +599,8 @@ class EditView(AddView):
         else:
             d = self.template_data.copy()
             d.update({'form':self.form, 'object':self.obj})
+            if self.post_fail:
+                self.post_fail(d, self.obj)
             return self.on_fail(d, json_result)
 
     def on_success(self, d, json_result):
