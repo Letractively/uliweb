@@ -421,17 +421,21 @@ class TextField(StringField):
     """
     default_build = TextArea
 
-    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=10, cols=75, **kwargs):
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=10, cols=75, convert_html=False, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.rows = rows
         self.cols = cols
-        
+        self.convert_html = convert_html
+    
     def html(self, data='', py=True):
-        if py:
-            value = self.to_html(data)
-        else:
-            value = data
-        return str(self.build(self.to_html(data), id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
+#        if py:
+#            value = self.to_html(data)
+#        else:
+        value = data
+        #add convert '&' to '&amp;' 2011-8-20 by limodou
+        if self.convert_html:
+            value = value.replace('&', '&amp;')
+        return str(self.build(value, id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
 
 class TextLinesField(TextField):
     """

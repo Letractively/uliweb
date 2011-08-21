@@ -1,3 +1,5 @@
+import os
+
 def fix_filename(filename, suffix=''):
     """
     e.g.
@@ -7,8 +9,6 @@ def fix_filename(filename, suffix=''):
     
             icon_40x40.png
     """
-    import os
-    
     if suffix:
         f, ext = os.path.splitext(filename)
         return f+suffix+ext
@@ -27,6 +27,16 @@ def resize_image(fobj, size=(50, 50)):
     image.save(o, "JPEG")
     o.seek(0)
     return o
+
+def thumbnail_image(infile, size=(200, 75)):
+    import Image
+
+    file, ext = os.path.splitext(infile)
+    im = Image.open(infile)
+    im.thumbnail(size, Image.ANTIALIAS)
+    ofile = file + ".thumbnail" + '.jpg'
+    im.save(ofile, "JPEG")
+    return ofile
 
 def resize_image_string(buf, size=(50, 50)):
     from StringIO import StringIO
