@@ -83,6 +83,7 @@ class User(Model):
             return url_for_static('images/user%dx%d.jpg' % (50, 50))
         
     def get_default_image_url(self, size=50):
+        from uliweb.contrib.staticfiles import url_for_static
         return url_for_static('images/user%dx%d.jpg' % (size, size))
         
     def __unicode__(self):
