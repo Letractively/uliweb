@@ -32,6 +32,7 @@ conf.local = local = Local()
 local_manager = LocalManager([local])
 conf.url_map = Map()
 __app_dirs__ = {}
+__app_alias__ = {}
 
 #Initialize pyini env
 pyini.set_env({'_':gettext_lazy, 'gettext_lazy':gettext_lazy})
@@ -155,6 +156,13 @@ def url_for(endpoint, **values):
             clsname = endpoint.im_self.__name__
         point = '.'.join([endpoint.__module__, clsname, endpoint.__name__])
     else:
+        if isinstance(endpoint, (str, unicode)):
+            #if the endpoint is string format, then find and replace
+            #the module prefix with app alias which matched
+            for k, v in __app_alias__.iteritems():
+                if endpoint.startswith(k):
+                    endpoint = v + endpoint[len(k):]
+                    break
         point = endpoint
     _external = values.pop('_external', False)
     if point in rules.__url_names__:
@@ -201,6 +209,13 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
             if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
                 apps.append(p)
     
+    #process app alias
+    #the app alias defined as ('current package name', 'alias appname')
+    for i, a in enumerate(apps):
+        if isinstance(a, (tuple, list)):
+            apps[i] = a[0]
+            __app_alias__[a[1]] = a[0]
+            
     apps.extend(include_apps)
     #process dependencies
     s = apps[:]

@@ -80,7 +80,10 @@ class User(Model):
         if self.image:
             return get_url(self.image)
         else:
-            return url_for_static('images/user.jpg')
+            return url_for_static('images/user%dx%d.jpg' % (50, 50))
+        
+    def get_default_image_url(self, size=50):
+        return url_for_static('images/user%dx%d.jpg' % (size, size))
         
     def __unicode__(self):
         return self.username
