@@ -28,15 +28,27 @@ def resize_image(fobj, size=(50, 50)):
     o.seek(0)
     return o
 
-def thumbnail_image(infile, size=(200, 75)):
+def thumbnail_image(realfile, filename, size=(200, 75)):
+    """
+    :param: real input filename (string)
+    :filename: relative input filename (string)
+    
+    return value should be a tuple, (saved_real_filename, saved_filename)
+    """
     import Image
 
-    file, ext = os.path.splitext(infile)
-    im = Image.open(infile)
+    im = Image.open(realfile)
+    print size, im.size
+    file, ext = os.path.splitext(realfile)
+    if im.size[0]<=size[0] and im.size[1]<=size[1]:
+        #the image size is smaller than thumbnail size, so we don't need to 
+        #thumbnail the image
+        return filename
     im.thumbnail(size, Image.ANTIALIAS)
     ofile = file + ".thumbnail" + '.jpg'
     im.save(ofile, "JPEG")
-    return ofile
+    file1, ext1 = os.path.splitext(filename)
+    return ofile, file1 + ".thumbnail" + '.jpg'
 
 def resize_image_string(buf, size=(50, 50)):
     from StringIO import StringIO
