@@ -7,7 +7,7 @@ def startup(sender):
     
     orm.set_debug_query(uliweb.settings.ORM.DEBUG_LOG)
     orm.set_auto_create(uliweb.settings.ORM.AUTO_CREATE)
-    orm.get_connection(uliweb.settings.ORM.CONNECTION)
+    orm.get_connection(uliweb.settings.ORM.CONNECTION, **uliweb.settings.ORM.CONNECTION_ARGS)
 
     if 'MODELS' in uliweb.settings:
         for k, v in uliweb.settings.MODELS.items():
